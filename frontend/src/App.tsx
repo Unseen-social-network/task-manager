@@ -13,13 +13,14 @@ function App() {
     const metrikaId = Number(metrikaEnvId)
     if (!Number.isFinite(metrikaId)) return
 
-    if (!window.ym) {
-      window.ym = function (...args: unknown[]) {
-        ;(window.ym as any).a = (window.ym as any).a || []
-        ;(window.ym as any).a.push(args)
-      } as any
-      ;(window.ym as any).l = Date.now()
-    }
+    const ym: NonNullable<Window['ym']> =
+      window.ym ??
+      ((...args: unknown[]) => {
+        ;(ym as any).a = (ym as any).a || []
+        ;(ym as any).a.push(args)
+      })
+    window.ym = ym
+    ;(window.ym as any).l = Date.now()
 
     if (!document.getElementById('yandex-metrika')) {
       const script = document.createElement('script')
@@ -29,7 +30,7 @@ function App() {
       document.head.appendChild(script)
     }
 
-    window.ym(metrikaId, 'init', {
+    ym(metrikaId, 'init', {
       clickmap: true,
       trackLinks: true,
       accurateTrackBounce: true,
