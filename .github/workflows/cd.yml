@@ -56,7 +56,9 @@ jobs:
         context: .
         file: ./infra/docker/backend/Dockerfile
         push: true
-        tags: ${{ steps.meta-backend.outputs.tags }}
+        tags: |
+            fgeeha/task_manager_backend:latest
+            fgeeha/task_manager_backend:${{ github.event.workflow_run.head_sha }}
         labels: ${{ steps.meta-backend.outputs.labels }}
 
     - name: Extract metadata for frontend
@@ -76,7 +78,9 @@ jobs:
         context: ./frontend
         file: ./frontend/Dockerfile
         push: true
-        tags: ${{ steps.meta-frontend.outputs.tags }}
+        tags: |
+            fgeeha/task_manager_frontend:latest
+            fgeeha/task_manager_frontend:${{ github.event.workflow_run.head_sha }}
         labels: ${{ steps.meta-frontend.outputs.labels }}
 
   deploy:
