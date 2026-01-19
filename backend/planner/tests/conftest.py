@@ -2,10 +2,11 @@
 Pytest fixtures for Planner tests.
 """
 
-import pytest
 from django.contrib.auth import get_user_model
-from planner.models import Contact, Task
+import pytest
 from rest_framework.test import APIClient
+
+from planner.models import Contact, Task
 
 User = get_user_model()
 
@@ -20,7 +21,7 @@ def api_client():
 def user(db):
     """Create and return a test user."""
     return User.objects.create_user(
-        username="testuser", email="test@example.com", password="testpass123"
+        username='testuser', email='test@example.com', password='testpass123'
     )
 
 
@@ -28,9 +29,9 @@ def user(db):
 def other_user(db):
     """Create and return another test user."""
     return User.objects.create_user(
-        username="otheruser",
-        email="other@example.com",
-        password="otherpass123",
+        username='otheruser',
+        email='other@example.com',
+        password='otherpass123',
     )
 
 
@@ -46,10 +47,10 @@ def contact(user):
     """Create and return a test contact."""
     return Contact.objects.create(
         owner=user,
-        name="John Doe",
-        company="ACME Corp",
-        phone="+1234567890",
-        email="john@example.com",
+        name='John Doe',
+        company='ACME Corp',
+        phone='+1234567890',
+        email='john@example.com',
     )
 
 
@@ -58,9 +59,9 @@ def other_contact(other_user):
     """Create and return a contact for other user."""
     return Contact.objects.create(
         owner=other_user,
-        name="Jane Smith",
-        company="Other Corp",
-        email="jane@example.com",
+        name='Jane Smith',
+        company='Other Corp',
+        email='jane@example.com',
     )
 
 
@@ -69,8 +70,8 @@ def task(user, contact):
     """Create and return a test task."""
     return Task.objects.create(
         owner=user,
-        title="Test Task",
-        description="Test description",
+        title='Test Task',
+        description='Test description',
         urgency=Task.Urgency.MEDIUM,
         status=Task.Status.TODO,
         contact=contact,
@@ -82,7 +83,7 @@ def other_task(other_user):
     """Create and return a task for other user."""
     return Task.objects.create(
         owner=other_user,
-        title="Other User Task",
+        title='Other User Task',
         urgency=Task.Urgency.HIGH,
         status=Task.Status.TODO,
     )

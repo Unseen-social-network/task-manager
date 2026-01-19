@@ -27,10 +27,10 @@ class ContactViewSet(viewsets.ModelViewSet):
 
     serializer_class = ContactSerializer
     permission_classes = [IsOwner]
-    filterset_fields = ["company"]
-    search_fields = ["name", "company", "phone", "email", "telegram", "notes"]
-    ordering_fields = ["name", "company", "created_at", "updated_at"]
-    ordering = ["-created_at"]
+    filterset_fields = ['company']
+    search_fields = ['name', 'company', 'phone', 'email', 'telegram', 'notes']
+    ordering_fields = ['name', 'company', 'created_at', 'updated_at']
+    ordering = ['-created_at']
 
     def get_queryset(self):
         """Return only contacts owned by the current user."""
@@ -42,7 +42,7 @@ class ContactViewSet(viewsets.ModelViewSet):
         This prevents revealing existence of other users' contacts.
         """
         queryset = self.get_queryset()
-        obj = get_object_or_404(queryset, pk=self.kwargs.get("pk"))
+        obj = get_object_or_404(queryset, pk=self.kwargs.get('pk'))
         self.check_object_permissions(self.request, obj)
         return obj
 
@@ -56,13 +56,13 @@ class TaskViewSet(viewsets.ModelViewSet):
     serializer_class = TaskSerializer
     permission_classes = [IsOwner]
     filterset_class = TaskFilter
-    search_fields = ["title", "description", "contact_freeform"]
-    ordering_fields = ["due_date", "created_at", "urgency", "status"]
-    ordering = ["-created_at"]
+    search_fields = ['title', 'description', 'contact_freeform']
+    ordering_fields = ['due_date', 'created_at', 'urgency', 'status']
+    ordering = ['-created_at']
 
     def get_queryset(self):
         """Return only tasks owned by the current user."""
-        return Task.objects.filter(owner=self.request.user).select_related("contact")
+        return Task.objects.filter(owner=self.request.user).select_related('contact')
 
     def get_object(self):
         """
@@ -70,13 +70,13 @@ class TaskViewSet(viewsets.ModelViewSet):
         This prevents revealing existence of other users' tasks.
         """
         queryset = self.get_queryset()
-        obj = get_object_or_404(queryset, pk=self.kwargs.get("pk"))
+        obj = get_object_or_404(queryset, pk=self.kwargs.get('pk'))
         self.check_object_permissions(self.request, obj)
         return obj
 
     @action(
         detail=True,
-        methods=["get", "post"],
+        methods=['get', 'post'],
         permission_classes=[IsTaskOwner],
         parser_classes=[MultiPartParser, FormParser],
     )
@@ -88,14 +88,18 @@ class TaskViewSet(viewsets.ModelViewSet):
         """
         task = self.get_object()
 
-        if request.method == "GET":
+        if request.method == 'GET':
             attachments = task.attachments.all()
-            serializer = AttachmentSerializer(attachments, many=True, context={"request": request})
+            serializer = AttachmentSerializer(
+                attachments, many=True, context={'request': request}
+            )
             return Response(serializer.data)
 
-        elif request.method == "POST":
+        elif request.method == 'POST':
             # Create attachment for this task
-            serializer = AttachmentCreateSerializer(data=request.data, context={"request": request})
+            serializer = AttachmentCreateSerializer(
+                data=request.data, context={'request': request}
+            )
             serializer.is_valid(raise_exception=True)
             serializer.save(task=task, owner=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -110,17 +114,17 @@ class AttachmentViewSet(viewsets.ModelViewSet):
 
     serializer_class = AttachmentSerializer
     permission_classes = [IsOwner]
-    http_method_names = ["get", "delete"]  # Only allow GET and DELETE
+    http_method_names = ['get', 'delete']  # Only allow GET and DELETE
 
     def get_queryset(self):
         """Return only attachments owned by the current user."""
-        return Attachment.objects.filter(owner=self.request.user).select_related("task")
+        return Attachment.objects.filter(owner=self.request.user).select_related('task')
 
     def get_object(self):
         """
         Get object and return 404 if not found or not owned by user.
         """
         queryset = self.get_queryset()
-        obj = get_object_or_404(queryset, pk=self.kwargs.get("pk"))
+        obj = get_object_or_404(queryset, pk=self.kwargs.get('pk'))
         self.check_object_permissions(self.request, obj)
         return obj

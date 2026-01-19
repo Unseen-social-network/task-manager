@@ -22,12 +22,12 @@ class IsTaskOwner(permissions.BasePermission):
     Used when creating attachments - validates task ownership.
     """
 
-    message = "Task not found or access denied."
+    message = 'Task not found or access denied.'
 
     def has_permission(self, request, view):
         """Check task ownership for attachment upload."""
-        if request.method == "POST":
-            task_id = view.kwargs.get("task_pk")
+        if request.method == 'POST':
+            task_id = view.kwargs.get('task_pk')
             if not task_id:
                 return False
 
