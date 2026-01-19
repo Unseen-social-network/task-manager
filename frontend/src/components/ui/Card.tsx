@@ -11,7 +11,7 @@ export const Card = ({ children, className, onClick }: CardProps) => {
   return (
     <div
       className={cn(
-        'bg-white rounded-lg shadow-sm border border-gray-200',
+        'bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-900 dark:border-gray-800',
         onClick && 'cursor-pointer hover:shadow-md transition-shadow',
         className
       )}

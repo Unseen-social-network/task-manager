@@ -7,12 +7,11 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { TaskForm } from './TaskForm'
 import { tasksService } from '@/services/tasks.service'
+import { useLocale } from '@/contexts/locale'
 import {
   formatDate,
   getUrgencyColor,
   getStatusColor,
-  getUrgencyLabel,
-  getStatusLabel,
 } from '@/utils/helpers'
 
 interface TaskDetailsModalProps {
@@ -27,29 +26,30 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
   const [isDeleting, setIsDeleting] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { t } = useLocale()
 
   const handleUpdate = async (data: UpdateTaskInput) => {
     try {
       await tasksService.updateTask(task.id, data)
-      toast.success('Task updated successfully')
+      toast.success(t('tasks.updateSuccess'))
       setIsEditing(false)
       onUpdate()
     } catch (error) {
-      toast.error('Failed to update task')
+      toast.error(t('tasks.updateFail'))
     }
   }
 
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this task?')) return
+    if (!confirm(t('tasks.deleteConfirm'))) return
 
     setIsDeleting(true)
     try {
       await tasksService.deleteTask(task.id)
-      toast.success('Task deleted successfully')
+      toast.success(t('tasks.deleteSuccess'))
       onClose()
       onUpdate()
     } catch (error) {
-      toast.error('Failed to delete task')
+      toast.error(t('tasks.deleteFail'))
     } finally {
       setIsDeleting(false)
     }
@@ -62,10 +62,10 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
     setIsUploading(true)
     try {
       await tasksService.uploadAttachment(task.id, file)
-      toast.success('File uploaded successfully')
+      toast.success(t('tasks.uploadSuccess'))
       onUpdate()
     } catch (error) {
-      toast.error('Failed to upload file')
+      toast.error(t('tasks.uploadFail'))
     } finally {
       setIsUploading(false)
       if (fileInputRef.current) {
@@ -75,20 +75,20 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
   }
 
   const handleDeleteAttachment = async (attachmentId: number) => {
-    if (!confirm('Are you sure you want to delete this attachment?')) return
+    if (!confirm(t('tasks.attachmentDeleteConfirm'))) return
 
     try {
       await tasksService.deleteAttachment(attachmentId)
-      toast.success('Attachment deleted successfully')
+      toast.success(t('tasks.attachmentDeleteSuccess'))
       onUpdate()
     } catch (error) {
-      toast.error('Failed to delete attachment')
+      toast.error(t('tasks.attachmentDeleteFail'))
     }
   }
 
   if (isEditing) {
     return (
-      <Modal isOpen={isOpen} onClose={onClose} title="Edit Task">
+      <Modal isOpen={isOpen} onClose={onClose} title={t('tasks.editTitle')}>
         <TaskForm
           initialData={{
             title: task.title,
@@ -110,16 +110,16 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Task Details"
+      title={t('tasks.detailsTitle')}
       footer={
         <>
           <Button variant="danger" onClick={handleDelete} isLoading={isDeleting}>
             <Trash2 className="w-4 h-4 mr-2" />
-            Delete
+            {t('actions.delete')}
           </Button>
           <Button onClick={() => setIsEditing(true)}>
             <Edit2 className="w-4 h-4 mr-2" />
-            Edit
+            {t('actions.edit')}
           </Button>
         </>
       }
@@ -127,20 +127,24 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
       <div className="space-y-6">
         {/* Title and Badges */}
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-3">{task.title}</h2>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-3">
+            {task.title}
+          </h2>
           <div className="flex gap-2">
-            <Badge className={getUrgencyColor(task.urgency)}>
-              {getUrgencyLabel(task.urgency)}
-            </Badge>
-            <Badge className={getStatusColor(task.status)}>{getStatusLabel(task.status)}</Badge>
+            <Badge className={getUrgencyColor(task.urgency)}>{t(`urgency.${task.urgency}`)}</Badge>
+            <Badge className={getStatusColor(task.status)}>{t(`status.${task.status}`)}</Badge>
           </div>
         </div>
 
         {/* Description */}
         {task.description && (
           <div>
-            <h3 className="text-sm font-semibold text-gray-700 mb-2">Description</h3>
-            <p className="text-gray-600 whitespace-pre-wrap">{task.description}</p>
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
+              {t('tasks.description')}
+            </h3>
+            <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap">
+              {task.description}
+            </p>
           </div>
         )}
 
@@ -148,21 +152,23 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
         <div className="grid grid-cols-2 gap-4">
           {task.due_date && (
             <div>
-              <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+              <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-1">
                 <Calendar className="w-4 h-4" />
-                <span className="font-medium">Due Date</span>
+                <span className="font-medium">{t('tasks.dueDate')}</span>
               </div>
-              <p className="text-gray-900">{formatDate(task.due_date)}</p>
+              <p className="text-gray-900 dark:text-gray-100">{formatDate(task.due_date)}</p>
             </div>
           )}
 
           {(task.contact_name || task.contact_freeform) && (
             <div>
-              <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+              <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-1">
                 <User className="w-4 h-4" />
-                <span className="font-medium">Contact</span>
+                <span className="font-medium">{t('tasks.contact')}</span>
               </div>
-              <p className="text-gray-900">{task.contact_name || task.contact_freeform}</p>
+              <p className="text-gray-900 dark:text-gray-100">
+                {task.contact_name || task.contact_freeform}
+              </p>
             </div>
           )}
         </div>
@@ -170,22 +176,24 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
         {/* Timestamps */}
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <span className="text-gray-500">Created:</span>{' '}
-            <span className="text-gray-900">{formatDate(task.created_at)}</span>
+            <span className="text-gray-500 dark:text-gray-400">{t('tasks.created')}</span>{' '}
+            <span className="text-gray-900 dark:text-gray-100">{formatDate(task.created_at)}</span>
           </div>
           <div>
-            <span className="text-gray-500">Updated:</span>{' '}
-            <span className="text-gray-900">{formatDate(task.updated_at)}</span>
+            <span className="text-gray-500 dark:text-gray-400">{t('tasks.updated')}</span>{' '}
+            <span className="text-gray-900 dark:text-gray-100">{formatDate(task.updated_at)}</span>
           </div>
         </div>
 
         {/* Attachments */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-700">Attachments</h3>
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+              {t('tasks.attachments')}
+            </h3>
             <Button size="sm" onClick={() => fileInputRef.current?.click()} isLoading={isUploading}>
               <Upload className="w-4 h-4 mr-2" />
-              Upload
+              {t('tasks.upload')}
             </Button>
             <input
               ref={fileInputRef}
@@ -200,7 +208,7 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
               {task.attachments.map(attachment => (
                 <div
                   key={attachment.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg dark:bg-gray-800"
                 >
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     <Download className="w-4 h-4 text-gray-400 flex-shrink-0" />
@@ -212,7 +220,7 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
                     >
                       {attachment.original_name}
                     </a>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
                       ({(attachment.size / 1024).toFixed(1)} KB)
                     </span>
                   </div>
@@ -226,7 +234,7 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
               ))}
             </div>
           ) : (
-            <p className="text-sm text-gray-500">No attachments</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{t('tasks.noAttachments')}</p>
           )}
         </div>
       </div>

@@ -116,6 +116,7 @@ Create a `.env` file in the root directory:
 
 ```env
 VITE_API_BASE_URL=http://localhost:8000
+VITE_YANDEX_METRIKA_ID=12345678
 ```
 
 For production, update the URL to your backend server.

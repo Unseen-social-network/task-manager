@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/Textarea'
 import { Select } from '@/components/ui/Select'
 import { Button } from '@/components/ui/Button'
 import { contactsService } from '@/services/contacts.service'
+import { useLocale } from '@/contexts/locale'
 
 interface TaskFormProps {
   initialData?: CreateTaskInput
@@ -17,6 +18,7 @@ interface TaskFormProps {
 export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFormProps) => {
   const [contacts, setContacts] = useState<Contact[]>([])
   const [useContact, setUseContact] = useState(!!initialData?.contact)
+  const { t } = useLocale()
 
   const {
     register,
@@ -45,13 +47,13 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <Input
-        label="Title"
-        {...register('title', { required: 'Title is required' })}
+        label={t('tasks.form.title')}
+        {...register('title', { required: t('tasks.form.titleRequired') })}
         error={errors.title?.message}
       />
 
       <Textarea
-        label="Description"
+        label={t('tasks.form.description')}
         rows={4}
         {...register('description')}
         error={errors.description?.message}
@@ -59,30 +61,30 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
 
       <div className="grid grid-cols-2 gap-4">
         <Select
-          label="Urgency"
+          label={t('tasks.form.urgency')}
           {...register('urgency')}
           options={[
-            { value: 'low', label: 'Low' },
-            { value: 'medium', label: 'Medium' },
-            { value: 'high', label: 'High' },
-            { value: 'critical', label: 'Critical' },
+            { value: 'low', label: t('urgency.low') },
+            { value: 'medium', label: t('urgency.medium') },
+            { value: 'high', label: t('urgency.high') },
+            { value: 'critical', label: t('urgency.critical') },
           ]}
         />
 
         <Select
-          label="Status"
+          label={t('tasks.form.status')}
           {...register('status')}
           options={[
-            { value: 'todo', label: 'To Do' },
-            { value: 'in_progress', label: 'In Progress' },
-            { value: 'done', label: 'Done' },
-            { value: 'canceled', label: 'Canceled' },
+            { value: 'todo', label: t('status.todo') },
+            { value: 'in_progress', label: t('status.in_progress') },
+            { value: 'done', label: t('status.done') },
+            { value: 'canceled', label: t('status.canceled') },
           ]}
         />
       </div>
 
       <Input
-        label="Due Date"
+        label={t('tasks.form.dueDate')}
         type="datetime-local"
         {...register('due_date')}
         error={errors.due_date?.message}
@@ -97,7 +99,9 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
             onChange={() => setUseContact(true)}
             className="text-primary-600 focus:ring-primary-500"
           />
-          <span className="text-sm">Use contact from book</span>
+          <span className="text-sm text-gray-700 dark:text-gray-200">
+            {t('tasks.form.useBookContact')}
+          </span>
         </label>
         <label className="flex items-center gap-2">
           <input
@@ -106,23 +110,25 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
             onChange={() => setUseContact(false)}
             className="text-primary-600 focus:ring-primary-500"
           />
-          <span className="text-sm">Enter contact manually</span>
+          <span className="text-sm text-gray-700 dark:text-gray-200">
+            {t('tasks.form.manualContact')}
+          </span>
         </label>
       </div>
 
       {useContact ? (
         <Select
-          label="Contact"
+          label={t('tasks.form.contact')}
           {...register('contact', { valueAsNumber: true })}
           options={[
-            { value: '', label: 'Select a contact' },
+            { value: '', label: t('tasks.form.contactSelect') },
             ...contacts.map(c => ({ value: String(c.id), label: c.name })),
           ]}
         />
       ) : (
         <Input
-          label="Contact (Freeform)"
-          placeholder="e.g., Call John at +1234567890"
+          label={t('tasks.form.contactFreeform')}
+          placeholder={t('tasks.form.contactPlaceholder')}
           {...register('contact_freeform')}
           error={errors.contact_freeform?.message}
         />
@@ -130,10 +136,10 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
 
       <div className="flex justify-end gap-3 pt-4">
         <Button type="button" variant="secondary" onClick={onCancel}>
-          Cancel
+          {t('tasks.form.cancel')}
         </Button>
         <Button type="submit" isLoading={isLoading}>
-          {initialData ? 'Update' : 'Create'} Task
+          {initialData ? t('tasks.form.update') : t('tasks.form.create')}
         </Button>
       </div>
     </form>
