@@ -62,9 +62,7 @@ class TaskViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Return only tasks owned by the current user."""
-        return Task.objects.filter(owner=self.request.user).select_related(
-            "contact"
-        )
+        return Task.objects.filter(owner=self.request.user).select_related("contact")
 
     def get_object(self):
         """
@@ -92,16 +90,12 @@ class TaskViewSet(viewsets.ModelViewSet):
 
         if request.method == "GET":
             attachments = task.attachments.all()
-            serializer = AttachmentSerializer(
-                attachments, many=True, context={"request": request}
-            )
+            serializer = AttachmentSerializer(attachments, many=True, context={"request": request})
             return Response(serializer.data)
 
         elif request.method == "POST":
             # Create attachment for this task
-            serializer = AttachmentCreateSerializer(
-                data=request.data, context={"request": request}
-            )
+            serializer = AttachmentCreateSerializer(data=request.data, context={"request": request})
             serializer.is_valid(raise_exception=True)
             serializer.save(task=task, owner=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -120,9 +114,7 @@ class AttachmentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Return only attachments owned by the current user."""
-        return Attachment.objects.filter(
-            owner=self.request.user
-        ).select_related("task")
+        return Attachment.objects.filter(owner=self.request.user).select_related("task")
 
     def get_object(self):
         """
