@@ -26,13 +26,17 @@ help:
 
 # Development commands
 build:
-	docker compose -f infra/compose/docker-compose.yml build
+	DOCKER_BUILDKIT=1 docker compose -f infra/compose/docker-compose.yml build
+
+build-no-cache:
+	DOCKER_BUILDKIT=1 docker compose -f infra/compose/docker-compose.yml build --no-cache
 
 up:
-	docker compose -f infra/compose/docker-compose.yml up -d
+	DOCKER_BUILDKIT=1 docker compose -f infra/compose/docker-compose.yml up -d
 	@echo "Waiting for database..."
 	@sleep 5
 	docker compose -f infra/compose/docker-compose.yml exec backend python manage.py migrate
+	docker compose -f infra/compose/docker-compose.yml exec backend python manage.py collectstatic --noinput
 	@echo "\nDevelopment environment is ready!"
 	@echo "Backend: http://localhost:8000"
 	@echo "Admin: http://localhost:8000/admin"

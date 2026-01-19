@@ -1,0 +1,70 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: planner_db_dev
+    environment:
+      POSTGRES_DB: planner_db
+      POSTGRES_USER: planner_user
+      POSTGRES_PASSWORD: planner_pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U planner_user -d planner_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ../..
+      dockerfile: infra/docker/backend/Dockerfile
+    container_name: planner_backend_dev
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ../../backend:/app
+      - media_data:/app/media
+      - static_data:/app/staticfiles
+    env_file:
+      - ../../.env
+    environment:
+      - DATABASE_URL=postgres://planner_user:planner_pass@db:5432/planner_db
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ../../frontend
+      dockerfile: Dockerfile
+    container_name: planner_frontend
+    ports:
+      - "3000:80"
+    volumes:
+      - static_data:/app/staticfiles:ro
+      - media_data:/app/media:ro
+    environment:
+      - VITE_API_BASE_URL=/api
+    restart: unless-stopped
+
+  # Development mode with hot reload
+  frontend-dev:
+    image: node:20-alpine
+    container_name: planner_frontend_dev
+    working_dir: /app
+    volumes:
+      - ../../frontend:/app
+      - /app/node_modules
+      - static_data:/app/staticfiles:ro
+      - media_data:/app/media:ro
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_BASE_URL=/api
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    profiles:
+      - dev
+
+volumes:
+  postgres_data:
+  media_data:
+  static_data:
