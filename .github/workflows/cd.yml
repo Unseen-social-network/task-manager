@@ -12,8 +12,8 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME_BACKEND: ${{ github.repository }}/backend
-  IMAGE_NAME_FRONTEND: ${{ github.repository }}/frontend
+  IMAGE_NAME_BACKEND: task_manager_backend
+  IMAGE_NAME_FRONTEND: task_manager_frontend
 
 jobs:
   build-and-push:
