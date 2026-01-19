@@ -65,14 +65,14 @@ jobs:
         cd backend
         poetry run python manage.py makemigrations --check --dry-run --no-input
 
-    # - name: Run tests
-    #   env:
-    #     DATABASE_URL: postgres://planner_user:planner_pass@localhost:5432/planner_test
-    #     SECRET_KEY: test-secret-key-for-ci
-    #     DEBUG: 1
-    #   run: |
-    #     cd backend
-    #     poetry run pytest --cov=planner --cov-report=term-missing --cov-report=xml
+    - name: Run tests
+      env:
+         SECRET_KEY: test-secret-key-for-ci
+         DEBUG: 1
+         USE_SQLITE_FOR_TESTS: true
+      run: |
+         cd backend
+         poetry run pytest --cov=planner --cov-report=term-missing --cov-report=xml
 
     - name: Upload coverage reports
       uses: codecov/codecov-action@v3
