@@ -84,16 +84,11 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
 
-    steps:
-    - name: Check if file exists
-      run: |
-        echo ls -la
-        ls -la
-        if [ ! -f docker-compose.production.yml ]; then
-          echo "ERROR: docker-compose.production.yml not found!"
-          exit 1
-        fi
-    
+    steps: 
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.workflow_run.head_sha }}
+
     - name: Copy production compose file
       uses: appleboy/scp-action@v0.1.7
       with:
