@@ -1,4 +1,4 @@
-.PHONY: help build up down restart logs shell migrate makemigrations createsuperuser test lint format clean
+.PHONY: help build up down restart logs shell migrate makemigrations createsuperuser test lint format clean prod-superuser
 
 # Default target
 help:
@@ -23,6 +23,7 @@ help:
 	@echo "  make prod-up         - Start production environment"
 	@echo "  make prod-down       - Stop production environment"
 	@echo "  make prod-logs       - View production logs"
+	@echo "  make prod-superuser  - Create superuser"
 
 # Development commands
 build:
@@ -83,27 +84,30 @@ format:
 
 # Production commands
 prod-build:
-	docker compose -f infra/compose/docker-compose.prod.yml build
+	docker compose -f infra/compose/docker-compose.production.yml build
 
 prod-up:
-	docker compose -f infra/compose/docker-compose.prod.yml up -d
+	docker compose -f infra/compose/docker-compose.production.yml up -d
 	@echo "Waiting for database..."
 	@sleep 5
-	docker compose -f infra/compose/docker-compose.prod.yml exec backend python manage.py migrate
-	docker compose -f infra/compose/docker-compose.prod.yml exec backend python manage.py collectstatic --no-input
+	docker compose -f infra/compose/docker-compose.production.yml exec backend python manage.py migrate
+	docker compose -f infra/compose/docker-compose.production.yml exec backend python manage.py collectstatic --no-input
 	@echo "\nProduction environment is ready!"
 	@echo "Application: http://localhost"
 
 prod-down:
-	docker compose -f infra/compose/docker-compose.prod.yml down
+	docker compose -f infra/compose/docker-compose.production.yml down
 
 prod-logs:
-	docker compose -f infra/compose/docker-compose.prod.yml logs -f
+	docker compose -f infra/compose/docker-compose.production.yml logs -f
+
+prod-superuser:
+	docker compose -f infra/compose/docker-compose.production.yml exec backend python manage.py createsuperuser
 
 # Cleanup
 clean:
 	docker compose -f infra/compose/docker-compose.yml down -v
-	docker compose -f infra/compose/docker-compose.prod.yml down -v
+	docker compose -f infra/compose/docker-compose.production.yml down -v
 	find . -type d -name __pycache__ -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
 	find . -type d -name "*.egg-info" -exec rm -rf {} +
