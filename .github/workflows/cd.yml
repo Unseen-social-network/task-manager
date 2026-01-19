@@ -85,6 +85,14 @@ jobs:
     if: github.ref == 'refs/heads/main'
 
     steps:
+    - name: Check if file exists
+      run: |
+        ls -la
+        if [ ! -f docker-compose.production.yml ]; then
+          echo "ERROR: docker-compose.production.yml not found!"
+          exit 1
+        fi
+    
     - name: Copy production compose file
       uses: appleboy/scp-action@v0.1.7
       with:
