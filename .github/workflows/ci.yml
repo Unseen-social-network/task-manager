@@ -26,57 +26,87 @@ jobs:
           --health-retries 5
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      # ------------------------------------------------------------
+      # Checkout
+      # ------------------------------------------------------------
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12'
+      # ------------------------------------------------------------
+      # Python
+      # ------------------------------------------------------------
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
 
-    - name: Install Poetry
-      uses: snok/install-poetry@v1
-      with:
-        version: 1.8.0
-        virtualenvs-create: true
-        virtualenvs-in-project: true
+      # ------------------------------------------------------------
+      # Poetry
+      # ------------------------------------------------------------
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: 1.8.0
+          virtualenvs-create: true
+          virtualenvs-in-project: true
 
-    - name: Load cached venv
-      id: cached-poetry-dependencies
-      uses: actions/cache@v3
-      with:
-        path: .venv
-        key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+      # ------------------------------------------------------------
+      # Cache venv
+      # ------------------------------------------------------------
+      - name: Cache Poetry venv
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
 
-    - name: Install dependencies
-      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-      run: poetry install --no-interaction --no-root
+      # ------------------------------------------------------------
+      # Install deps
+      # ------------------------------------------------------------
+      - name: Install dependencies
+        run: poetry install --no-interaction --no-root
 
-    - name: Lint with Ruff
-      run: |
-        poetry run ruff check backend/ --config pyproject.toml
-        poetry run ruff format --check backend/
+      # ------------------------------------------------------------
+      # Ruff = единственный линтер + форматтер
+      # ------------------------------------------------------------
+      - name: Ruff lint
+        run: poetry run ruff check backend/ --config pyproject.toml
 
-    - name: Check migrations
-      env:
-        DATABASE_URL: postgres://planner_user:planner_pass@localhost:5432/planner_test
-        SECRET_KEY: test-secret-key-for-ci
-      run: |
-        cd backend
-        poetry run python manage.py makemigrations --check --dry-run --no-input
+      - name: Ruff format check
+        run: poetry run ruff format --check backend/
 
-    - name: Run tests
-      env:
-         SECRET_KEY: test-secret-key-for-ci
-         DEBUG: 1
-         USE_SQLITE_FOR_TESTS: true
-      run: |
-         cd backend
-         poetry run pytest --cov=planner --cov-report=term-missing --cov-report=xml
+      # ------------------------------------------------------------
+      # Django migrations check
+      # ------------------------------------------------------------
+      - name: Check migrations
+        env:
+          DATABASE_URL: postgres://planner_user:planner_pass@localhost:5432/planner_test
+          SECRET_KEY: test-secret-key-for-ci
+        run: |
+          cd backend
+          poetry run python manage.py makemigrations --check --dry-run --no-input
 
-    - name: Upload coverage reports
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./backend/coverage.xml
-        flags: unittests
-        name: codecov-umbrella
+      # ------------------------------------------------------------
+      # Tests
+      # ------------------------------------------------------------
+      - name: Run tests
+        env:
+          SECRET_KEY: test-secret-key-for-ci
+          DEBUG: "1"
+          USE_SQLITE_FOR_TESTS: "true"
+        run: |
+          cd backend
+          poetry run pytest \
+            --cov=planner \
+            --cov-report=term-missing \
+            --cov-report=xml
+
+      # ------------------------------------------------------------
+      # Coverage
+      # ------------------------------------------------------------
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v4
+        with:
+          files: backend/coverage.xml
+          flags: unittests
+          name: codecov
