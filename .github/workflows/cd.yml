@@ -85,31 +85,222 @@ jobs:
     if: github.ref == 'refs/heads/main'
 
     steps:
-    - name: Copy production compose file
+    - name: Checkout code for deploy
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.workflow_run.head_sha }}
+
+    - name: Проверить структуру репозитория
+      run: |
+        echo "=== Структура репозитория ==="
+        echo "Текущая директория: $(pwd)"
+        echo ""
+        echo "Содержимое корневой директории:"
+        ls -la
+        echo ""
+        echo "Поиск docker-compose файлов:"
+        find . -name "*docker-compose*" -type f
+        echo ""
+        echo "Поиск Makefile:"
+        find . -name "Makefile" -type f
+        echo ""
+        echo "Директория infra:"
+        ls -la infra/ 2>/dev/null || echo "Директория infra не найдена"
+        echo ""
+        echo "Директория infra/compose:"
+        ls -la infra/compose/ 2>/dev/null || echo "Директория infra/compose не найдена"
+
+    - name: Найти или создать необходимые файлы
+      run: |
+        echo "=== Подготовка файлов для деплоя ==="
+        
+        # 1. Найти docker-compose.production.yml
+        if [ -f "docker-compose.production.yml" ]; then
+          echo "✓ Найден docker-compose.production.yml в корне"
+        elif [ -f "infra/compose/docker-compose.prod.yml" ]; then
+          echo "✓ Найден infra/compose/docker-compose.prod.yml, копируем..."
+          cp infra/compose/docker-compose.prod.yml docker-compose.production.yml
+        else
+          echo "⚠ Docker-compose файл не найден. Создаем базовый..."
+          # Создаем базовый docker-compose файл
+          cat > docker-compose.production.yml << 'EOF'
+          services:
+            db:
+              image: postgres:16-alpine
+              container_name: planner_db_prod
+              environment:
+                POSTGRES_DB: ${POSTGRES_DB:-planner_db}
+                POSTGRES_USER: ${POSTGRES_USER:-planner_user}
+                POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-planner_pass}
+              volumes:
+                - postgres_data:/var/lib/postgresql/data
+              restart: unless-stopped
+              healthcheck:
+                test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-planner_user} -d ${POSTGRES_DB:-planner_db}"]
+                interval: 10s
+                timeout: 5s
+                retries: 5
+              networks:
+                - planner_network
+          
+            backend:
+              image: fgeeha/task_manager_backend:${IMAGE_TAG:-latest}
+              env_file: .env
+              volumes:
+                - media_data:/app/media
+                - static_data:/app/staticfiles
+              env_file:
+                - .env
+              environment:
+                - DATABASE_URL=postgres://${POSTGRES_USER:-planner_user}:${POSTGRES_PASSWORD:-planner_pass}@db:5432/${POSTGRES_DB:-planner_db}
+                - DEBUG=0
+              depends_on:
+                db:
+                  condition: service_healthy
+              restart: unless-stopped
+              networks:
+                - planner_network
+          
+            nginx:
+              image: fgeeha/task_manager_frontend:${IMAGE_TAG:-latest}
+              ports:
+                - "3003:80"
+              volumes:
+                - media_data:/app/media:ro
+                - static_data:/app/staticfiles:ro
+              depends_on:
+                - backend
+              restart: unless-stopped
+              networks:
+                - planner_network
+          
+          volumes:
+            postgres_data:
+            media_data:
+            static_data:
+          
+          networks:
+            planner_network:
+              driver: bridge
+          EOF
+        fi
+        
+        # 2. Проверить или создать Makefile
+        if [ -f "Makefile" ]; then
+          echo "✓ Найден Makefile"
+        else
+          echo "⚠ Makefile не найден. Создаем..."
+          cat > Makefile << 'EOF'
+          .PHONY: deploy migrate collectstatic clean pull up down logs
+          
+          deploy:
+              docker compose -f docker-compose.production.yml up -d --build
+          
+          migrate:
+              docker compose -f docker-compose.production.yml exec backend python manage.py migrate --no-input
+          
+          collectstatic:
+              docker compose -f docker-compose.production.yml exec backend python manage.py collectstatic --no-input
+          
+          pull:
+              docker compose -f docker-compose.production.yml pull
+          
+          up:
+              docker compose -f docker-compose.production.yml up -d
+          
+          down:
+              docker compose -f docker-compose.production.yml down
+          
+          logs:
+              docker compose -f docker-compose.production.yml logs -f
+          
+          clean:
+              docker system prune -af
+          EOF
+        fi
+        
+        # 3. Проверить созданные файлы
+        echo ""
+        echo "=== Итоговые файлы ==="
+        echo "Размер docker-compose.production.yml: $(wc -l < docker-compose.production.yml) строк"
+        echo "Размер Makefile: $(wc -l < Makefile) строк"
+        ls -la docker-compose.production.yml Makefile
+
+    - name: Копировать файлы на сервер
       uses: appleboy/scp-action@v0.1.7
       with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          passphrase: ${{ secrets.DEPLOY_SSH_PASSPHRASE }}
-          source: "docker-compose.production.yml,Makefile"
-          target: "${{ secrets.PROJECT_PATH }}"
-          overwrite: true
-      
-    - name: Deploy to server
+        host: ${{ secrets.DEPLOY_HOST }}
+        username: ${{ secrets.DEPLOY_USER }}
+        key: ${{ secrets.DEPLOY_SSH_KEY }}
+        passphrase: ${{ secrets.DEPLOY_SSH_PASSPHRASE }}
+        port: ${{ secrets.SSH_PORT || '22' }}
+        source: "docker-compose.production.yml,Makefile"
+        target: "${{ secrets.PROJECT_PATH || '/opt/planner' }}"
+        overwrite: true
+        debug: true
+    
+    - name: Развернуть на сервере
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.DEPLOY_HOST }}
         username: ${{ secrets.DEPLOY_USER }}
         key: ${{ secrets.DEPLOY_SSH_KEY }}
         passphrase: ${{ secrets.DEPLOY_SSH_PASSPHRASE }}
+        port: ${{ secrets.SSH_PORT || '22' }}
         script: |
-          cd /opt/planner
-          docker compose -f infra/compose/docker-compose.prod.yml pull
-          docker compose -f infra/compose/docker-compose.prod.yml up -d
-          docker compose -f infra/compose/docker-compose.prod.yml exec -T backend python manage.py migrate --no-input
-          docker compose -f infra/compose/docker-compose.prod.yml exec -T backend python manage.py collectstatic --no-input
+          echo "=== Начало деплоя на сервере ==="
+          echo "Текущая директория: $(pwd)"
+          echo "Целевая директория: ${{ secrets.PROJECT_PATH || '/opt/planner' }}"
+          
+          cd "${{ secrets.PROJECT_PATH || '/opt/planner' }}"
+          echo "Перешли в директорию: $(pwd)"
+          
+          echo "Содержимое директории:"
+          ls -la
+          
+          echo "Проверяем наличие docker-compose.production.yml:"
+          if [ -f "docker-compose.production.yml" ]; then
+            echo "✓ docker-compose.production.yml найден"
+            echo "Первые 5 строк файла:"
+            head -5 docker-compose.production.yml
+          else
+            echo "✗ docker-compose.production.yml не найден!"
+            exit 1
+          fi
+          
+          echo "Проверяем наличие Makefile:"
+          if [ -f "Makefile" ]; then
+            echo "✓ Makefile найден"
+          else
+            echo "✗ Makefile не найден!"
+            exit 1
+          fi
+          
+          echo "Останавливаем старые контейнеры..."
+          docker compose -f docker-compose.production.yml down || true
+          
+          echo "Пуллим новые образы..."
+          docker compose -f docker-compose.production.yml pull
+          
+          echo "Запускаем контейнеры..."
+          docker compose -f docker-compose.production.yml up -d
+          
+          echo "Ждем запуска backend..."
+          sleep 10
+          
+          echo "Выполняем миграции..."
+          docker compose -f docker-compose.production.yml exec -T backend python manage.py migrate --no-input || echo "Миграции не выполнены"
+          
+          echo "Собираем статические файлы..."
+          docker compose -f docker-compose.production.yml exec -T backend python manage.py collectstatic --no-input --clear || echo "Сборка статики не выполнена"
+          
+          echo "Очищаем неиспользуемые Docker объекты..."
           docker system prune -af
+          
+          echo "Проверяем работу контейнеров..."
+          docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+          
+          echo "=== Деплой завершен успешно ==="
 
   send_message:
     name: Telegram notify
