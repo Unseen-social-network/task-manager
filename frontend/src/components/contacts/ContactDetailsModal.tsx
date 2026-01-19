@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { ContactForm } from './ContactForm'
 import { contactsService } from '@/services/contacts.service'
 import { formatDate } from '@/utils/helpers'
+import { useLocale } from '@/contexts/locale'
 
 interface ContactDetailsModalProps {
   contact: Contact
@@ -23,29 +24,30 @@ export const ContactDetailsModal = ({
 }: ContactDetailsModalProps) => {
   const [isEditing, setIsEditing] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const { t } = useLocale()
 
   const handleUpdate = async (data: UpdateContactInput) => {
     try {
       await contactsService.updateContact(contact.id, data)
-      toast.success('Contact updated successfully')
+      toast.success(t('contacts.updateSuccess'))
       setIsEditing(false)
       onUpdate()
     } catch (error) {
-      toast.error('Failed to update contact')
+      toast.error(t('contacts.updateFail'))
     }
   }
 
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this contact?')) return
+    if (!confirm(t('contacts.deleteConfirm'))) return
 
     setIsDeleting(true)
     try {
       await contactsService.deleteContact(contact.id)
-      toast.success('Contact deleted successfully')
+      toast.success(t('contacts.deleteSuccess'))
       onClose()
       onUpdate()
     } catch (error) {
-      toast.error('Failed to delete contact')
+      toast.error(t('contacts.deleteFail'))
     } finally {
       setIsDeleting(false)
     }
@@ -53,7 +55,7 @@ export const ContactDetailsModal = ({
 
   if (isEditing) {
     return (
-      <Modal isOpen={isOpen} onClose={onClose} title="Edit Contact">
+      <Modal isOpen={isOpen} onClose={onClose} title={t('contacts.editTitle')}>
         <ContactForm
           initialData={{
             name: contact.name,
@@ -74,16 +76,16 @@ export const ContactDetailsModal = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Contact Details"
+      title={t('contacts.detailsTitle')}
       footer={
         <>
           <Button variant="danger" onClick={handleDelete} isLoading={isDeleting}>
             <Trash2 className="w-4 h-4 mr-2" />
-            Delete
+            {t('actions.delete')}
           </Button>
           <Button onClick={() => setIsEditing(true)}>
             <Edit2 className="w-4 h-4 mr-2" />
-            Edit
+            {t('actions.edit')}
           </Button>
         </>
       }
@@ -91,9 +93,11 @@ export const ContactDetailsModal = ({
       <div className="space-y-6">
         {/* Name and Company */}
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">{contact.name}</h2>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            {contact.name}
+          </h2>
           {contact.company && (
-            <div className="flex items-center gap-2 text-gray-600 mt-2">
+            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300 mt-2">
               <Building className="w-4 h-4" />
               <span>{contact.company}</span>
             </div>
@@ -106,7 +110,7 @@ export const ContactDetailsModal = ({
             <div className="flex items-center gap-3">
               <Phone className="w-5 h-5 text-gray-400" />
               <div>
-                <p className="text-sm text-gray-500">Phone</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('contacts.phone')}</p>
                 <a href={`tel:${contact.phone}`} className="text-primary-600 hover:underline">
                   {contact.phone}
                 </a>
@@ -118,7 +122,7 @@ export const ContactDetailsModal = ({
             <div className="flex items-center gap-3">
               <Mail className="w-5 h-5 text-gray-400" />
               <div>
-                <p className="text-sm text-gray-500">Email</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('contacts.email')}</p>
                 <a href={`mailto:${contact.email}`} className="text-primary-600 hover:underline">
                   {contact.email}
                 </a>
@@ -130,8 +134,8 @@ export const ContactDetailsModal = ({
             <div className="flex items-center gap-3">
               <MessageCircle className="w-5 h-5 text-gray-400" />
               <div>
-                <p className="text-sm text-gray-500">Telegram</p>
-                <span className="text-gray-900">{contact.telegram}</span>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('contacts.telegram')}</p>
+                <span className="text-gray-900 dark:text-gray-100">{contact.telegram}</span>
               </div>
             </div>
           )}
@@ -140,20 +144,28 @@ export const ContactDetailsModal = ({
         {/* Notes */}
         {contact.notes && (
           <div>
-            <h3 className="text-sm font-semibold text-gray-700 mb-2">Notes</h3>
-            <p className="text-gray-600 whitespace-pre-wrap">{contact.notes}</p>
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
+              {t('contacts.notes')}
+            </h3>
+            <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap">
+              {contact.notes}
+            </p>
           </div>
         )}
 
         {/* Timestamps */}
-        <div className="grid grid-cols-2 gap-4 text-sm pt-4 border-t">
+        <div className="grid grid-cols-2 gap-4 text-sm pt-4 border-t border-gray-200 dark:border-gray-800">
           <div>
-            <span className="text-gray-500">Created:</span>{' '}
-            <span className="text-gray-900">{formatDate(contact.created_at)}</span>
+            <span className="text-gray-500 dark:text-gray-400">{t('contacts.created')}</span>{' '}
+            <span className="text-gray-900 dark:text-gray-100">
+              {formatDate(contact.created_at)}
+            </span>
           </div>
           <div>
-            <span className="text-gray-500">Updated:</span>{' '}
-            <span className="text-gray-900">{formatDate(contact.updated_at)}</span>
+            <span className="text-gray-500 dark:text-gray-400">{t('contacts.updated')}</span>{' '}
+            <span className="text-gray-900 dark:text-gray-100">
+              {formatDate(contact.updated_at)}
+            </span>
           </div>
         </div>
       </div>

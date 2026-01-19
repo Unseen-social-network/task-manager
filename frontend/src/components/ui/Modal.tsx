@@ -34,13 +34,13 @@ export const Modal = ({ isOpen, onClose, title, children, footer }: ModalProps) 
         />
 
         {/* Modal */}
-        <div className="relative bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="relative bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto dark:bg-gray-900">
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b">
-            <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
+          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-800">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-gray-400 hover:text-gray-600 transition-colors dark:hover:text-gray-200"
             >
               <X className="w-5 h-5" />
             </button>
@@ -50,7 +50,11 @@ export const Modal = ({ isOpen, onClose, title, children, footer }: ModalProps) 
           <div className="p-6">{children}</div>
 
           {/* Footer */}
-          {footer && <div className="flex justify-end gap-3 p-6 border-t bg-gray-50">{footer}</div>}
+          {footer && (
+            <div className="flex justify-end gap-3 p-6 border-t bg-gray-50 dark:bg-gray-800 dark:border-gray-800">
+              {footer}
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -1,10 +1,10 @@
 import { create } from 'zustand'
 import { authService } from '@/services/auth.service'
 import { getStoredTokens } from '@/services/api'
-import type { LoginCredentials, User } from '@/types'
+import type { LoginCredentials } from '@/types'
 
 interface AuthState {
-  user: User | null
+  username: string | null
   isAuthenticated: boolean
   isLoading: boolean
   error: string | null
@@ -13,8 +13,10 @@ interface AuthState {
   checkAuth: () => void
 }
 
+const USERNAME_STORAGE_KEY = 'auth_username'
+
 export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
+  username: localStorage.getItem(USERNAME_STORAGE_KEY),
   isAuthenticated: false,
   isLoading: false,
   error: null,
@@ -23,7 +25,12 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true, error: null })
     try {
       await authService.login(credentials)
-      set({ isAuthenticated: true, isLoading: false })
+      localStorage.setItem(USERNAME_STORAGE_KEY, credentials.username)
+      set({
+        username: credentials.username,
+        isAuthenticated: true,
+        isLoading: false,
+      })
     } catch (error: any) {
       const errorMessage = error.response?.data?.detail || 'Login failed'
       set({ error: errorMessage, isLoading: false })
@@ -33,11 +40,15 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   logout: () => {
     authService.logout()
-    set({ user: null, isAuthenticated: false })
+    localStorage.removeItem(USERNAME_STORAGE_KEY)
+    set({ username: null, isAuthenticated: false })
   },
 
   checkAuth: () => {
     const tokens = getStoredTokens()
-    set({ isAuthenticated: !!tokens?.access })
+    set({
+      isAuthenticated: !!tokens?.access,
+      username: localStorage.getItem(USERNAME_STORAGE_KEY),
+    })
   },
 }))
