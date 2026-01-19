@@ -25,7 +25,7 @@ services:
     env_file:
       - .env
     ports:
-      - "8003:80"
+      - "8003:8000"
     environment:
       - DATABASE_URL=postgres://${POSTGRES_USER:-planner_user}:${POSTGRES_PASSWORD:-planner_pass}@db:5432/${POSTGRES_DB:-planner_db}
       - DEBUG=0
