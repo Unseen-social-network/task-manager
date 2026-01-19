@@ -6,11 +6,12 @@ from django.shortcuts import get_object_or_404
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .filters import TaskFilter
 from .models import Attachment, Contact, Task
-from .permissions import IsOwner, IsTaskOwner
+from .permissions import IsOwner
 from .serializers import (
     AttachmentCreateSerializer,
     AttachmentSerializer,
@@ -26,7 +27,7 @@ class ContactViewSet(viewsets.ModelViewSet):
     """
 
     serializer_class = ContactSerializer
-    permission_classes = [IsOwner]
+    permission_classes = [IsAuthenticated]
     filterset_fields = ['company']
     search_fields = ['name', 'company', 'phone', 'email', 'telegram', 'notes']
     ordering_fields = ['name', 'company', 'created_at', 'updated_at']
@@ -54,7 +55,7 @@ class TaskViewSet(viewsets.ModelViewSet):
     """
 
     serializer_class = TaskSerializer
-    permission_classes = [IsOwner]
+    permission_classes = [IsAuthenticated]
     filterset_class = TaskFilter
     search_fields = ['title', 'description', 'contact_freeform']
     ordering_fields = ['due_date', 'created_at', 'urgency', 'status']
@@ -77,7 +78,6 @@ class TaskViewSet(viewsets.ModelViewSet):
     @action(
         detail=True,
         methods=['get', 'post'],
-        permission_classes=[IsTaskOwner],
         parser_classes=[MultiPartParser, FormParser],
     )
     def attachments(self, request, pk=None):
@@ -86,23 +86,27 @@ class TaskViewSet(viewsets.ModelViewSet):
         GET: list all attachments for this task
         POST: upload new attachment to this task
         """
-        task = self.get_object()
+        task = get_object_or_404(
+            Task,
+            pk=pk,
+            owner=request.user,
+        )
 
         if request.method == 'GET':
-            attachments = task.attachments.all()
             serializer = AttachmentSerializer(
-                attachments, many=True, context={'request': request}
+                task.attachments.all(),
+                many=True,
+                context={'request': request},
             )
             return Response(serializer.data)
 
-        elif request.method == 'POST':
-            # Create attachment for this task
-            serializer = AttachmentCreateSerializer(
-                data=request.data, context={'request': request}
-            )
-            serializer.is_valid(raise_exception=True)
-            serializer.save(task=task, owner=request.user)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        serializer = AttachmentCreateSerializer(
+            data=request.data,
+            context={'request': request},
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save(task=task, owner=request.user)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class AttachmentViewSet(viewsets.ModelViewSet):
