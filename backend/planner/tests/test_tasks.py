@@ -21,7 +21,9 @@ class TestTaskAPI:
         assert len(response.data["results"]) == 1
         assert response.data["results"][0]["id"] == task.id
 
-    def test_create_task_with_contact(self, authenticated_client, user, contact):
+    def test_create_task_with_contact(
+        self, authenticated_client, user, contact
+    ):
         """Test creating a task with contact reference."""
         url = "/api/v1/tasks/"
         data = {
@@ -39,7 +41,9 @@ class TestTaskAPI:
         created_task = Task.objects.get(owner=user, title="New Task")
         assert created_task.contact == contact
 
-    def test_create_task_with_freeform_contact(self, authenticated_client, user):
+    def test_create_task_with_freeform_contact(
+        self, authenticated_client, user
+    ):
         """Test creating a task with freeform contact."""
         url = "/api/v1/tasks/"
         data = {
@@ -78,7 +82,9 @@ class TestTaskAPI:
         assert response.status_code == status.HTTP_200_OK
         assert response.data["id"] == task.id
 
-    def test_retrieve_other_user_task_forbidden(self, authenticated_client, other_task):
+    def test_retrieve_other_user_task_forbidden(
+        self, authenticated_client, other_task
+    ):
         """Test that retrieving another user's task returns 404."""
         url = f"/api/v1/tasks/{other_task.id}/"
         response = authenticated_client.get(url)
@@ -120,7 +126,9 @@ class TestTaskAPI:
     def test_filter_tasks_by_urgency(self, authenticated_client, user):
         """Test filtering tasks by urgency."""
         Task.objects.create(owner=user, title="Low Task", urgency="low")
-        Task.objects.create(owner=user, title="Critical Task", urgency="critical")
+        Task.objects.create(
+            owner=user, title="Critical Task", urgency="critical"
+        )
 
         url = "/api/v1/tasks/?urgency=critical"
         response = authenticated_client.get(url)

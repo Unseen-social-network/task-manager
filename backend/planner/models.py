@@ -19,10 +19,14 @@ class Contact(models.Model):
         verbose_name="Owner",
     )
     name = models.CharField(max_length=255, verbose_name="Name")
-    company = models.CharField(max_length=255, blank=True, verbose_name="Company")
+    company = models.CharField(
+        max_length=255, blank=True, verbose_name="Company"
+    )
     phone = models.CharField(max_length=50, blank=True, verbose_name="Phone")
     email = models.EmailField(blank=True, verbose_name="Email")
-    telegram = models.CharField(max_length=100, blank=True, verbose_name="Telegram")
+    telegram = models.CharField(
+        max_length=100, blank=True, verbose_name="Telegram"
+    )
     other = models.JSONField(
         blank=True,
         null=True,
@@ -30,7 +34,9 @@ class Contact(models.Model):
         help_text="Additional contact information (e.g., WhatsApp, VK, position)",
     )
     notes = models.TextField(blank=True, verbose_name="Notes")
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created at")
+    created_at = models.DateTimeField(
+        auto_now_add=True, verbose_name="Created at"
+    )
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated at")
 
     class Meta:
@@ -76,7 +82,9 @@ class Task(models.Model):
         default=Urgency.MEDIUM,
         verbose_name="Urgency",
     )
-    due_date = models.DateTimeField(blank=True, null=True, verbose_name="Due date")
+    due_date = models.DateTimeField(
+        blank=True, null=True, verbose_name="Due date"
+    )
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
@@ -98,7 +106,9 @@ class Task(models.Model):
         verbose_name="Freeform contact",
         help_text="Manual contact info (if not using contact book)",
     )
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created at")
+    created_at = models.DateTimeField(
+        auto_now_add=True, verbose_name="Created at"
+    )
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated at")
 
     class Meta:
@@ -132,7 +142,9 @@ class Attachment(models.Model):
         related_name="attachments",
         verbose_name="Task",
     )
-    file = models.FileField(upload_to="attachments/%Y/%m/%d/", verbose_name="File")
+    file = models.FileField(
+        upload_to="attachments/%Y/%m/%d/", verbose_name="File"
+    )
     original_name = models.CharField(
         max_length=255,
         blank=True,
@@ -143,7 +155,9 @@ class Attachment(models.Model):
         null=True,
         verbose_name="File size (bytes)",
     )
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created at")
+    created_at = models.DateTimeField(
+        auto_now_add=True, verbose_name="Created at"
+    )
 
     class Meta:
         verbose_name = "Attachment"

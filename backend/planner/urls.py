@@ -4,7 +4,10 @@ URL routing for Planner API.
 
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+)
 
 from .views import AttachmentViewSet, ContactViewSet, TaskViewSet
 

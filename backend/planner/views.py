@@ -62,7 +62,9 @@ class TaskViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Return only tasks owned by the current user."""
-        return Task.objects.filter(owner=self.request.user).select_related("contact")
+        return Task.objects.filter(owner=self.request.user).select_related(
+            "contact"
+        )
 
     def get_object(self):
         """
@@ -118,7 +120,9 @@ class AttachmentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Return only attachments owned by the current user."""
-        return Attachment.objects.filter(owner=self.request.user).select_related("task")
+        return Attachment.objects.filter(
+            owner=self.request.user
+        ).select_related("task")
 
     def get_object(self):
         """

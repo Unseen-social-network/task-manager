@@ -12,7 +12,9 @@ from planner.models import Contact
 class TestContactAPI:
     """Tests for Contact CRUD operations and permissions."""
 
-    def test_list_contacts_only_own(self, authenticated_client, contact, other_contact):
+    def test_list_contacts_only_own(
+        self, authenticated_client, contact, other_contact
+    ):
         """Test that users can only see their own contacts."""
         url = "/api/v1/contacts/"
         response = authenticated_client.get(url)
@@ -44,7 +46,9 @@ class TestContactAPI:
         assert response.status_code == status.HTTP_200_OK
         assert response.data["id"] == contact.id
 
-    def test_retrieve_other_user_contact_forbidden(self, authenticated_client, other_contact):
+    def test_retrieve_other_user_contact_forbidden(
+        self, authenticated_client, other_contact
+    ):
         """Test that retrieving another user's contact returns 404."""
         url = f"/api/v1/contacts/{other_contact.id}/"
         response = authenticated_client.get(url)
@@ -62,7 +66,9 @@ class TestContactAPI:
         contact.refresh_from_db()
         assert contact.name == "Updated Name"
 
-    def test_update_other_user_contact_forbidden(self, authenticated_client, other_contact):
+    def test_update_other_user_contact_forbidden(
+        self, authenticated_client, other_contact
+    ):
         """Test that updating another user's contact returns 404."""
         url = f"/api/v1/contacts/{other_contact.id}/"
         data = {"name": "Hacked Name"}
@@ -81,7 +87,9 @@ class TestContactAPI:
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert not Contact.objects.filter(id=contact.id).exists()
 
-    def test_delete_other_user_contact_forbidden(self, authenticated_client, other_contact):
+    def test_delete_other_user_contact_forbidden(
+        self, authenticated_client, other_contact
+    ):
         """Test that deleting another user's contact returns 404."""
         url = f"/api/v1/contacts/{other_contact.id}/"
         response = authenticated_client.delete(url)

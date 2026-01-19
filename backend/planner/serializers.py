@@ -61,7 +61,9 @@ class AttachmentSerializer(serializers.ModelSerializer):
         """Ensure task belongs to the current user."""
         request = self.context.get("request")
         if request and value.owner != request.user:
-            raise serializers.ValidationError("Cannot attach file to another user's task.")
+            raise serializers.ValidationError(
+                "Cannot attach file to another user's task."
+            )
         return value
 
 
@@ -106,7 +108,9 @@ class TaskSerializer(serializers.ModelSerializer):
         """Ensure contact belongs to the current user."""
         request = self.context.get("request")
         if value and request and value.owner != request.user:
-            raise serializers.ValidationError("Cannot use another user's contact.")
+            raise serializers.ValidationError(
+                "Cannot use another user's contact."
+            )
         return value
 
     def validate(self, attrs):
