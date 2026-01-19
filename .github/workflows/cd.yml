@@ -88,7 +88,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
 
-    steps: 
+    steps:
     - uses: actions/checkout@v4
       with:
         ref: ${{ github.event.workflow_run.head_sha }}
@@ -103,7 +103,7 @@ jobs:
           source: "docker-compose.production.yml,Makefile"
           target: "${{ secrets.PROJECT_PATH }}"
           overwrite: true
-      
+
     - name: Deploy to server
       uses: appleboy/ssh-action@v1.0.3
       with:
@@ -113,10 +113,10 @@ jobs:
         passphrase: ${{ secrets.DEPLOY_SSH_PASSPHRASE }}
         script: |
           cd /opt/planner
-          docker compose -f infra/compose/docker-compose.production.yml pull
-          DOCKER_BUILDKIT=1 docker compose -f infra/compose/docker-compose.production.yml up -d
-          docker compose -f infra/compose/docker-compose.production.yml exec -T backend python manage.py migrate --no-input
-          docker compose -f infra/compose/docker-compose.production.yml exec -T backend python manage.py collectstatic --no-input
+          docker compose -f docker-compose.production.yml pull
+          DOCKER_BUILDKIT=1 docker compose -f docker-compose.production.yml up -d
+          docker compose -f docker-compose.production.yml exec -T backend python manage.py migrate --no-input
+          docker compose -f docker-compose.production.yml exec -T backend python manage.py collectstatic --no-input
           docker system prune -af
 
   send_message:
