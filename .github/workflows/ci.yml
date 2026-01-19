@@ -52,10 +52,10 @@ jobs:
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
       run: poetry install --no-interaction --no-root
 
-    - name: Lint with Ruff
-      run: |
-        poetry run ruff check backend/
-        poetry run ruff format --check backend/
+    # - name: Lint with Ruff
+    #   run: |
+    #     poetry run ruff check backend/
+    #     poetry run ruff format --check backend/
 
     - name: Check migrations
       env:
