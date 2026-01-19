@@ -14,10 +14,12 @@ interface AuthState {
 }
 
 const USERNAME_STORAGE_KEY = 'auth_username'
+const storedTokens = getStoredTokens()
+const storedUsername = localStorage.getItem(USERNAME_STORAGE_KEY)
 
 export const useAuthStore = create<AuthState>((set) => ({
-  username: localStorage.getItem(USERNAME_STORAGE_KEY),
-  isAuthenticated: false,
+  username: storedUsername,
+  isAuthenticated: !!storedTokens?.access,
   isLoading: false,
   error: null,
 
