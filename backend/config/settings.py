@@ -20,6 +20,7 @@ env = environ.Env(
     CSRF_TRUSTED_ORIGINS=(list, []),
     JWT_ACCESS_TOKEN_LIFETIME=(int, 60),
     JWT_REFRESH_TOKEN_LIFETIME=(int, 1440),
+    USE_HTTPS=(bool, False),
 )
 
 # Read .env file if exists
@@ -32,6 +33,13 @@ SECRET_KEY = env(
     'SECRET_KEY', default='django-insecure-local-dev-key-change-in-production'
 )
 
+# use HTTPS in production
+if env('USE_HTTPS', False):
+    USE_HTTPS = True
+else:
+    USE_HTTPS = False
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    USE_X_FORWARDED_HOST = True
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')
 
