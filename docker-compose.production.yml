@@ -19,7 +19,7 @@ services:
 
   backend:
     image: fgeeha/task_manager_backend:${IMAGE_TAG:-latest}
-    env_file: .env
+    env_file: ./.env
     volumes:
       - media_data:/app/media
       - static_data:/app/staticfiles
