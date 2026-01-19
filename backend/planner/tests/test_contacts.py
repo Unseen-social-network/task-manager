@@ -3,9 +3,8 @@ Tests for Contact API endpoints.
 """
 
 import pytest
-from rest_framework import status
-
 from planner.models import Contact
+from rest_framework import status
 
 
 @pytest.mark.django_db

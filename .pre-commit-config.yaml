@@ -14,7 +14,9 @@ exclude: |
   )
 
 repos:
+  # ------------------------------------------------------------
   # Базовые "гигиенические" хуки
+  # ------------------------------------------------------------
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
@@ -28,7 +30,9 @@ repos:
       - id: check-json
       - id: check-added-large-files
 
-  # Ruff: линт + автофиксы (включая одинарные кавычки через Q-правила)
+  # ------------------------------------------------------------
+  # Ruff: линт + автофиксы (БЕЗ импортов)
+  # ------------------------------------------------------------
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.9.0
     hooks:
@@ -39,16 +43,20 @@ repos:
           - --config
           - pyproject.toml
 
-  # isort: сортировка импортов (совместим с профилем black)
-#  - repo: https://github.com/pycqa/isort
-#    rev: 5.13.2
-#    hooks:
-#      - id: isort
-#        args:
-#          - --profile=black
-#          - --settings-path=pyproject.toml
+  # ------------------------------------------------------------
+  # isort: ЕДИНСТВЕННЫЙ, кто сортирует импорты
+  # ------------------------------------------------------------
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args:
+          - --profile=black
+          - --settings-path=pyproject.toml
 
-  # Black: форматирование, но кавычки не нормализуем (их держит Ruff)
+  # ------------------------------------------------------------
+  # Black: финальное форматирование
+  # ------------------------------------------------------------
   - repo: https://github.com/psf/black
     rev: 25.1.0
     hooks:
@@ -57,11 +65,11 @@ repos:
           - --config
           - pyproject.toml
 
-
-  # Django-upgrade: автоправки кода под более новый Django (полезная практика)
+  # ------------------------------------------------------------
+  # Django-upgrade
+  # ------------------------------------------------------------
   - repo: https://github.com/adamchainz/django-upgrade
     rev: 1.21.0
     hooks:
       - id: django-upgrade
-        # Поменяй target-version под свою реальную версию Django при желании
         args: [--target-version, "4.2"]

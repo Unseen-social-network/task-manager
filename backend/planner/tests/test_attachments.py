@@ -4,9 +4,8 @@ Tests for Attachment API endpoints.
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
-from rest_framework import status
-
 from planner.models import Attachment
+from rest_framework import status
 
 
 @pytest.mark.django_db
