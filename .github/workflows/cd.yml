@@ -87,6 +87,7 @@ jobs:
     steps:
     - name: Check if file exists
       run: |
+        echo ls -la
         ls -la
         if [ ! -f docker-compose.production.yml ]; then
           echo "ERROR: docker-compose.production.yml not found!"
