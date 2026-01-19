@@ -55,3 +55,15 @@ repos:
     hooks:
       - id: django-upgrade
         args: [--target-version, "4.2"]
+
+  # ------------------------------------------------------------
+  # Pytest (ручной запуск)
+  # ------------------------------------------------------------
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest (manual)
+        entry: poetry run pytest
+        language: system
+        pass_filenames: false
+        stages: [manual]
