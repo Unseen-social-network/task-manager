@@ -1,4 +1,4 @@
-.PHONY: help build up down restart logs shell migrate makemigrations createsuperuser test lint format clean prod-superuser
+.PHONY: help build up down restart logs shell migrate makemigrations createsuperuser test lint format clean prod-superuser frontend-install frontend-lint frontend-build frontend-check
 
 # Default target
 help:
@@ -16,6 +16,10 @@ help:
 	@echo "  make test            - Run tests"
 	@echo "  make lint            - Run linters"
 	@echo "  make format          - Format code"
+	@echo "  make frontend-install - Install frontend dependencies"
+	@echo "  make frontend-lint   - Run frontend lint"
+	@echo "  make frontend-build  - Build frontend"
+	@echo "  make frontend-check  - Run frontend lint + build"
 	@echo "  make clean           - Clean up containers and volumes"
 	@echo ""
 	@echo "Production commands:"
@@ -81,6 +85,17 @@ lint:
 format:
 	poetry run ruff check --fix backend/
 	poetry run ruff format backend/
+
+frontend-install:
+	cd frontend && npm install
+
+frontend-lint:
+	cd frontend && npm run lint
+
+frontend-build:
+	cd frontend && npm run build
+
+frontend-check: frontend-lint frontend-build
 
 # Production commands
 prod-build:
