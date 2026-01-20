@@ -4,6 +4,28 @@ export interface User {
   email: string
 }
 
+export interface ProjectLink {
+  label: string
+  url: string
+}
+
+export interface Project {
+  id: number
+  name: string
+  description: string
+  phone: string
+  links: ProjectLink[]
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateProjectInput {
+  name: string
+  description?: string
+  phone?: string
+  links?: ProjectLink[]
+}
+
 export interface Contact {
   id: number
   owner?: number
@@ -45,6 +67,11 @@ export interface Task {
   contact_name?: string
   contact_freeform: string
   attachments: Attachment[]
+  project_id?: number | null
+  project_name?: string
+  tagged_user?: string
+  time_spent_seconds?: number
+  tracking_completed?: boolean
   created_at: string
   updated_at: string
 }
@@ -57,9 +84,18 @@ export interface CreateTaskInput {
   status?: TaskStatus
   contact?: number | null
   contact_freeform?: string
+  project_id?: number | null
+  tagged_user?: string
 }
 
 export type UpdateTaskInput = Partial<CreateTaskInput>
+
+export interface TaskMeta {
+  project_id?: number | null
+  tagged_user?: string
+  time_spent_seconds?: number
+  tracking_completed?: boolean
+}
 
 export interface Attachment {
   id: number

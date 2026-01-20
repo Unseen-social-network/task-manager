@@ -1,13 +1,18 @@
-import { useState, useRef } from 'react'
-import { Edit2, Trash2, Upload, Download, X, Calendar, User } from 'lucide-react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { Edit2, Trash2, Upload, Download, X, Calendar, User, FolderKanban, AtSign } from 'lucide-react'
 import toast from 'react-hot-toast'
-import type { Task, UpdateTaskInput } from '@/types'
+import type { Task, UpdateTaskInput, TaskMeta } from '@/types'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { TaskForm } from './TaskForm'
+import { TaskTimeTracker } from './TaskTimeTracker'
+import { PomodoroTimer } from './PomodoroTimer'
 import { tasksService } from '@/services/tasks.service'
+import { taskMetaService } from '@/services/taskMeta.service'
+import { projectsService } from '@/services/projects.service'
 import { useLocale } from '@/contexts/localeContext'
+import { useAuthStore } from '@/contexts/authStore'
 import {
   formatDate,
   getUrgencyColor,
@@ -25,12 +30,51 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
   const [isEditing, setIsEditing] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
+  const [metaState, setMetaState] = useState<TaskMeta>({
+    project_id: task.project_id ?? null,
+    tagged_user: task.tagged_user,
+    time_spent_seconds: task.time_spent_seconds ?? 0,
+    tracking_completed: task.tracking_completed ?? false,
+  })
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { t } = useLocale()
+  const username = useAuthStore(state => state.username)
+  const projectName = metaState.project_id
+    ? projectsService.getProject(metaState.project_id)?.name
+    : task.project_name
+  const taggedUser = metaState.tagged_user ?? task.tagged_user
+  const isTaggedViewer = !!(taggedUser && taggedUser === username)
+
+  useEffect(() => {
+    setMetaState({
+      project_id: task.project_id ?? null,
+      tagged_user: task.tagged_user,
+      time_spent_seconds: task.time_spent_seconds ?? 0,
+      tracking_completed: task.tracking_completed ?? false,
+    })
+  }, [task])
+
+  const updateMeta = useCallback(
+    (updates: TaskMeta) => {
+      setMetaState(prev => {
+        const next = {
+          ...prev,
+          ...updates,
+        }
+        taskMetaService.setTaskMeta(task.id, next)
+        return next
+      })
+    },
+    [task.id]
+  )
 
   const handleUpdate = async (data: UpdateTaskInput) => {
     try {
-      await tasksService.updateTask(task.id, data)
+      const { project_id, tagged_user, ...payload } = data
+      const normalizedProjectId =
+        typeof project_id === 'number' && Number.isFinite(project_id) ? project_id : null
+      await tasksService.updateTask(task.id, payload)
+      updateMeta({ project_id: normalizedProjectId ?? null, tagged_user })
       toast.success(t('tasks.updateSuccess'))
       setIsEditing(false)
       onUpdate()
@@ -45,6 +89,7 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
     setIsDeleting(true)
     try {
       await tasksService.deleteTask(task.id)
+      taskMetaService.deleteTaskMeta(task.id)
       toast.success(t('tasks.deleteSuccess'))
       onClose()
       onUpdate()
@@ -98,6 +143,8 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
             due_date: task.due_date,
             contact: task.contact,
             contact_freeform: task.contact_freeform,
+            project_id: metaState.project_id ?? undefined,
+            tagged_user: metaState.tagged_user,
           }}
           onSubmit={handleUpdate}
           onCancel={() => setIsEditing(false)}
@@ -113,11 +160,16 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
       title={t('tasks.detailsTitle')}
       footer={
         <>
-          <Button variant="danger" onClick={handleDelete} isLoading={isDeleting}>
+          <Button
+            variant="danger"
+            onClick={handleDelete}
+            isLoading={isDeleting}
+            disabled={isTaggedViewer}
+          >
             <Trash2 className="w-4 h-4 mr-2" />
             {t('actions.delete')}
           </Button>
-          <Button onClick={() => setIsEditing(true)}>
+          <Button onClick={() => setIsEditing(true)} disabled={isTaggedViewer}>
             <Edit2 className="w-4 h-4 mr-2" />
             {t('actions.edit')}
           </Button>
@@ -150,6 +202,16 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
 
         {/* Meta Information */}
         <div className="grid grid-cols-2 gap-4">
+          {projectName && (
+            <div>
+              <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-1">
+                <FolderKanban className="w-4 h-4" />
+                <span className="font-medium">{t('tasks.project')}</span>
+              </div>
+              <p className="text-gray-900 dark:text-gray-100">{projectName}</p>
+            </div>
+          )}
+
           {task.due_date && (
             <div>
               <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-1">
@@ -171,6 +233,38 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
               </p>
             </div>
           )}
+
+          {taggedUser && (
+            <div>
+              <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-1">
+                <AtSign className="w-4 h-4" />
+                <span className="font-medium">{t('tasks.taggedUser')}</span>
+              </div>
+              <p className="text-gray-900 dark:text-gray-100">@{taggedUser}</p>
+            </div>
+          )}
+        </div>
+
+        {isTaggedViewer && (
+          <p className="text-sm text-amber-600 dark:text-amber-400">
+            {t('tasks.taggedReadOnly')}
+          </p>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <TaskTimeTracker
+            key={`tracker-${task.id}`}
+            initialSeconds={metaState.time_spent_seconds ?? 0}
+            trackingCompleted={metaState.tracking_completed ?? false}
+            isLocked={isTaggedViewer}
+            onUpdate={updateMeta}
+          />
+          <PomodoroTimer
+            key={`pomodoro-${task.id}`}
+            isLocked={isTaggedViewer || (metaState.tracking_completed ?? false)}
+            currentSeconds={metaState.time_spent_seconds ?? 0}
+            onUpdate={updateMeta}
+          />
         </div>
 
         {/* Timestamps */}

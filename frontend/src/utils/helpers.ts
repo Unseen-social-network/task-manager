@@ -69,6 +69,21 @@ export const truncate = (str: string, length: number): string => {
   return str.substring(0, length) + '...'
 }
 
+export const formatDuration = (totalSeconds: number): string => {
+  const clampedSeconds = Math.max(0, Math.floor(totalSeconds))
+  const hours = Math.floor(clampedSeconds / 3600)
+  const minutes = Math.floor((clampedSeconds % 3600) / 60)
+  const seconds = clampedSeconds % 60
+
+  const parts = [
+    hours > 0 ? String(hours).padStart(2, '0') : null,
+    String(minutes).padStart(2, '0'),
+    String(seconds).padStart(2, '0'),
+  ].filter(Boolean) as string[]
+
+  return parts.join(':')
+}
+
 export const cn = (...classes: (string | undefined | null | false)[]): string => {
   return classes.filter(Boolean).join(' ')
 }

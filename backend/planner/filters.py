@@ -19,6 +19,8 @@ class TaskFilter(filters.FilterSet):
     created_at_from = filters.DateTimeFilter(field_name='created_at', lookup_expr='gte')
     created_at_to = filters.DateTimeFilter(field_name='created_at', lookup_expr='lte')
     contact = filters.NumberFilter(field_name='contact__id')
+    project = filters.NumberFilter(field_name='project__id')
+    tagged_user = filters.CharFilter(field_name='tagged_user__username')
 
     class Meta:
         model = Task
@@ -30,4 +32,6 @@ class TaskFilter(filters.FilterSet):
             'created_at_from',
             'created_at_to',
             'contact',
+            'project',
+            'tagged_user',
         ]
