@@ -80,6 +80,26 @@ export const Header = () => {
             </Button>
           </div>
         </div>
+        <nav className="flex md:hidden gap-2 pb-3 overflow-x-auto">
+          <button
+            onClick={() => navigate('/tasks')}
+            className="whitespace-nowrap text-gray-700 hover:text-primary-600 px-3 py-2 text-sm font-medium transition-colors dark:text-gray-200 dark:hover:text-primary-400"
+          >
+            {t('nav.tasks')}
+          </button>
+          <button
+            onClick={() => navigate('/projects')}
+            className="whitespace-nowrap text-gray-700 hover:text-primary-600 px-3 py-2 text-sm font-medium transition-colors dark:text-gray-200 dark:hover:text-primary-400"
+          >
+            {t('nav.projects')}
+          </button>
+          <button
+            onClick={() => navigate('/contacts')}
+            className="whitespace-nowrap text-gray-700 hover:text-primary-600 px-3 py-2 text-sm font-medium transition-colors dark:text-gray-200 dark:hover:text-primary-400"
+          >
+            {t('nav.contacts')}
+          </button>
+        </nav>
       </div>
     </header>
   )
