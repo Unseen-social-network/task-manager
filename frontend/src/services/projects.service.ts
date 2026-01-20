@@ -1,24 +1,5 @@
-import type { CreateProjectInput, Project } from '@/types'
-
-const STORAGE_KEY = 'projects_data'
-
-const loadProjects = (): Project[] => {
-  const stored = localStorage.getItem(STORAGE_KEY)
-  if (!stored) return []
-  try {
-    return JSON.parse(stored) as Project[]
-  } catch {
-    return []
-  }
-}
-
-const saveProjects = (projects: Project[]) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(projects))
-}
-
-const getNextId = (projects: Project[]): number => {
-  return projects.reduce((max, project) => Math.max(max, project.id), 0) + 1
-}
+import { api } from './api'
+import type { CreateProjectInput, Project, PaginatedResponse } from '@/types'
 
 const normalizeProject = (input: CreateProjectInput): CreateProjectInput => {
   const links =
@@ -36,55 +17,29 @@ const normalizeProject = (input: CreateProjectInput): CreateProjectInput => {
 }
 
 export const projectsService = {
-  getProjects(): Project[] {
-    return loadProjects()
+  async getProjects(): Promise<PaginatedResponse<Project>> {
+    const response = await api.get<PaginatedResponse<Project>>('/api/v1/projects/')
+    return response.data
   },
 
-  getProject(id: number): Project | undefined {
-    return loadProjects().find(project => project.id === id)
+  async getProject(id: number): Promise<Project> {
+    const response = await api.get<Project>(`/api/v1/projects/${id}/`)
+    return response.data
   },
 
-  createProject(input: CreateProjectInput): Project {
-    const projects = loadProjects()
-    const now = new Date().toISOString()
+  async createProject(input: CreateProjectInput): Promise<Project> {
     const normalized = normalizeProject(input)
-    const project: Project = {
-      id: getNextId(projects),
-      name: normalized.name,
-      description: normalized.description ?? '',
-      phone: normalized.phone ?? '',
-      links: normalized.links ?? [],
-      created_at: now,
-      updated_at: now,
-    }
-    const next = [...projects, project]
-    saveProjects(next)
-    return project
+    const response = await api.post<Project>('/api/v1/projects/', normalized)
+    return response.data
   },
 
-  updateProject(id: number, input: CreateProjectInput): Project | null {
-    const projects = loadProjects()
-    const index = projects.findIndex(project => project.id === id)
-    if (index === -1) return null
-
-    const now = new Date().toISOString()
+  async updateProject(id: number, input: CreateProjectInput): Promise<Project> {
     const normalized = normalizeProject(input)
-    const updated: Project = {
-      ...projects[index],
-      name: normalized.name,
-      description: normalized.description ?? '',
-      phone: normalized.phone ?? '',
-      links: normalized.links ?? [],
-      updated_at: now,
-    }
-    const next = [...projects]
-    next[index] = updated
-    saveProjects(next)
-    return updated
+    const response = await api.patch<Project>(`/api/v1/projects/${id}/`, normalized)
+    return response.data
   },
 
-  deleteProject(id: number): void {
-    const next = loadProjects().filter(project => project.id !== id)
-    saveProjects(next)
+  async deleteProject(id: number): Promise<void> {
+    await api.delete(`/api/v1/projects/${id}/`)
   },
 }

@@ -30,10 +30,7 @@ export const ProjectDetailsModal = ({
 
   const handleUpdate = async (data: CreateProjectInput) => {
     try {
-      const updated = projectsService.updateProject(project.id, data)
-      if (!updated) {
-        throw new Error('Project not found')
-      }
+      await projectsService.updateProject(project.id, data)
       toast.success(t('projects.updateSuccess'))
       setIsEditing(false)
       onUpdate()
@@ -47,7 +44,7 @@ export const ProjectDetailsModal = ({
 
     setIsDeleting(true)
     try {
-      projectsService.deleteProject(project.id)
+      await projectsService.deleteProject(project.id)
       toast.success(t('projects.deleteSuccess'))
       onClose()
       onUpdate()

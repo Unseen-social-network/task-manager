@@ -16,11 +16,19 @@ export const ProjectsPage = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const { t } = useLocale()
 
-  const loadProjects = () => {
-    const data = projectsService.getProjects()
-    setProjects(data)
+  const loadProjects = async () => {
+    setIsLoading(true)
+    try {
+      const response = await projectsService.getProjects()
+      setProjects(response.results)
+    } catch (error) {
+      toast.error(t('projects.loadFail'))
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -29,7 +37,7 @@ export const ProjectsPage = () => {
 
   const handleCreateProject = async (data: CreateProjectInput) => {
     try {
-      projectsService.createProject(data)
+      await projectsService.createProject(data)
       toast.success(t('projects.createSuccess'))
       setIsCreateModalOpen(false)
       loadProjects()
@@ -64,7 +72,12 @@ export const ProjectsPage = () => {
           </Button>
         </div>
 
-        {projects.length === 0 ? (
+        {isLoading ? (
+          <div className="text-center py-12">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+            <p className="text-gray-600 dark:text-gray-300 mt-4">{t('projects.loading')}</p>
+          </div>
+        ) : projects.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-600 dark:text-gray-300">{t('projects.empty')}</p>
             <Button onClick={() => setIsCreateModalOpen(true)} className="mt-4">

@@ -124,6 +124,11 @@ class Task(models.Model):
         verbose_name='Tracking completed',
         help_text='Whether the time tracking session is завершен',
     )
+    pomodoro_sessions = models.PositiveIntegerField(
+        default=0,
+        verbose_name='Pomodoro sessions',
+        help_text='Number of completed pomodoro focus sessions',
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
 

@@ -72,6 +72,7 @@ export interface Task {
   tagged_user?: string
   time_spent_seconds?: number
   tracking_completed?: boolean
+  pomodoro_sessions?: number
   created_at: string
   updated_at: string
 }
@@ -86,6 +87,9 @@ export interface CreateTaskInput {
   contact_freeform?: string
   project_id?: number | null
   tagged_user?: string
+  time_spent_seconds?: number
+  tracking_completed?: boolean
+  pomodoro_sessions?: number
 }
 
 export type UpdateTaskInput = Partial<CreateTaskInput>
