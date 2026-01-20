@@ -16,7 +16,6 @@ export const ProjectsPage = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
   const { t } = useLocale()
 
   const loadProjects = useCallback(async () => {
@@ -71,12 +70,7 @@ export const ProjectsPage = () => {
           </Button>
         </div>
 
-        {isLoading ? (
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-            <p className="text-gray-600 dark:text-gray-300 mt-4">{t('projects.loading')}</p>
-          </div>
-        ) : projects.length === 0 ? (
+        {projects.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-600 dark:text-gray-300">{t('projects.empty')}</p>
             <Button onClick={() => setIsCreateModalOpen(true)} className="mt-4">
