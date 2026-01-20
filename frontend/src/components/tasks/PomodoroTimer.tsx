@@ -14,14 +14,24 @@ interface PomodoroTimerProps {
   isLocked?: boolean
   onUpdate: (updates: TaskMeta) => void
   currentSeconds?: number
+  initialSessions?: number
 }
 
-export const PomodoroTimer = ({ isLocked = false, onUpdate, currentSeconds = 0 }: PomodoroTimerProps) => {
+export const PomodoroTimer = ({
+  isLocked = false,
+  onUpdate,
+  currentSeconds = 0,
+  initialSessions = 0,
+}: PomodoroTimerProps) => {
   const { t } = useLocale()
   const [mode, setMode] = useState<PomodoroMode>('focus')
   const [remainingSeconds, setRemainingSeconds] = useState(FOCUS_SECONDS)
   const [isRunning, setIsRunning] = useState(false)
-  const [sessionsCompleted, setSessionsCompleted] = useState(0)
+  const [sessionsCompleted, setSessionsCompleted] = useState(initialSessions)
+
+  useEffect(() => {
+    setSessionsCompleted(initialSessions)
+  }, [initialSessions])
 
   useEffect(() => {
     if (!isRunning || isLocked) return
@@ -35,8 +45,11 @@ export const PomodoroTimer = ({ isLocked = false, onUpdate, currentSeconds = 0 }
     if (remainingSeconds !== 0) return
     setIsRunning(false)
     if (mode === 'focus') {
-      setSessionsCompleted(prev => prev + 1)
-      onUpdate({ time_spent_seconds: currentSeconds + FOCUS_SECONDS })
+      setSessionsCompleted(prev => {
+        const next = prev + 1
+        onUpdate({ pomodoro_sessions: next, time_spent_seconds: currentSeconds + FOCUS_SECONDS })
+        return next
+      })
       setMode('break')
       setRemainingSeconds(BREAK_SECONDS)
     } else {
@@ -55,6 +68,7 @@ export const PomodoroTimer = ({ isLocked = false, onUpdate, currentSeconds = 0 }
     setMode('focus')
     setRemainingSeconds(FOCUS_SECONDS)
     setSessionsCompleted(0)
+    onUpdate({ pomodoro_sessions: 0 })
   }
 
   return (

@@ -1,13 +1,14 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Edit2, Trash2, Upload, Download, X, Calendar, User, FolderKanban, AtSign } from 'lucide-react'
 import toast from 'react-hot-toast'
-import type { Task, UpdateTaskInput, TaskMeta } from '@/types'
+import type { Task, UpdateTaskInput, TaskMeta, Project } from '@/types'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { TaskForm } from './TaskForm'
 import { TaskTimeTracker } from './TaskTimeTracker'
 import { PomodoroTimer } from './PomodoroTimer'
+import { ProjectDetailsModal } from '@/components/projects/ProjectDetailsModal'
 import { tasksService } from '@/services/tasks.service'
 import { taskMetaService } from '@/services/taskMeta.service'
 import { projectsService } from '@/services/projects.service'
@@ -17,6 +18,7 @@ import {
   formatDate,
   getUrgencyColor,
   getStatusColor,
+  formatDuration,
 } from '@/utils/helpers'
 
 interface TaskDetailsModalProps {
@@ -30,29 +32,36 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
   const [isEditing, setIsEditing] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
+  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false)
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [metaState, setMetaState] = useState<TaskMeta>({
     project_id: task.project_id ?? null,
     tagged_user: task.tagged_user,
     time_spent_seconds: task.time_spent_seconds ?? 0,
     tracking_completed: task.tracking_completed ?? false,
+    pomodoro_sessions: 0,
   })
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { t } = useLocale()
   const username = useAuthStore(state => state.username)
-  const projectName = metaState.project_id
-    ? projectsService.getProject(metaState.project_id)?.name
-    : task.project_name
+  const userKey = username ?? 'anonymous'
+  const projectDetails = metaState.project_id
+    ? projectsService.getProject(metaState.project_id)
+    : undefined
+  const projectName = projectDetails?.name ?? task.project_name
   const taggedUser = metaState.tagged_user ?? task.tagged_user
   const isTaggedViewer = !!(taggedUser && taggedUser === username)
 
   useEffect(() => {
+    const storedMeta = taskMetaService.getTaskMeta(task.id, userKey)
     setMetaState({
-      project_id: task.project_id ?? null,
-      tagged_user: task.tagged_user,
-      time_spent_seconds: task.time_spent_seconds ?? 0,
-      tracking_completed: task.tracking_completed ?? false,
+      project_id: storedMeta.project_id ?? task.project_id ?? null,
+      tagged_user: storedMeta.tagged_user ?? task.tagged_user,
+      time_spent_seconds: storedMeta.time_spent_seconds ?? task.time_spent_seconds ?? 0,
+      tracking_completed: storedMeta.tracking_completed ?? task.tracking_completed ?? false,
+      pomodoro_sessions: storedMeta.pomodoro_sessions ?? 0,
     })
-  }, [task])
+  }, [task, userKey])
 
   const updateMeta = useCallback(
     (updates: TaskMeta) => {
@@ -61,11 +70,11 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
           ...prev,
           ...updates,
         }
-        taskMetaService.setTaskMeta(task.id, next)
+        taskMetaService.setTaskMeta(task.id, next, userKey)
         return next
       })
     },
-    [task.id]
+    [task.id, userKey]
   )
 
   const handleUpdate = async (data: UpdateTaskInput) => {
@@ -89,7 +98,7 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
     setIsDeleting(true)
     try {
       await tasksService.deleteTask(task.id)
-      taskMetaService.deleteTaskMeta(task.id)
+      taskMetaService.deleteTaskMeta(task.id, userKey)
       toast.success(t('tasks.deleteSuccess'))
       onClose()
       onUpdate()
@@ -131,6 +140,17 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
     }
   }
 
+  const handleProjectOpen = () => {
+    if (!projectDetails) return
+    setSelectedProject(projectDetails)
+    setIsProjectModalOpen(true)
+  }
+
+  const handleProjectClose = () => {
+    setIsProjectModalOpen(false)
+    setSelectedProject(null)
+  }
+
   if (isEditing) {
     return (
       <Modal isOpen={isOpen} onClose={onClose} title={t('tasks.editTitle')}>
@@ -154,29 +174,30 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
   }
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={t('tasks.detailsTitle')}
-      footer={
-        <>
-          <Button
-            variant="danger"
-            onClick={handleDelete}
-            isLoading={isDeleting}
-            disabled={isTaggedViewer}
-          >
-            <Trash2 className="w-4 h-4 mr-2" />
-            {t('actions.delete')}
-          </Button>
-          <Button onClick={() => setIsEditing(true)} disabled={isTaggedViewer}>
-            <Edit2 className="w-4 h-4 mr-2" />
-            {t('actions.edit')}
-          </Button>
-        </>
-      }
-    >
-      <div className="space-y-6">
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title={t('tasks.detailsTitle')}
+        footer={
+          <>
+            <Button
+              variant="danger"
+              onClick={handleDelete}
+              isLoading={isDeleting}
+              disabled={isTaggedViewer}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              {t('actions.delete')}
+            </Button>
+            <Button onClick={() => setIsEditing(true)} disabled={isTaggedViewer}>
+              <Edit2 className="w-4 h-4 mr-2" />
+              {t('actions.edit')}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-6">
         {/* Title and Badges */}
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-3">
@@ -208,7 +229,18 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
                 <FolderKanban className="w-4 h-4" />
                 <span className="font-medium">{t('tasks.project')}</span>
               </div>
-              <p className="text-gray-900 dark:text-gray-100">{projectName}</p>
+              {projectDetails ? (
+                <button
+                  type="button"
+                  onClick={handleProjectOpen}
+                  className="text-left text-gray-900 dark:text-gray-100 underline decoration-dotted underline-offset-4 hover:text-primary-600"
+                  aria-label={t('tasks.projectOpen')}
+                >
+                  {projectName}
+                </button>
+              ) : (
+                <p className="text-gray-900 dark:text-gray-100">{projectName}</p>
+              )}
             </div>
           )}
 
@@ -256,15 +288,42 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
             key={`tracker-${task.id}`}
             initialSeconds={metaState.time_spent_seconds ?? 0}
             trackingCompleted={metaState.tracking_completed ?? false}
-            isLocked={isTaggedViewer}
+            isLocked={false}
             onUpdate={updateMeta}
           />
           <PomodoroTimer
             key={`pomodoro-${task.id}`}
-            isLocked={isTaggedViewer || (metaState.tracking_completed ?? false)}
+            isLocked={metaState.tracking_completed ?? false}
             currentSeconds={metaState.time_spent_seconds ?? 0}
+            initialSessions={metaState.pomodoro_sessions ?? 0}
             onUpdate={updateMeta}
           />
+        </div>
+
+        <div>
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">
+            {t('tasks.statsTitle')}
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+            <div className="rounded-lg border border-gray-200 p-3 dark:border-gray-800">
+              <div className="text-gray-500 dark:text-gray-400">{t('tasks.statsTime')}</div>
+              <div className="text-gray-900 dark:text-gray-100 font-semibold">
+                {formatDuration(metaState.time_spent_seconds ?? 0)}
+              </div>
+            </div>
+            <div className="rounded-lg border border-gray-200 p-3 dark:border-gray-800">
+              <div className="text-gray-500 dark:text-gray-400">{t('tasks.statsPomodoro')}</div>
+              <div className="text-gray-900 dark:text-gray-100 font-semibold">
+                {metaState.pomodoro_sessions ?? 0}
+              </div>
+            </div>
+            <div className="rounded-lg border border-gray-200 p-3 dark:border-gray-800">
+              <div className="text-gray-500 dark:text-gray-400">{t('tasks.statsTracking')}</div>
+              <div className="text-gray-900 dark:text-gray-100 font-semibold">
+                {metaState.tracking_completed ? t('tasks.statsTrackingDone') : t('tasks.statsTrackingInProgress')}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Timestamps */}
@@ -331,7 +390,17 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
             <p className="text-sm text-gray-500 dark:text-gray-400">{t('tasks.noAttachments')}</p>
           )}
         </div>
-      </div>
-    </Modal>
+        </div>
+      </Modal>
+      {selectedProject && (
+        <ProjectDetailsModal
+          project={selectedProject}
+          isOpen={isProjectModalOpen}
+          onClose={handleProjectClose}
+          onUpdate={handleProjectClose}
+          isReadOnly={isTaggedViewer}
+        />
+      )}
+    </>
   )
 }

@@ -4,8 +4,17 @@ const STORAGE_KEY = 'task_meta_data'
 
 type TaskMetaStore = Record<number, TaskMeta>
 
-const loadMeta = (): TaskMetaStore => {
-  const stored = localStorage.getItem(STORAGE_KEY)
+const getUserKey = (userKey?: string | null): string => {
+  const normalized = userKey?.trim()
+  return normalized ? normalized : 'anonymous'
+}
+
+const getStorageKey = (userKey?: string | null): string => {
+  return `${STORAGE_KEY}:${getUserKey(userKey)}`
+}
+
+const loadMeta = (storageKey: string): TaskMetaStore => {
+  const stored = localStorage.getItem(storageKey)
   if (!stored) return {}
   try {
     return JSON.parse(stored) as TaskMetaStore
@@ -14,18 +23,32 @@ const loadMeta = (): TaskMetaStore => {
   }
 }
 
-const saveMeta = (data: TaskMetaStore) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+const saveMeta = (storageKey: string, data: TaskMetaStore) => {
+  localStorage.setItem(storageKey, JSON.stringify(data))
 }
 
 export const taskMetaService = {
-  getTaskMeta(taskId: number): TaskMeta {
-    const data = loadMeta()
-    return data[taskId] ?? {}
+  getTaskMeta(taskId: number, userKey?: string | null): TaskMeta {
+    const storageKey = getStorageKey(userKey)
+    const data = loadMeta(storageKey)
+    if (data[taskId]) {
+      return data[taskId]
+    }
+    const legacyData = loadMeta(STORAGE_KEY)
+    if (legacyData[taskId]) {
+      const next = {
+        ...data,
+        [taskId]: legacyData[taskId],
+      }
+      saveMeta(storageKey, next)
+      return legacyData[taskId]
+    }
+    return {}
   },
 
-  setTaskMeta(taskId: number, updates: TaskMeta): TaskMeta {
-    const data = loadMeta()
+  setTaskMeta(taskId: number, updates: TaskMeta, userKey?: string | null): TaskMeta {
+    const storageKey = getStorageKey(userKey)
+    const data = loadMeta(storageKey)
     const next = {
       ...data[taskId],
       ...updates,
@@ -34,15 +57,16 @@ export const taskMetaService = {
       ...data,
       [taskId]: next,
     }
-    saveMeta(updated)
+    saveMeta(storageKey, updated)
     return next
   },
 
-  deleteTaskMeta(taskId: number): void {
-    const data = loadMeta()
+  deleteTaskMeta(taskId: number, userKey?: string | null): void {
+    const storageKey = getStorageKey(userKey)
+    const data = loadMeta(storageKey)
     if (!data[taskId]) return
     const next = { ...data }
     delete next[taskId]
-    saveMeta(next)
+    saveMeta(storageKey, next)
   },
 }

@@ -14,6 +14,7 @@ interface ProjectDetailsModalProps {
   isOpen: boolean
   onClose: () => void
   onUpdate: () => void
+  isReadOnly?: boolean
 }
 
 export const ProjectDetailsModal = ({
@@ -21,6 +22,7 @@ export const ProjectDetailsModal = ({
   isOpen,
   onClose,
   onUpdate,
+  isReadOnly = false,
 }: ProjectDetailsModalProps) => {
   const [isEditing, setIsEditing] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -56,7 +58,7 @@ export const ProjectDetailsModal = ({
     }
   }
 
-  if (isEditing) {
+  if (isEditing && !isReadOnly) {
     return (
       <Modal isOpen={isOpen} onClose={onClose} title={t('projects.editTitle')}>
         <ProjectForm
@@ -79,16 +81,18 @@ export const ProjectDetailsModal = ({
       onClose={onClose}
       title={t('projects.detailsTitle')}
       footer={
-        <>
-          <Button variant="danger" onClick={handleDelete} isLoading={isDeleting}>
-            <Trash2 className="w-4 h-4 mr-2" />
-            {t('actions.delete')}
-          </Button>
-          <Button onClick={() => setIsEditing(true)}>
-            <Edit2 className="w-4 h-4 mr-2" />
-            {t('actions.edit')}
-          </Button>
-        </>
+        isReadOnly ? undefined : (
+          <>
+            <Button variant="danger" onClick={handleDelete} isLoading={isDeleting}>
+              <Trash2 className="w-4 h-4 mr-2" />
+              {t('actions.delete')}
+            </Button>
+            <Button onClick={() => setIsEditing(true)}>
+              <Edit2 className="w-4 h-4 mr-2" />
+              {t('actions.edit')}
+            </Button>
+          </>
+        )
       }
     >
       <div className="space-y-6">

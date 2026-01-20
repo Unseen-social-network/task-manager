@@ -95,6 +95,7 @@ export interface TaskMeta {
   tagged_user?: string
   time_spent_seconds?: number
   tracking_completed?: boolean
+  pomodoro_sessions?: number
 }
 
 export interface Attachment {

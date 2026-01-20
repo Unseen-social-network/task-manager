@@ -12,6 +12,7 @@ import { tasksService } from '@/services/tasks.service'
 import { taskMetaService } from '@/services/taskMeta.service'
 import { projectsService } from '@/services/projects.service'
 import { useLocale } from '@/contexts/localeContext'
+import { useAuthStore } from '@/contexts/authStore'
 import type { Task, CreateTaskInput, TaskFilters as TaskFiltersType } from '@/types'
 
 export const TasksPage = () => {
@@ -22,12 +23,14 @@ export const TasksPage = () => {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [filters, setFilters] = useState<TaskFiltersType>({})
   const { t } = useLocale()
+  const username = useAuthStore(state => state.username)
+  const userKey = username ?? 'anonymous'
 
   const enrichTasks = useCallback((items: Task[]) => {
     const projects = projectsService.getProjects()
     const projectMap = new Map(projects.map(project => [project.id, project.name]))
     return items.map(task => {
-      const meta = taskMetaService.getTaskMeta(task.id)
+      const meta = taskMetaService.getTaskMeta(task.id, userKey)
       const projectId = meta.project_id ?? task.project_id ?? null
       const projectName = projectId ? projectMap.get(projectId) : undefined
       return {
@@ -37,7 +40,7 @@ export const TasksPage = () => {
         project_name: projectName ?? task.project_name,
       }
     })
-  }, [])
+  }, [userKey])
 
   const loadTasks = useCallback(async () => {
     setIsLoading(true)
@@ -64,7 +67,7 @@ export const TasksPage = () => {
       taskMetaService.setTaskMeta(created.id, {
         project_id: normalizedProjectId ?? null,
         tagged_user,
-      })
+      }, userKey)
       toast.success(t('tasks.createSuccess'))
       setIsCreateModalOpen(false)
       loadTasks()
