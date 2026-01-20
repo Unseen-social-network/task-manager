@@ -69,7 +69,9 @@ class TaskViewSet(viewsets.ModelViewSet):
         base_queryset = Task.objects.filter(owner=user)
         if self.request.method in ('GET', 'HEAD', 'OPTIONS'):
             base_queryset = base_queryset | Task.objects.filter(tagged_user=user)
-        return base_queryset.select_related('contact', 'project', 'tagged_user').distinct()
+        return base_queryset.select_related(
+            'contact', 'project', 'tagged_user'
+        ).distinct()
 
     def get_object(self):
         """
