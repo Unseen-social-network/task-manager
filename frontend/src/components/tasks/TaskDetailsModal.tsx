@@ -73,7 +73,7 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
         if (isActive) {
           setProjectDetails(project)
         }
-      } catch (error) {
+      } catch {
         if (isActive) {
           setProjectDetails(null)
         }
@@ -95,7 +95,7 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
       isSavingRef.current = true
       try {
         await tasksService.updateTask(task.id, pending)
-      } catch (error) {
+      } catch {
         toast.error(t('tasks.updateFail'))
       } finally {
         isSavingRef.current = false
@@ -155,7 +155,7 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
       toast.success(t('tasks.updateSuccess'))
       setIsEditing(false)
       onUpdate()
-    } catch (error) {
+    } catch {
       toast.error(t('tasks.updateFail'))
     }
   }
@@ -169,7 +169,7 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
       toast.success(t('tasks.deleteSuccess'))
       onClose()
       onUpdate()
-    } catch (error) {
+    } catch {
       toast.error(t('tasks.deleteFail'))
     } finally {
       setIsDeleting(false)
@@ -185,7 +185,7 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
       await tasksService.uploadAttachment(task.id, file)
       toast.success(t('tasks.uploadSuccess'))
       onUpdate()
-    } catch (error) {
+    } catch {
       toast.error(t('tasks.uploadFail'))
     } finally {
       setIsUploading(false)
@@ -202,7 +202,7 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
       await tasksService.deleteAttachment(attachmentId)
       toast.success(t('tasks.attachmentDeleteSuccess'))
       onUpdate()
-    } catch (error) {
+    } catch {
       toast.error(t('tasks.attachmentDeleteFail'))
     }
   }

@@ -34,7 +34,7 @@ export const ProjectDetailsModal = ({
       toast.success(t('projects.updateSuccess'))
       setIsEditing(false)
       onUpdate()
-    } catch (error) {
+    } catch {
       toast.error(t('projects.updateFail'))
     }
   }
@@ -48,7 +48,7 @@ export const ProjectDetailsModal = ({
       toast.success(t('projects.deleteSuccess'))
       onClose()
       onUpdate()
-    } catch (error) {
+    } catch {
       toast.error(t('projects.deleteFail'))
     } finally {
       setIsDeleting(false)

@@ -26,7 +26,7 @@ export const TasksPage = () => {
     try {
       const response = await tasksService.getTasks(filters)
       setTasks(response.results)
-    } catch (error) {
+    } catch {
       toast.error(t('tasks.loadFail'))
     } finally {
       setIsLoading(false)
@@ -43,7 +43,7 @@ export const TasksPage = () => {
       toast.success(t('tasks.createSuccess'))
       setIsCreateModalOpen(false)
       loadTasks()
-    } catch (error) {
+    } catch {
       toast.error(t('tasks.createFail'))
     }
   }
