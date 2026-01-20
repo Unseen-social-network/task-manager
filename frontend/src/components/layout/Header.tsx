@@ -35,6 +35,12 @@ export const Header = () => {
               {t('nav.tasks')}
             </button>
             <button
+              onClick={() => navigate('/projects')}
+              className="text-gray-700 hover:text-primary-600 px-3 py-2 text-sm font-medium transition-colors dark:text-gray-200 dark:hover:text-primary-400"
+            >
+              {t('nav.projects')}
+            </button>
+            <button
               onClick={() => navigate('/contacts')}
               className="text-gray-700 hover:text-primary-600 px-3 py-2 text-sm font-medium transition-colors dark:text-gray-200 dark:hover:text-primary-400"
             >

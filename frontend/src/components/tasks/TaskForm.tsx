@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import type { CreateTaskInput, Contact } from '@/types'
+import type { CreateTaskInput, Contact, Project } from '@/types'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { Select } from '@/components/ui/Select'
 import { Button } from '@/components/ui/Button'
 import { contactsService } from '@/services/contacts.service'
+import { projectsService } from '@/services/projects.service'
 import { useLocale } from '@/contexts/localeContext'
 
 interface TaskFormProps {
@@ -17,6 +18,7 @@ interface TaskFormProps {
 
 export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFormProps) => {
   const [contacts, setContacts] = useState<Contact[]>([])
+  const [projects, setProjects] = useState<Project[]>([])
   const [useContact, setUseContact] = useState(!!initialData?.contact)
   const { t } = useLocale()
 
@@ -33,6 +35,7 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
 
   useEffect(() => {
     loadContacts()
+    loadProjects()
   }, [])
 
   const loadContacts = async () => {
@@ -42,6 +45,11 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
     } catch (error) {
       console.error('Failed to load contacts:', error)
     }
+  }
+
+  const loadProjects = () => {
+    const data = projectsService.getProjects()
+    setProjects(data)
   }
 
   return (
@@ -89,6 +97,27 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
         {...register('due_date')}
         error={errors.due_date?.message}
       />
+
+      <Select
+        label={t('tasks.form.project')}
+        {...register('project_id', { valueAsNumber: true })}
+        options={[
+          { value: '', label: t('tasks.form.projectPlaceholder') },
+          ...projects.map(project => ({ value: String(project.id), label: project.name })),
+        ]}
+      />
+
+      <div className="space-y-2">
+        <Input
+          label={t('tasks.form.taggedUser')}
+          placeholder={t('tasks.form.taggedPlaceholder')}
+          {...register('tagged_user')}
+          error={errors.tagged_user?.message}
+        />
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          {t('tasks.form.taggedHint')}
+        </p>
+      </div>
 
       {/* Contact selection toggle */}
       <div className="flex items-center gap-4">

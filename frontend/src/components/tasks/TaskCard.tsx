@@ -1,9 +1,9 @@
-import { Calendar, Paperclip, User } from 'lucide-react'
+import { AtSign, Calendar, FolderKanban, Paperclip, Timer, User } from 'lucide-react'
 import type { Task } from '@/types'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { useLocale } from '@/contexts/localeContext'
-import { formatDateOnly, getUrgencyColor, getStatusColor, truncate } from '@/utils/helpers'
+import { formatDateOnly, formatDuration, getUrgencyColor, getStatusColor, truncate } from '@/utils/helpers'
 
 interface TaskCardProps {
   task: Task
@@ -36,6 +36,13 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
 
         {/* Meta information */}
         <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+          {task.project_name && (
+            <div className="flex items-center gap-1">
+              <FolderKanban className="w-4 h-4" />
+              <span>{task.project_name}</span>
+            </div>
+          )}
+
           {task.due_date && (
             <div className="flex items-center gap-1">
               <Calendar className="w-4 h-4" />
@@ -47,6 +54,20 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
             <div className="flex items-center gap-1">
               <User className="w-4 h-4" />
               <span>{task.contact_name || task.contact_freeform}</span>
+            </div>
+          )}
+
+          {task.tagged_user && (
+            <div className="flex items-center gap-1">
+              <AtSign className="w-4 h-4" />
+              <span>@{task.tagged_user}</span>
+            </div>
+          )}
+
+          {typeof task.time_spent_seconds === 'number' && task.time_spent_seconds > 0 && (
+            <div className="flex items-center gap-1">
+              <Timer className="w-4 h-4" />
+              <span>{formatDuration(task.time_spent_seconds)}</span>
             </div>
           )}
 

@@ -9,6 +9,8 @@ import { TaskForm } from '@/components/tasks/TaskForm'
 import { TaskFilters } from '@/components/tasks/TaskFilters'
 import { TaskDetailsModal } from '@/components/tasks/TaskDetailsModal'
 import { tasksService } from '@/services/tasks.service'
+import { taskMetaService } from '@/services/taskMeta.service'
+import { projectsService } from '@/services/projects.service'
 import { useLocale } from '@/contexts/localeContext'
 import type { Task, CreateTaskInput, TaskFilters as TaskFiltersType } from '@/types'
 
@@ -21,17 +23,33 @@ export const TasksPage = () => {
   const [filters, setFilters] = useState<TaskFiltersType>({})
   const { t } = useLocale()
 
+  const enrichTasks = useCallback((items: Task[]) => {
+    const projects = projectsService.getProjects()
+    const projectMap = new Map(projects.map(project => [project.id, project.name]))
+    return items.map(task => {
+      const meta = taskMetaService.getTaskMeta(task.id)
+      const projectId = meta.project_id ?? task.project_id ?? null
+      const projectName = projectId ? projectMap.get(projectId) : undefined
+      return {
+        ...task,
+        ...meta,
+        project_id: projectId,
+        project_name: projectName ?? task.project_name,
+      }
+    })
+  }, [])
+
   const loadTasks = useCallback(async () => {
     setIsLoading(true)
     try {
       const response = await tasksService.getTasks(filters)
-      setTasks(response.results)
+      setTasks(enrichTasks(response.results))
     } catch (error) {
       toast.error(t('tasks.loadFail'))
     } finally {
       setIsLoading(false)
     }
-  }, [filters, t])
+  }, [enrichTasks, filters, t])
 
   useEffect(() => {
     loadTasks()
@@ -39,7 +57,14 @@ export const TasksPage = () => {
 
   const handleCreateTask = async (data: CreateTaskInput) => {
     try {
-      await tasksService.createTask(data)
+      const { project_id, tagged_user, ...payload } = data
+      const normalizedProjectId =
+        typeof project_id === 'number' && Number.isFinite(project_id) ? project_id : null
+      const created = await tasksService.createTask(payload)
+      taskMetaService.setTaskMeta(created.id, {
+        project_id: normalizedProjectId ?? null,
+        tagged_user,
+      })
       toast.success(t('tasks.createSuccess'))
       setIsCreateModalOpen(false)
       loadTasks()
