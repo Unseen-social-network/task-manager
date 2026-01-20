@@ -13,15 +13,19 @@ function App() {
     const metrikaId = Number(metrikaEnvId)
     if (!Number.isFinite(metrikaId)) return
 
-    type MetrikaFunction = ((...args: unknown[]) => void) & {
+    type MetrikaFunction = ((
+      id: number,
+      method: string,
+      ...args: unknown[]
+    ) => void) & {
       a?: unknown[][]
       l?: number
     }
     const ym: MetrikaFunction =
       window.ym ??
-      ((...args: unknown[]) => {
+      ((id: number, method: string, ...args: unknown[]) => {
         ym.a = ym.a ?? []
-        ym.a.push(args)
+        ym.a.push([id, method, ...args])
       })
     window.ym = ym
     ym.l = Date.now()
