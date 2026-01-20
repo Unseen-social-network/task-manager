@@ -68,6 +68,22 @@ class Task(models.Model):
         related_name='tasks',
         verbose_name='Owner',
     )
+    project = models.ForeignKey(
+        'Project',
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name='tasks',
+        verbose_name='Project',
+    )
+    tagged_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name='tagged_tasks',
+        verbose_name='Tagged user',
+    )
     title = models.CharField(max_length=500, verbose_name='Title')
     description = models.TextField(blank=True, verbose_name='Description')
     urgency = models.CharField(
@@ -98,6 +114,16 @@ class Task(models.Model):
         verbose_name='Freeform contact',
         help_text='Manual contact info (if not using contact book)',
     )
+    time_spent_seconds = models.PositiveIntegerField(
+        default=0,
+        verbose_name='Time spent (seconds)',
+        help_text='Total tracked time for the task in seconds',
+    )
+    tracking_completed = models.BooleanField(
+        default=False,
+        verbose_name='Tracking completed',
+        help_text='Whether the time tracking session is завершен',
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
 
@@ -113,6 +139,42 @@ class Task(models.Model):
 
     def __str__(self):
         return f'{self.title} ({self.owner.username})'
+
+
+class Project(models.Model):
+    """
+    Project entity with description, contact phone, and links.
+    """
+
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='projects',
+        verbose_name='Owner',
+    )
+    name = models.CharField(max_length=255, verbose_name='Name')
+    description = models.TextField(blank=True, verbose_name='Description')
+    phone = models.CharField(max_length=50, blank=True, verbose_name='Phone')
+    links = models.JSONField(
+        blank=True,
+        null=True,
+        verbose_name='Links',
+        help_text='List of project links (label + url)',
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
+
+    class Meta:
+        verbose_name = 'Project'
+        verbose_name_plural = 'Projects'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['owner', '-created_at']),
+            models.Index(fields=['owner', 'name']),
+        ]
+
+    def __str__(self):
+        return f'{self.name} ({self.owner.username})'
 
 
 class Attachment(models.Model):

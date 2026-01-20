@@ -12,16 +12,27 @@ from planner.models import Task
 class TestTaskAPI:
     """Tests for Task CRUD operations and permissions."""
 
-    def test_list_tasks_only_own(self, authenticated_client, task, other_task):
-        """Test that users can only see their own tasks."""
+    def test_list_tasks_includes_tagged(
+        self, authenticated_client, user, other_user, task
+    ):
+        """Test that users see own tasks and tasks where they are tagged."""
+        Task.objects.create(
+            owner=other_user,
+            title='Tagged Task',
+            status=Task.Status.TODO,
+            tagged_user=user,
+        )
         url = '/api/v1/tasks/'
         response = authenticated_client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
-        assert len(response.data['results']) == 1
-        assert response.data['results'][0]['id'] == task.id
+        assert len(response.data['results']) == 2
+        returned_ids = {item['id'] for item in response.data['results']}
+        assert task.id in returned_ids
 
-    def test_create_task_with_contact(self, authenticated_client, user, contact):
+    def test_create_task_with_contact(
+        self, authenticated_client, user, contact, project
+    ):
         """Test creating a task with contact reference."""
         url = '/api/v1/tasks/'
         data = {
@@ -30,6 +41,8 @@ class TestTaskAPI:
             'urgency': 'high',
             'status': 'todo',
             'contact': contact.id,
+            'project': project.id,
+            'tagged_user': user.username,
         }
 
         response = authenticated_client.post(url, data)
@@ -38,6 +51,8 @@ class TestTaskAPI:
         assert Task.objects.filter(owner=user, title='New Task').exists()
         created_task = Task.objects.get(owner=user, title='New Task')
         assert created_task.contact == contact
+        assert created_task.project == project
+        assert created_task.tagged_user == user
 
     def test_create_task_with_freeform_contact(self, authenticated_client, user):
         """Test creating a task with freeform contact."""
@@ -82,6 +97,50 @@ class TestTaskAPI:
         """Test that retrieving another user's task returns 404."""
         url = f'/api/v1/tasks/{other_task.id}/'
         response = authenticated_client.get(url)
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_retrieve_tagged_task_allowed(self, authenticated_client, user, other_user):
+        """Test that tagged user can retrieve the task."""
+        tagged_task = Task.objects.create(
+            owner=other_user,
+            title='Tagged Task',
+            status=Task.Status.TODO,
+            tagged_user=user,
+        )
+        url = f'/api/v1/tasks/{tagged_task.id}/'
+        response = authenticated_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data['id'] == tagged_task.id
+
+    def test_tagged_user_cannot_update_task(
+        self, authenticated_client, user, other_user
+    ):
+        """Test that tagged user cannot update the task."""
+        tagged_task = Task.objects.create(
+            owner=other_user,
+            title='Tagged Task',
+            status=Task.Status.TODO,
+            tagged_user=user,
+        )
+        url = f'/api/v1/tasks/{tagged_task.id}/'
+        response = authenticated_client.patch(url, {'status': 'done'})
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_tagged_user_cannot_delete_task(
+        self, authenticated_client, user, other_user
+    ):
+        """Test that tagged user cannot delete the task."""
+        tagged_task = Task.objects.create(
+            owner=other_user,
+            title='Tagged Task',
+            status=Task.Status.TODO,
+            tagged_user=user,
+        )
+        url = f'/api/v1/tasks/{tagged_task.id}/'
+        response = authenticated_client.delete(url)
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 

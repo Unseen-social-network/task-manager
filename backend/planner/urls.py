@@ -9,10 +9,11 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
 
-from .views import AttachmentViewSet, ContactViewSet, TaskViewSet
+from .views import AttachmentViewSet, ContactViewSet, ProjectViewSet, TaskViewSet
 
 router = DefaultRouter()
 router.register(r'contacts', ContactViewSet, basename='contact')
+router.register(r'projects', ProjectViewSet, basename='project')
 router.register(r'tasks', TaskViewSet, basename='task')
 router.register(r'attachments', AttachmentViewSet, basename='attachment')
 
