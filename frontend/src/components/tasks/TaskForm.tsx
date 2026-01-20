@@ -47,9 +47,13 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
     }
   }
 
-  const loadProjects = () => {
-    const data = projectsService.getProjects()
-    setProjects(data)
+  const loadProjects = async () => {
+    try {
+      const response = await projectsService.getProjects()
+      setProjects(response.results)
+    } catch (error) {
+      console.error('Failed to load projects:', error)
+    }
   }
 
   return (

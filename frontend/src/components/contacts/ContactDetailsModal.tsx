@@ -32,7 +32,7 @@ export const ContactDetailsModal = ({
       toast.success(t('contacts.updateSuccess'))
       setIsEditing(false)
       onUpdate()
-    } catch (error) {
+    } catch {
       toast.error(t('contacts.updateFail'))
     }
   }
@@ -46,7 +46,7 @@ export const ContactDetailsModal = ({
       toast.success(t('contacts.deleteSuccess'))
       onClose()
       onUpdate()
-    } catch (error) {
+    } catch {
       toast.error(t('contacts.deleteFail'))
     } finally {
       setIsDeleting(false)

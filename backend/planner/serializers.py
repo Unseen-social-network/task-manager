@@ -113,6 +113,7 @@ class TaskSerializer(serializers.ModelSerializer):
             'contact_freeform',
             'time_spent_seconds',
             'tracking_completed',
+            'pomodoro_sessions',
             'attachments',
             'created_at',
             'updated_at',

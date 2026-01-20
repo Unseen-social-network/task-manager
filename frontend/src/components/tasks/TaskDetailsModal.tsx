@@ -10,7 +10,6 @@ import { TaskTimeTracker } from './TaskTimeTracker'
 import { PomodoroTimer } from './PomodoroTimer'
 import { ProjectDetailsModal } from '@/components/projects/ProjectDetailsModal'
 import { tasksService } from '@/services/tasks.service'
-import { taskMetaService } from '@/services/taskMeta.service'
 import { projectsService } from '@/services/projects.service'
 import { useLocale } from '@/contexts/localeContext'
 import { useAuthStore } from '@/contexts/authStore'
@@ -34,34 +33,89 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
   const [isUploading, setIsUploading] = useState(false)
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false)
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
+  const [projectDetails, setProjectDetails] = useState<Project | null>(null)
   const [metaState, setMetaState] = useState<TaskMeta>({
     project_id: task.project_id ?? null,
     tagged_user: task.tagged_user,
     time_spent_seconds: task.time_spent_seconds ?? 0,
     tracking_completed: task.tracking_completed ?? false,
-    pomodoro_sessions: 0,
+    pomodoro_sessions: task.pomodoro_sessions ?? 0,
   })
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const pendingUpdatesRef = useRef<UpdateTaskInput>({})
+  const isSavingRef = useRef(false)
   const { t } = useLocale()
   const username = useAuthStore(state => state.username)
-  const userKey = username ?? 'anonymous'
-  const projectDetails = metaState.project_id
-    ? projectsService.getProject(metaState.project_id)
-    : undefined
   const projectName = projectDetails?.name ?? task.project_name
   const taggedUser = metaState.tagged_user ?? task.tagged_user
   const isTaggedViewer = !!(taggedUser && taggedUser === username)
 
   useEffect(() => {
-    const storedMeta = taskMetaService.getTaskMeta(task.id, userKey)
     setMetaState({
-      project_id: storedMeta.project_id ?? task.project_id ?? null,
-      tagged_user: storedMeta.tagged_user ?? task.tagged_user,
-      time_spent_seconds: storedMeta.time_spent_seconds ?? task.time_spent_seconds ?? 0,
-      tracking_completed: storedMeta.tracking_completed ?? task.tracking_completed ?? false,
-      pomodoro_sessions: storedMeta.pomodoro_sessions ?? 0,
+      project_id: task.project_id ?? null,
+      tagged_user: task.tagged_user,
+      time_spent_seconds: task.time_spent_seconds ?? 0,
+      tracking_completed: task.tracking_completed ?? false,
+      pomodoro_sessions: task.pomodoro_sessions ?? 0,
     })
-  }, [task, userKey])
+    pendingUpdatesRef.current = {}
+  }, [task])
+
+  useEffect(() => {
+    let isActive = true
+    const loadProject = async () => {
+      if (!metaState.project_id) {
+        setProjectDetails(null)
+        return
+      }
+      try {
+        const project = await projectsService.getProject(metaState.project_id)
+        if (isActive) {
+          setProjectDetails(project)
+        }
+      } catch {
+        if (isActive) {
+          setProjectDetails(null)
+        }
+      }
+    }
+    loadProject()
+    return () => {
+      isActive = false
+    }
+  }, [metaState.project_id])
+
+  const flushPending = useCallback(
+    async (force = false) => {
+      if (isSavingRef.current) return
+      const pending = pendingUpdatesRef.current
+      if (!force && Object.keys(pending).length === 0) return
+      if (Object.keys(pending).length === 0) return
+      pendingUpdatesRef.current = {}
+      isSavingRef.current = true
+      try {
+        await tasksService.updateTask(task.id, pending)
+      } catch {
+        toast.error(t('tasks.updateFail'))
+      } finally {
+        isSavingRef.current = false
+        if (Object.keys(pendingUpdatesRef.current).length > 0) {
+          void flushPending(true)
+        }
+      }
+    },
+    [task.id, t]
+  )
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      void flushPending()
+    }, 10000)
+    return () => {
+      window.clearInterval(interval)
+      void flushPending(true)
+    }
+  }, [flushPending])
 
   const updateMeta = useCallback(
     (updates: TaskMeta) => {
@@ -70,11 +124,17 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
           ...prev,
           ...updates,
         }
-        taskMetaService.setTaskMeta(task.id, next, userKey)
+        pendingUpdatesRef.current = {
+          ...pendingUpdatesRef.current,
+          ...updates,
+        }
+        if (updates.tracking_completed || updates.pomodoro_sessions !== undefined) {
+          void flushPending(true)
+        }
         return next
       })
     },
-    [task.id, userKey]
+    [flushPending]
   )
 
   const handleUpdate = async (data: UpdateTaskInput) => {
@@ -82,12 +142,20 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
       const { project_id, tagged_user, ...payload } = data
       const normalizedProjectId =
         typeof project_id === 'number' && Number.isFinite(project_id) ? project_id : null
-      await tasksService.updateTask(task.id, { ...payload, tagged_user })
-      updateMeta({ project_id: normalizedProjectId ?? null, tagged_user })
+      const updated = await tasksService.updateTask(task.id, {
+        ...payload,
+        tagged_user,
+        project_id: normalizedProjectId,
+      })
+      setMetaState(prev => ({
+        ...prev,
+        project_id: updated.project_id ?? null,
+        tagged_user: updated.tagged_user,
+      }))
       toast.success(t('tasks.updateSuccess'))
       setIsEditing(false)
       onUpdate()
-    } catch (error) {
+    } catch {
       toast.error(t('tasks.updateFail'))
     }
   }
@@ -98,11 +166,10 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
     setIsDeleting(true)
     try {
       await tasksService.deleteTask(task.id)
-      taskMetaService.deleteTaskMeta(task.id, userKey)
       toast.success(t('tasks.deleteSuccess'))
       onClose()
       onUpdate()
-    } catch (error) {
+    } catch {
       toast.error(t('tasks.deleteFail'))
     } finally {
       setIsDeleting(false)
@@ -118,7 +185,7 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
       await tasksService.uploadAttachment(task.id, file)
       toast.success(t('tasks.uploadSuccess'))
       onUpdate()
-    } catch (error) {
+    } catch {
       toast.error(t('tasks.uploadFail'))
     } finally {
       setIsUploading(false)
@@ -135,7 +202,7 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
       await tasksService.deleteAttachment(attachmentId)
       toast.success(t('tasks.attachmentDeleteSuccess'))
       onUpdate()
-    } catch (error) {
+    } catch {
       toast.error(t('tasks.attachmentDeleteFail'))
     }
   }

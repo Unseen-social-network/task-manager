@@ -25,7 +25,7 @@ export const ContactsPage = () => {
     try {
       const response = await contactsService.getContacts(filters)
       setContacts(response.results)
-    } catch (error) {
+    } catch {
       toast.error(t('contacts.loadFail'))
     } finally {
       setIsLoading(false)
@@ -42,7 +42,7 @@ export const ContactsPage = () => {
       toast.success(t('contacts.createSuccess'))
       setIsCreateModalOpen(false)
       loadContacts()
-    } catch (error) {
+    } catch {
       toast.error(t('contacts.createFail'))
     }
   }

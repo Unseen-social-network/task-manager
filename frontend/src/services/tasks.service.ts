@@ -7,6 +7,27 @@ import type {
   TaskFilters,
 } from '@/types'
 
+type TaskApi = Omit<Task, 'project_id'> & {
+  project: number | null
+}
+
+const mapTaskFromApi = (task: TaskApi): Task => {
+  const { project, ...rest } = task
+  return {
+    ...rest,
+    project_id: project,
+  }
+}
+
+const mapTaskInput = (data: CreateTaskInput | UpdateTaskInput) => {
+  const { project_id, ...rest } = data
+  const payload: Record<string, unknown> = { ...rest }
+  if (project_id !== undefined) {
+    payload.project = typeof project_id === 'number' ? project_id : null
+  }
+  return payload
+}
+
 export const tasksService = {
   async getTasks(filters?: TaskFilters): Promise<PaginatedResponse<Task>> {
     const params = new URLSearchParams()
@@ -19,23 +40,26 @@ export const tasksService = {
       })
     }
 
-    const response = await api.get<PaginatedResponse<Task>>('/api/v1/tasks/', { params })
-    return response.data
+    const response = await api.get<PaginatedResponse<TaskApi>>('/api/v1/tasks/', { params })
+    return {
+      ...response.data,
+      results: response.data.results.map(mapTaskFromApi),
+    }
   },
 
   async getTask(id: number): Promise<Task> {
-    const response = await api.get<Task>(`/api/v1/tasks/${id}/`)
-    return response.data
+    const response = await api.get<TaskApi>(`/api/v1/tasks/${id}/`)
+    return mapTaskFromApi(response.data)
   },
 
   async createTask(data: CreateTaskInput): Promise<Task> {
-    const response = await api.post<Task>('/api/v1/tasks/', data)
-    return response.data
+    const response = await api.post<TaskApi>('/api/v1/tasks/', mapTaskInput(data))
+    return mapTaskFromApi(response.data)
   },
 
   async updateTask(id: number, data: UpdateTaskInput): Promise<Task> {
-    const response = await api.patch<Task>(`/api/v1/tasks/${id}/`, data)
-    return response.data
+    const response = await api.patch<TaskApi>(`/api/v1/tasks/${id}/`, mapTaskInput(data))
+    return mapTaskFromApi(response.data)
   },
 
   async deleteTask(id: number): Promise<void> {
