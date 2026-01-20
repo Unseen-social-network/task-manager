@@ -18,7 +18,7 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
       <div className="space-y-3">
         {/* Title and Badges */}
         <div className="flex items-start justify-between gap-3">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex-1">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex-1 min-w-0 break-words">
             {task.title}
           </h3>
           <div className="flex gap-2">
@@ -29,7 +29,7 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
 
         {/* Description */}
         {task.description && (
-          <p className="text-sm text-gray-600 dark:text-gray-300">
+          <p className="text-sm text-gray-600 dark:text-gray-300 break-words">
             {truncate(task.description, 150)}
           </p>
         )}
@@ -37,30 +37,30 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
         {/* Meta information */}
         <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
           {task.project_name && (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 min-w-0">
               <FolderKanban className="w-4 h-4" />
-              <span>{task.project_name}</span>
+              <span className="break-words">{task.project_name}</span>
             </div>
           )}
 
           {task.due_date && (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 min-w-0">
               <Calendar className="w-4 h-4" />
               <span>{formatDateOnly(task.due_date)}</span>
             </div>
           )}
 
           {(task.contact_name || task.contact_freeform) && (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 min-w-0">
               <User className="w-4 h-4" />
-              <span>{task.contact_name || task.contact_freeform}</span>
+              <span className="break-words">{task.contact_name || task.contact_freeform}</span>
             </div>
           )}
 
           {task.tagged_user && (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 min-w-0">
               <AtSign className="w-4 h-4" />
-              <span>@{task.tagged_user}</span>
+              <span className="break-words">@{task.tagged_user}</span>
             </div>
           )}
 

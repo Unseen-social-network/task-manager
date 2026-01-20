@@ -67,7 +67,7 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
         error={errors.description?.message}
       />
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Select
           label={t('tasks.form.urgency')}
           {...register('urgency')}
