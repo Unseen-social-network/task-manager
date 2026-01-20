@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Plus } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Layout } from '@/components/layout/Layout'
@@ -18,14 +18,15 @@ export const ProjectsPage = () => {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const { t } = useLocale()
 
-  const loadProjects = () => {
-    const data = projectsService.getProjects()
-    setProjects(data)
-  }
+  const loadProjects = useCallback(() => {
+  const data = projectsService.getProjects()
+  setProjects(data)
+}, [])
+
 
   useEffect(() => {
     loadProjects()
-  }, [])
+  }, [loadProjects])
 
   const handleCreateProject = async (data: CreateProjectInput) => {
     try {
