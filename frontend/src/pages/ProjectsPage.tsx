@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Plus } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Layout } from '@/components/layout/Layout'
@@ -19,29 +19,26 @@ export const ProjectsPage = () => {
   const [isLoading, setIsLoading] = useState(true)
   const { t } = useLocale()
 
-  const loadProjects = async () => {
-    setIsLoading(true)
+  const loadProjects = useCallback(async () => {
     try {
-      const response = await projectsService.getProjects()
-      setProjects(response.results)
-    } catch (error) {
+      const data = await Promise.resolve(projectsService.getProjects())
+      setProjects(data)
+    } catch {
       toast.error(t('projects.loadFail'))
-    } finally {
-      setIsLoading(false)
     }
-  }
+  }, [t])
 
   useEffect(() => {
-    loadProjects()
-  }, [])
+    void loadProjects()
+  }, [loadProjects])
 
   const handleCreateProject = async (data: CreateProjectInput) => {
     try {
-      await projectsService.createProject(data)
+      await Promise.resolve(projectsService.createProject(data))
       toast.success(t('projects.createSuccess'))
       setIsCreateModalOpen(false)
-      loadProjects()
-    } catch (error) {
+      await loadProjects()
+    } catch {
       toast.error(t('projects.createFail'))
     }
   }
@@ -51,9 +48,9 @@ export const ProjectsPage = () => {
     setIsDetailsModalOpen(true)
   }
 
-  const handleProjectUpdate = () => {
+  const handleProjectUpdate = async () => {
     setIsDetailsModalOpen(false)
-    loadProjects()
+    await loadProjects()
   }
 
   return (
@@ -64,7 +61,9 @@ export const ProjectsPage = () => {
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
               {t('projects.title')}
             </h1>
-            <p className="text-gray-600 dark:text-gray-300 mt-1">{t('projects.subtitle')}</p>
+            <p className="text-gray-600 dark:text-gray-300 mt-1">
+              {t('projects.subtitle')}
+            </p>
           </div>
           <Button onClick={() => setIsCreateModalOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
