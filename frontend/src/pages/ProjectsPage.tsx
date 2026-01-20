@@ -18,23 +18,26 @@ export const ProjectsPage = () => {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const { t } = useLocale()
 
-  const loadProjects = useCallback(() => {
-  const data = projectsService.getProjects()
-  setProjects(data)
-}, [])
-
+  const loadProjects = useCallback(async () => {
+    try {
+      const data = await Promise.resolve(projectsService.getProjects())
+      setProjects(data)
+    } catch {
+      toast.error(t('projects.loadFail'))
+    }
+  }, [t])
 
   useEffect(() => {
-    loadProjects()
+    void loadProjects()
   }, [loadProjects])
 
   const handleCreateProject = async (data: CreateProjectInput) => {
     try {
-      projectsService.createProject(data)
+      await Promise.resolve(projectsService.createProject(data))
       toast.success(t('projects.createSuccess'))
       setIsCreateModalOpen(false)
-      loadProjects()
-    } catch (error) {
+      await loadProjects()
+    } catch {
       toast.error(t('projects.createFail'))
     }
   }
@@ -44,9 +47,9 @@ export const ProjectsPage = () => {
     setIsDetailsModalOpen(true)
   }
 
-  const handleProjectUpdate = () => {
+  const handleProjectUpdate = async () => {
     setIsDetailsModalOpen(false)
-    loadProjects()
+    await loadProjects()
   }
 
   return (
@@ -57,7 +60,9 @@ export const ProjectsPage = () => {
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
               {t('projects.title')}
             </h1>
-            <p className="text-gray-600 dark:text-gray-300 mt-1">{t('projects.subtitle')}</p>
+            <p className="text-gray-600 dark:text-gray-300 mt-1">
+              {t('projects.subtitle')}
+            </p>
           </div>
           <Button onClick={() => setIsCreateModalOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
