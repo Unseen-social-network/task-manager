@@ -3,7 +3,7 @@ import type { CreateContactInput } from '@/types'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { Button } from '@/components/ui/Button'
-import { useLocale } from '@/contexts/locale'
+import { useLocale } from '@/contexts/localeContext'
 
 interface ContactFormProps {
   initialData?: CreateContactInput

@@ -1,14 +1,7 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { translations, type Locale } from '@/utils/translations'
-
-interface LocaleContextValue {
-  locale: Locale
-  setLocale: (locale: Locale) => void
-  t: (key: string) => string
-}
-
-const LocaleContext = createContext<LocaleContextValue | undefined>(undefined)
+import { LocaleContext } from '@/contexts/localeContext'
 
 const STORAGE_KEY = 'app_locale'
 
@@ -37,12 +30,4 @@ export const LocaleProvider = ({ children }: { children: ReactNode }) => {
   const value = useMemo(() => ({ locale, setLocale, t }), [locale, setLocale, t])
 
   return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>
-}
-
-export const useLocale = () => {
-  const context = useContext(LocaleContext)
-  if (!context) {
-    throw new Error('useLocale must be used within LocaleProvider')
-  }
-  return context
 }

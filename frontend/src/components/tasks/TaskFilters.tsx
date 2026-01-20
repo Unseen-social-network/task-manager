@@ -2,7 +2,7 @@ import { Search } from 'lucide-react'
 import type { TaskFilters as TaskFiltersType } from '@/types'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
-import { useLocale } from '@/contexts/locale'
+import { useLocale } from '@/contexts/localeContext'
 
 interface TaskFiltersProps {
   filters: TaskFiltersType

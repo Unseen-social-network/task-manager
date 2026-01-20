@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Plus, Search } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Layout } from '@/components/layout/Layout'
@@ -8,7 +8,7 @@ import { ContactCard } from '@/components/contacts/ContactCard'
 import { ContactForm } from '@/components/contacts/ContactForm'
 import { ContactDetailsModal } from '@/components/contacts/ContactDetailsModal'
 import { contactsService } from '@/services/contacts.service'
-import { useLocale } from '@/contexts/locale'
+import { useLocale } from '@/contexts/localeContext'
 import type { Contact, CreateContactInput, ContactFilters } from '@/types'
 
 export const ContactsPage = () => {
@@ -20,11 +20,7 @@ export const ContactsPage = () => {
   const [filters, setFilters] = useState<ContactFilters>({})
   const { t } = useLocale()
 
-  useEffect(() => {
-    loadContacts()
-  }, [filters])
-
-  const loadContacts = async () => {
+  const loadContacts = useCallback(async () => {
     setIsLoading(true)
     try {
       const response = await contactsService.getContacts(filters)
@@ -34,7 +30,11 @@ export const ContactsPage = () => {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [filters, t])
+
+  useEffect(() => {
+    loadContacts()
+  }, [loadContacts])
 
   const handleCreateContact = async (data: CreateContactInput) => {
     try {

@@ -4,11 +4,12 @@ import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import { Moon, Sun } from 'lucide-react'
 import { useAuthStore } from '@/contexts/authStore'
-import { useLocale } from '@/contexts/locale'
-import { useTheme } from '@/contexts/theme'
+import { useLocale } from '@/contexts/localeContext'
+import { useTheme } from '@/contexts/themeContext'
 import type { LoginCredentials } from '@/types'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
+import { getApiErrorMessage } from '@/utils/helpers'
 
 export const LoginPage = () => {
   const navigate = useNavigate()
@@ -29,8 +30,8 @@ export const LoginPage = () => {
       await login(data)
       toast.success(t('login.success'))
       navigate('/tasks')
-    } catch (error: any) {
-      toast.error(error.response?.data?.detail || t('login.failure'))
+    } catch (error: unknown) {
+      toast.error(getApiErrorMessage(error, t('login.failure')))
     } finally {
       setIsLoading(false)
     }

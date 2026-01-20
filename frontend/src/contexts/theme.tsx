@@ -1,15 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-
-export type ThemeMode = 'light' | 'dark'
-
-interface ThemeContextValue {
-  theme: ThemeMode
-  toggleTheme: () => void
-  setTheme: (theme: ThemeMode) => void
-}
-
-const ThemeContext = createContext<ThemeContextValue | undefined>(undefined)
+import { ThemeContext, type ThemeMode } from '@/contexts/themeContext'
 
 const STORAGE_KEY = 'app_theme'
 
@@ -51,12 +42,4 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const value = useMemo(() => ({ theme, toggleTheme, setTheme }), [theme, toggleTheme, setTheme])
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
-}
-
-export const useTheme = () => {
-  const context = useContext(ThemeContext)
-  if (!context) {
-    throw new Error('useTheme must be used within ThemeProvider')
-  }
-  return context
 }

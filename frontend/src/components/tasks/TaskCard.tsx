@@ -2,7 +2,7 @@ import { Calendar, Paperclip, User } from 'lucide-react'
 import type { Task } from '@/types'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import { useLocale } from '@/contexts/locale'
+import { useLocale } from '@/contexts/localeContext'
 import { formatDateOnly, getUrgencyColor, getStatusColor, truncate } from '@/utils/helpers'
 
 interface TaskCardProps {

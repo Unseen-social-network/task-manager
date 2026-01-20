@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/Textarea'
 import { Select } from '@/components/ui/Select'
 import { Button } from '@/components/ui/Button'
 import { contactsService } from '@/services/contacts.service'
-import { useLocale } from '@/contexts/locale'
+import { useLocale } from '@/contexts/localeContext'
 
 interface TaskFormProps {
   initialData?: CreateTaskInput

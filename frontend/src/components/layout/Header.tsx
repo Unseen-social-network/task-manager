@@ -2,8 +2,8 @@ import { LogOut, Moon, Sun, User } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/contexts/authStore'
 import { Button } from '@/components/ui/Button'
-import { useLocale } from '@/contexts/locale'
-import { useTheme } from '@/contexts/theme'
+import { useLocale } from '@/contexts/localeContext'
+import { useTheme } from '@/contexts/themeContext'
 
 export const Header = () => {
   const navigate = useNavigate()

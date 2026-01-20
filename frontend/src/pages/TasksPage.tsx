@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Plus } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Layout } from '@/components/layout/Layout'
@@ -9,7 +9,7 @@ import { TaskForm } from '@/components/tasks/TaskForm'
 import { TaskFilters } from '@/components/tasks/TaskFilters'
 import { TaskDetailsModal } from '@/components/tasks/TaskDetailsModal'
 import { tasksService } from '@/services/tasks.service'
-import { useLocale } from '@/contexts/locale'
+import { useLocale } from '@/contexts/localeContext'
 import type { Task, CreateTaskInput, TaskFilters as TaskFiltersType } from '@/types'
 
 export const TasksPage = () => {
@@ -21,11 +21,7 @@ export const TasksPage = () => {
   const [filters, setFilters] = useState<TaskFiltersType>({})
   const { t } = useLocale()
 
-  useEffect(() => {
-    loadTasks()
-  }, [filters])
-
-  const loadTasks = async () => {
+  const loadTasks = useCallback(async () => {
     setIsLoading(true)
     try {
       const response = await tasksService.getTasks(filters)
@@ -35,7 +31,11 @@ export const TasksPage = () => {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [filters, t])
+
+  useEffect(() => {
+    loadTasks()
+  }, [loadTasks])
 
   const handleCreateTask = async (data: CreateTaskInput) => {
     try {
