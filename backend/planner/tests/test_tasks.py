@@ -12,7 +12,9 @@ from planner.models import Task
 class TestTaskAPI:
     """Tests for Task CRUD operations and permissions."""
 
-    def test_list_tasks_includes_tagged(self, authenticated_client, user, other_user, task):
+    def test_list_tasks_includes_tagged(
+        self, authenticated_client, user, other_user, task
+    ):
         """Test that users see own tasks and tasks where they are tagged."""
         Task.objects.create(
             owner=other_user,
@@ -28,7 +30,9 @@ class TestTaskAPI:
         returned_ids = {item['id'] for item in response.data['results']}
         assert task.id in returned_ids
 
-    def test_create_task_with_contact(self, authenticated_client, user, contact, project):
+    def test_create_task_with_contact(
+        self, authenticated_client, user, contact, project
+    ):
         """Test creating a task with contact reference."""
         url = '/api/v1/tasks/'
         data = {
@@ -110,7 +114,9 @@ class TestTaskAPI:
         assert response.status_code == status.HTTP_200_OK
         assert response.data['id'] == tagged_task.id
 
-    def test_tagged_user_cannot_update_task(self, authenticated_client, user, other_user):
+    def test_tagged_user_cannot_update_task(
+        self, authenticated_client, user, other_user
+    ):
         """Test that tagged user cannot update the task."""
         tagged_task = Task.objects.create(
             owner=other_user,
@@ -123,7 +129,9 @@ class TestTaskAPI:
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_tagged_user_cannot_delete_task(self, authenticated_client, user, other_user):
+    def test_tagged_user_cannot_delete_task(
+        self, authenticated_client, user, other_user
+    ):
         """Test that tagged user cannot delete the task."""
         tagged_task = Task.objects.create(
             owner=other_user,
