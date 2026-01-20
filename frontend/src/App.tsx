@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast'
 import { LoginPage } from '@/pages/LoginPage'
 import { TasksPage } from '@/pages/TasksPage'
 import { ContactsPage } from '@/pages/ContactsPage'
+import { ProjectsPage } from '@/pages/ProjectsPage'
 import { PrivateRoute } from '@/components/PrivateRoute'
 
 function App() {
@@ -95,6 +96,14 @@ function App() {
           element={
             <PrivateRoute>
               <ContactsPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/projects"
+          element={
+            <PrivateRoute>
+              <ProjectsPage />
             </PrivateRoute>
           }
         />
