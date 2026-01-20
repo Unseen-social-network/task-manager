@@ -73,7 +73,7 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
       const { project_id, tagged_user, ...payload } = data
       const normalizedProjectId =
         typeof project_id === 'number' && Number.isFinite(project_id) ? project_id : null
-      await tasksService.updateTask(task.id, payload)
+      await tasksService.updateTask(task.id, { ...payload, tagged_user })
       updateMeta({ project_id: normalizedProjectId ?? null, tagged_user })
       toast.success(t('tasks.updateSuccess'))
       setIsEditing(false)
@@ -201,7 +201,7 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
         )}
 
         {/* Meta Information */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {projectName && (
             <div>
               <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-1">

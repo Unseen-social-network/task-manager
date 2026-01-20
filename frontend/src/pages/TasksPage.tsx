@@ -60,7 +60,7 @@ export const TasksPage = () => {
       const { project_id, tagged_user, ...payload } = data
       const normalizedProjectId =
         typeof project_id === 'number' && Number.isFinite(project_id) ? project_id : null
-      const created = await tasksService.createTask(payload)
+      const created = await tasksService.createTask({ ...payload, tagged_user })
       taskMetaService.setTaskMeta(created.id, {
         project_id: normalizedProjectId ?? null,
         tagged_user,
