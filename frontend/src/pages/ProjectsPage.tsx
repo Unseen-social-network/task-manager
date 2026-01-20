@@ -11,6 +11,26 @@ import { projectsService } from '@/services/projects.service'
 import { useLocale } from '@/contexts/localeContext'
 import type { Project, CreateProjectInput } from '@/types'
 
+type PaginatedResponse<T> = {
+  items?: T[]
+  results?: T[]
+  data?: T[]
+}
+
+const toProjectList = (value: unknown): Project[] => {
+  if (Array.isArray(value)) return value as Project[]
+
+  if (value && typeof value === 'object') {
+    const v = value as PaginatedResponse<Project>
+
+    if (Array.isArray(v.items)) return v.items
+    if (Array.isArray(v.results)) return v.results
+    if (Array.isArray(v.data)) return v.data
+  }
+
+  return []
+}
+
 export const ProjectsPage = () => {
   const [projects, setProjects] = useState<Project[]>([])
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -20,9 +40,10 @@ export const ProjectsPage = () => {
 
   const loadProjects = useCallback(async () => {
     try {
-      const data = await Promise.resolve(projectsService.getProjects())
-      setProjects(data)
+      const resp = await Promise.resolve(projectsService.getProjects())
+      setProjects(toProjectList(resp))
     } catch {
+      // если ключа нет — замени на строку или добавь в словарь
       toast.error(t('projects.loadFail'))
     }
   }, [t])
