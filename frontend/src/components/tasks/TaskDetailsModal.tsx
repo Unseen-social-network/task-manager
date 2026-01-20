@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { TaskForm } from './TaskForm'
 import { tasksService } from '@/services/tasks.service'
-import { useLocale } from '@/contexts/locale'
+import { useLocale } from '@/contexts/localeContext'
 import {
   formatDate,
   getUrgencyColor,

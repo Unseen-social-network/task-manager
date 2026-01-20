@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { authService } from '@/services/auth.service'
 import { getStoredTokens } from '@/services/api'
 import type { LoginCredentials } from '@/types'
+import { getApiErrorMessage } from '@/utils/helpers'
 
 interface AuthState {
   username: string | null
@@ -33,8 +34,8 @@ export const useAuthStore = create<AuthState>((set) => ({
         isAuthenticated: true,
         isLoading: false,
       })
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.detail || 'Login failed'
+    } catch (error: unknown) {
+      const errorMessage = getApiErrorMessage(error, 'Login failed')
       set({ error: errorMessage, isLoading: false })
       throw error
     }

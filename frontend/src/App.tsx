@@ -13,14 +13,22 @@ function App() {
     const metrikaId = Number(metrikaEnvId)
     if (!Number.isFinite(metrikaId)) return
 
-    const ym: NonNullable<Window['ym']> =
+    type MetrikaFunction = ((
+      id: number,
+      method: string,
+      ...args: unknown[]
+    ) => void) & {
+      a?: unknown[][]
+      l?: number
+    }
+    const ym: MetrikaFunction =
       window.ym ??
-      ((...args: unknown[]) => {
-        ;(ym as any).a = (ym as any).a || []
-        ;(ym as any).a.push(args)
+      ((id: number, method: string, ...args: unknown[]) => {
+        ym.a = ym.a ?? []
+        ym.a.push([id, method, ...args])
       })
     window.ym = ym
-    ;(window.ym as any).l = Date.now()
+    ym.l = Date.now()
 
     if (!document.getElementById('yandex-metrika')) {
       const script = document.createElement('script')

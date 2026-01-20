@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { ContactForm } from './ContactForm'
 import { contactsService } from '@/services/contacts.service'
 import { formatDate } from '@/utils/helpers'
-import { useLocale } from '@/contexts/locale'
+import { useLocale } from '@/contexts/localeContext'
 
 interface ContactDetailsModalProps {
   contact: Contact

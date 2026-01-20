@@ -1,5 +1,10 @@
 import { format, parseISO } from 'date-fns'
+import { isAxiosError } from 'axios'
 import type { TaskUrgency, TaskStatus } from '@/types'
+
+type ApiErrorData = {
+  detail?: string
+}
 
 export const formatDate = (dateString: string | null): string => {
   if (!dateString) return '-'
@@ -66,4 +71,14 @@ export const truncate = (str: string, length: number): string => {
 
 export const cn = (...classes: (string | undefined | null | false)[]): string => {
   return classes.filter(Boolean).join(' ')
+}
+
+export const getApiErrorMessage = (error: unknown, fallback: string): string => {
+  if (isAxiosError<ApiErrorData>(error)) {
+    return error.response?.data?.detail ?? fallback
+  }
+  if (error instanceof Error && error.message) {
+    return error.message
+  }
+  return fallback
 }
