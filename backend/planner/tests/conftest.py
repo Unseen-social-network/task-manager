@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 import pytest
 from rest_framework.test import APIClient
 
-from planner.models import Contact, Task
+from planner.models import Contact, Project, Task
 
 User = get_user_model()
 
@@ -75,6 +75,18 @@ def task(user, contact):
         urgency=Task.Urgency.MEDIUM,
         status=Task.Status.TODO,
         contact=contact,
+    )
+
+
+@pytest.fixture
+def project(user):
+    """Create and return a test project."""
+    return Project.objects.create(
+        owner=user,
+        name='Test Project',
+        description='Project description',
+        phone='+1234567890',
+        links=[{'label': 'Docs', 'url': 'https://example.com/docs'}],
     )
 
 

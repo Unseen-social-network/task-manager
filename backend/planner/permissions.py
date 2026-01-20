@@ -36,3 +36,16 @@ class IsTaskOwner(permissions.BasePermission):
             # Check if task exists and belongs to user
             return Task.objects.filter(id=task_id, owner=request.user).exists()
         return True
+
+
+class TaskAccessPermission(permissions.BasePermission):
+    """
+    Allow task owners full access; tagged users can only read.
+    """
+
+    message = 'Task not found or access denied.'
+
+    def has_object_permission(self, request, view, obj):
+        if request.method in permissions.SAFE_METHODS:
+            return obj.owner == request.user or obj.tagged_user == request.user
+        return obj.owner == request.user
