@@ -4,7 +4,7 @@ Admin configuration for Planner models.
 
 from django.contrib import admin
 
-from .models import Attachment, Contact, Project, Task
+from .models import Attachment, Contact, Invite, Profile, Project, Task
 
 
 @admin.register(Contact)
@@ -83,4 +83,29 @@ class AttachmentAdmin(admin.ModelAdmin):
     fieldsets = (
         (None, {'fields': ('owner', 'task', 'file')}),
         ('Metadata', {'fields': ('original_name', 'size', 'created_at')}),
+    )
+
+
+@admin.register(Profile)
+class ProfileAdmin(admin.ModelAdmin):
+    list_display = ['user', 'full_name', 'telegram_username', 'invite_quota']
+    search_fields = ['user__username', 'full_name', 'telegram_username']
+    list_filter = ['invite_quota']
+    readonly_fields = ['created_at', 'updated_at']
+    fieldsets = (
+        (None, {'fields': ('user', 'full_name', 'telegram_username')}),
+        ('Invites', {'fields': ('invite_quota',)}),
+        ('Timestamps', {'fields': ('created_at', 'updated_at')}),
+    )
+
+
+@admin.register(Invite)
+class InviteAdmin(admin.ModelAdmin):
+    list_display = ['email', 'invited_by', 'status', 'invited_at', 'accepted_at']
+    list_filter = ['status', 'invited_at']
+    search_fields = ['email', 'invited_by__username']
+    readonly_fields = ['token', 'invited_at', 'accepted_at', 'revoked_at']
+    fieldsets = (
+        (None, {'fields': ('email', 'invited_by', 'invited_user', 'status')}),
+        ('Tracking', {'fields': ('token', 'invited_at', 'accepted_at', 'revoked_at')}),
     )

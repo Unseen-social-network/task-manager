@@ -123,6 +123,43 @@ export interface LoginCredentials {
   password: string
 }
 
+export interface Profile {
+  username: string
+  full_name: string
+  telegram_username: string
+  invite_quota: number
+  invites_remaining: number
+}
+
+export interface PasswordChangeInput {
+  old_password: string
+  new_password: string
+}
+
+export type InviteStatus = 'pending' | 'accepted' | 'revoked'
+
+export interface Invite {
+  id: number
+  email: string
+  status: InviteStatus
+  token: string
+  invited_at: string
+  accepted_at: string | null
+  revoked_at: string | null
+  invited_by_username: string
+  invited_by_full_name: string
+}
+
+export interface InviteCreateInput {
+  email: string
+}
+
+export interface InviteAcceptInput {
+  username: string
+  full_name: string
+  password: string
+}
+
 export interface PaginatedResponse<T> {
   count: number
   next: string | null

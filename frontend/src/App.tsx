@@ -5,6 +5,8 @@ import { LoginPage } from '@/pages/LoginPage'
 import { TasksPage } from '@/pages/TasksPage'
 import { ContactsPage } from '@/pages/ContactsPage'
 import { ProjectsPage } from '@/pages/ProjectsPage'
+import { SettingsPage } from '@/pages/SettingsPage'
+import { InviteAcceptPage } from '@/pages/InviteAcceptPage'
 import { PrivateRoute } from '@/components/PrivateRoute'
 
 function App() {
@@ -83,11 +85,20 @@ function App() {
 
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/invite/:token" element={<InviteAcceptPage />} />
         <Route
           path="/tasks"
           element={
             <PrivateRoute>
               <TasksPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <PrivateRoute>
+              <SettingsPage />
             </PrivateRoute>
           }
         />
