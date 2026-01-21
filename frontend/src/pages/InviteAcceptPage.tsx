@@ -5,13 +5,15 @@ import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useLocale } from '@/contexts/localeContext'
+import { useTheme } from '@/contexts/themeContext'
 import { invitesService } from '@/services/invites.service'
 import type { Invite, InviteAcceptInput } from '@/types'
 
 type InviteFormValues = InviteAcceptInput & { confirm_password: string }
 
 export const InviteAcceptPage = () => {
-  const { t } = useLocale()
+  const { t, locale, setLocale } = useLocale()
+  const { theme, toggleTheme } = useTheme()
   const { token } = useParams<{ token: string }>()
   const navigate = useNavigate()
   const [invite, setInvite] = useState<Invite | null>(null)
@@ -79,6 +81,24 @@ export const InviteAcceptPage = () => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-lg shadow p-8 space-y-6">
+        <div className="flex justify-end gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setLocale(locale === 'en' ? 'ru' : 'en')}
+            aria-label={t('nav.languageToggle')}
+          >
+            {t('nav.languageToggle')}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleTheme}
+            aria-label={t('nav.themeToggle')}
+          >
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </Button>
+        </div>
         <div className="space-y-2">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
             {t('invite.title')}
@@ -108,7 +128,7 @@ export const InviteAcceptPage = () => {
               label={t('invite.username')}
               {...register('username', { required: t('invite.required') })}
               error={errors.username?.message}
-              placeholder="anna"
+              placeholder="nikita"
             />
             <p className="text-xs text-gray-500 dark:text-gray-400">
               {t('invite.usernameHint')}
