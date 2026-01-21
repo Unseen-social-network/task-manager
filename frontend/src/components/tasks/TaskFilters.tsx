@@ -1,5 +1,5 @@
 import { Search } from 'lucide-react'
-import type { TaskFilters as TaskFiltersType, TaskStatus } from '@/types'
+import type { Project, TaskFilters as TaskFiltersType, TaskStatus } from '@/types'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { useLocale } from '@/contexts/localeContext'
@@ -8,9 +8,15 @@ interface TaskFiltersProps {
   filters: TaskFiltersType
   onChange: (filters: TaskFiltersType) => void
   statusOptions?: TaskStatus[]
+  projects?: Project[]
 }
 
-export const TaskFilters = ({ filters, onChange, statusOptions }: TaskFiltersProps) => {
+export const TaskFilters = ({
+  filters,
+  onChange,
+  statusOptions,
+  projects = [],
+}: TaskFiltersProps) => {
   const { t } = useLocale()
   const availableStatuses: TaskStatus[] = statusOptions ?? [
     'todo',
@@ -20,9 +26,17 @@ export const TaskFilters = ({ filters, onChange, statusOptions }: TaskFiltersPro
   ]
 
   const handleFilterChange = (key: keyof TaskFiltersType, value: string) => {
+    const nextValue = (() => {
+      if (key === 'project') {
+        if (!value) return undefined
+        const parsed = Number(value)
+        return Number.isFinite(parsed) ? parsed : undefined
+      }
+      return value || undefined
+    })()
     onChange({
       ...filters,
-      [key]: value || undefined,
+      [key]: nextValue,
     })
   }
 
@@ -41,7 +55,7 @@ export const TaskFilters = ({ filters, onChange, statusOptions }: TaskFiltersPro
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Select
           options={[
             { value: '', label: t('tasks.filter.statusAll') },
@@ -64,6 +78,18 @@ export const TaskFilters = ({ filters, onChange, statusOptions }: TaskFiltersPro
           ]}
           value={filters.urgency || ''}
           onChange={e => handleFilterChange('urgency', e.target.value)}
+        />
+
+        <Select
+          options={[
+            { value: '', label: t('tasks.filter.projectAll') },
+            ...projects.map(project => ({
+              value: String(project.id),
+              label: project.name,
+            })),
+          ]}
+          value={filters.project ? String(filters.project) : ''}
+          onChange={e => handleFilterChange('project', e.target.value)}
         />
 
         <Select

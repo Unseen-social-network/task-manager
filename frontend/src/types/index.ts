@@ -176,6 +176,7 @@ export interface TaskFilters {
   created_at_from?: string
   created_at_to?: string
   contact?: number
+  project?: number
   search?: string
   ordering?: string
   page?: number
