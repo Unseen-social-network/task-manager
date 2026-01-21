@@ -77,10 +77,11 @@ export const PomodoroTimer = ({
 
   const playNotificationSound = useCallback(() => {
     if (typeof window === 'undefined') return
-    const AudioContext =
-      window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
-    if (!AudioContext) return
-    const audioContext = new AudioContext()
+    const audioContextConstructor: (typeof AudioContext) | undefined =
+      window.AudioContext ||
+      (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+    if (!audioContextConstructor) return
+    const audioContext = new audioContextConstructor()
     const oscillator = audioContext.createOscillator()
     const gainNode = audioContext.createGain()
     oscillator.type = 'sine'
