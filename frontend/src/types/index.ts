@@ -129,6 +129,7 @@ export interface Profile {
   telegram_username: string
   invite_quota: number
   invites_remaining: number
+  inviter_username?: string | null
 }
 
 export interface PasswordChangeInput {

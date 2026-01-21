@@ -182,6 +182,7 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     username = serializers.CharField(source='user.username', read_only=True)
     invites_remaining = serializers.SerializerMethodField()
+    inviter_username = serializers.SerializerMethodField()
 
     class Meta:
         model = Profile
@@ -191,8 +192,14 @@ class ProfileSerializer(serializers.ModelSerializer):
             'telegram_username',
             'invite_quota',
             'invites_remaining',
+            'inviter_username',
         ]
-        read_only_fields = ['username', 'invite_quota', 'invites_remaining']
+        read_only_fields = [
+            'username',
+            'invite_quota',
+            'invites_remaining',
+            'inviter_username',
+        ]
 
     def get_invites_remaining(self, obj):
         used_invites = Invite.objects.filter(
@@ -200,6 +207,20 @@ class ProfileSerializer(serializers.ModelSerializer):
             status__in=[Invite.Status.PENDING, Invite.Status.ACCEPTED],
         ).count()
         return max(obj.invite_quota - used_invites, 0)
+
+    def get_inviter_username(self, obj):
+        invite = (
+            Invite.objects.filter(
+                invited_user=obj.user,
+                status=Invite.Status.ACCEPTED,
+            )
+            .select_related('invited_by')
+            .order_by('-accepted_at')
+            .first()
+        )
+        if invite and invite.invited_by:
+            return invite.invited_by.username
+        return None
 
 
 class PasswordChangeSerializer(serializers.Serializer):

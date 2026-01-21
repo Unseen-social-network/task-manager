@@ -281,6 +281,10 @@ export const SettingsPage = () => {
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {t('settings.invites.remaining')} {remainingInvites}
             </p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {t('settings.invites.invitedBy')}{' '}
+              {profile?.inviter_username || 'System32'}
+            </p>
           </div>
           <form onSubmit={handleInviteSubmit(handleInviteSend)} className="space-y-4">
             <Input
