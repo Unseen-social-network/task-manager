@@ -180,6 +180,7 @@ export interface TaskFilters {
   contact?: number
   project?: number
   search?: string
+  search_in_description?: boolean
   ordering?: string
   page?: number
 }

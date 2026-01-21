@@ -69,6 +69,21 @@ export const TaskFilters = ({
         {t('tasks.filter.searchEverywhere')}
       </label>
 
+      <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+        <input
+          type="checkbox"
+          checked={filters.search_in_description ?? false}
+          onChange={event =>
+            onChange({
+              ...filters,
+              search_in_description: event.target.checked ? true : undefined,
+            })
+          }
+          className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+        />
+        {t('tasks.filter.searchInDescription')}
+      </label>
+
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Select
           options={[
