@@ -3,6 +3,7 @@ Serializers for Planner application.
 """
 
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from rest_framework import serializers
 
 from .models import Attachment, Contact, Invite, Profile, Project, Task
@@ -284,10 +285,13 @@ class InviteCreateSerializer(serializers.ModelSerializer):
         email = attrs.get('email')
         if email and User.objects.filter(email__iexact=email).exists():
             raise serializers.ValidationError('User with this email already exists.')
-        if email and Invite.objects.filter(
-            email__iexact=email,
-            status=Invite.Status.PENDING,
-        ).exists():
+        if (
+            email
+            and Invite.objects.filter(
+                email__iexact=email,
+                status=Invite.Status.PENDING,
+            ).exists()
+        ):
             raise serializers.ValidationError('Invite has already been sent.')
         used_invites = Invite.objects.filter(
             invited_by=request.user,

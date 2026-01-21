@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
@@ -65,23 +65,23 @@ export const SettingsPage = () => {
     fetchProfile()
   }, [resetProfile, t])
 
-  const fetchInvites = async () => {
-    setLoadingInvites(true)
-    try {
-      const data = await invitesService.listInvites()
-      setInvites(data.results)
-    } catch {
-      toast.error(t('settings.invites.loadFail'))
-    } finally {
-      setLoadingInvites(false)
-    }
-  }
+  const fetchInvites = useCallback(async () => {
+  setLoadingInvites(true)
+  try {
+        const data = await invitesService.listInvites()
+        setInvites(data.results)
+      } catch {
+        toast.error(t('settings.invites.loadFail'))
+      } finally {
+        setLoadingInvites(false)
+      }
+    }, [t])
 
   useEffect(() => {
-    if (activeTab === 'invites') {
-      fetchInvites()
-    }
-  }, [activeTab])
+      if (activeTab === 'invites') {
+        fetchInvites()
+      }
+    }, [activeTab, fetchInvites])
 
   const handleProfileSave = async (data: Profile) => {
     setSavingProfile(true)

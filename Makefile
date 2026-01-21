@@ -1,4 +1,4 @@
-.PHONY: help build up down restart logs shell migrate makemigrations createsuperuser test lint format clean prod-superuser frontend-install frontend-lint frontend-build frontend-check
+.PHONY: help build up down restart logs shell migrate makemigrations createsuperuser test lint format clean prod-superuser frontend-install frontend-lint frontend-build frontend-check all-pre-CI
 
 # Default target
 help:
@@ -21,6 +21,7 @@ help:
 	@echo "  make frontend-build  - Build frontend"
 	@echo "  make frontend-check  - Run frontend lint + build"
 	@echo "  make clean           - Clean up containers and volumes"
+	@echo "  make all-pre-CI      - All check"
 	@echo ""
 	@echo "Production commands:"
 	@echo "  make prod-build      - Build production images"
@@ -73,14 +74,13 @@ createsuperuser:
 
 # Testing and linting
 test:
-	docker compose -f infra/compose/docker-compose.yml exec backend pytest -v
+	poetry run pytest
 
 test-cov:
 	docker compose -f infra/compose/docker-compose.yml exec backend pytest --cov=planner --cov-report=html
 
 lint:
-	poetry run ruff check backend/
-	poetry run ruff format --check backend/
+	poetry run pre-commit run -a
 
 format:
 	poetry run ruff check --fix backend/
@@ -128,3 +128,7 @@ clean:
 	find . -type d -name "*.egg-info" -exec rm -rf {} +
 	find . -type d -name ".pytest_cache" -exec rm -rf {} +
 	find . -type d -name ".ruff_cache" -exec rm -rf {} +
+
+
+# Pre-Ci
+all-pre-CI: lint test frontend-check

@@ -296,7 +296,9 @@ class Invite(models.Model):
         verbose_name='Status',
     )
     invited_at = models.DateTimeField(auto_now_add=True, verbose_name='Invited at')
-    accepted_at = models.DateTimeField(null=True, blank=True, verbose_name='Accepted at')
+    accepted_at = models.DateTimeField(
+        null=True, blank=True, verbose_name='Accepted at'
+    )
     revoked_at = models.DateTimeField(null=True, blank=True, verbose_name='Revoked at')
 
     class Meta:

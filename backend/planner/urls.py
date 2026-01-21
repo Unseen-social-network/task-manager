@@ -14,10 +14,10 @@ from .views import (
     ContactViewSet,
     InviteAcceptView,
     InviteViewSet,
+    PasswordChangeView,
     ProfileView,
     ProjectViewSet,
     TaskViewSet,
-    PasswordChangeView,
 )
 
 router = DefaultRouter()
@@ -33,7 +33,9 @@ urlpatterns = [
     path('auth/jwt/refresh/', TokenRefreshView.as_view(), name='jwt-refresh'),
     path('profile/', ProfileView.as_view(), name='profile'),
     path('profile/password/', PasswordChangeView.as_view(), name='password-change'),
-    path('invites/accept/<uuid:token>/', InviteAcceptView.as_view(), name='invite-accept'),
+    path(
+        'invites/accept/<uuid:token>/', InviteAcceptView.as_view(), name='invite-accept'
+    ),
     # API endpoints
     path('', include(router.urls)),
 ]

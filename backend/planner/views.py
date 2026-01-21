@@ -287,4 +287,6 @@ class InviteAcceptView(APIView):
         serializer.is_valid(raise_exception=True)
         with transaction.atomic():
             serializer.save(invite=invite)
-        return Response({'detail': 'Invite accepted successfully.'}, status=status.HTTP_201_CREATED)
+        return Response(
+            {'detail': 'Invite accepted successfully.'}, status=status.HTTP_201_CREATED
+        )
