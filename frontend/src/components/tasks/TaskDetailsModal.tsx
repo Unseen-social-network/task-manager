@@ -34,6 +34,10 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false)
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [projectDetails, setProjectDetails] = useState<Project | null>(null)
+  const [isTrackerRunning, setIsTrackerRunning] = useState(false)
+  const [isPomodoroRunning, setIsPomodoroRunning] = useState(false)
+  const [trackerStopSignal, setTrackerStopSignal] = useState(0)
+  const [pomodoroStopSignal, setPomodoroStopSignal] = useState(0)
   const [metaState, setMetaState] = useState<TaskMeta>({
     project_id: task.project_id ?? null,
     tagged_user: task.tagged_user,
@@ -218,6 +222,16 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
     setSelectedProject(null)
   }
 
+  const handleClose = () => {
+    if (isTrackerRunning || isPomodoroRunning) {
+      const shouldStop = confirm(t('tasks.timerCloseConfirm'))
+      if (!shouldStop) return
+      setTrackerStopSignal(prev => prev + 1)
+      setPomodoroStopSignal(prev => prev + 1)
+    }
+    onClose()
+  }
+
   const handleShare = async () => {
     const url = new URL(window.location.href)
     url.pathname = '/tasks'
@@ -232,7 +246,7 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
 
   if (isEditing) {
     return (
-      <Modal isOpen={isOpen} onClose={onClose} title={t('tasks.editTitle')}>
+      <Modal isOpen={isOpen} onClose={handleClose} title={t('tasks.editTitle')}>
         <TaskForm
           initialData={{
             title: task.title,
@@ -254,11 +268,11 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
 
   return (
     <>
-      <Modal
-        isOpen={isOpen}
-        onClose={onClose}
-        title={t('tasks.detailsTitle')}
-        footer={
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title={t('tasks.detailsTitle')}
+      footer={
           <>
             <Button
               variant="danger"
@@ -372,6 +386,8 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
             initialSeconds={metaState.time_spent_seconds ?? 0}
             trackingCompleted={metaState.tracking_completed ?? false}
             isLocked={false}
+            stopSignal={trackerStopSignal}
+            onRunningChange={setIsTrackerRunning}
             onUpdate={updateMeta}
           />
           <PomodoroTimer
@@ -379,6 +395,8 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
             isLocked={metaState.tracking_completed ?? false}
             currentSeconds={metaState.time_spent_seconds ?? 0}
             initialSessions={metaState.pomodoro_sessions ?? 0}
+            stopSignal={pomodoroStopSignal}
+            onRunningChange={setIsPomodoroRunning}
             onUpdate={updateMeta}
           />
         </div>
