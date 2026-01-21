@@ -50,12 +50,16 @@ export const Header = () => {
 
           {/* User menu */}
           <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-4">
-            <div className="flex items-center gap-2 text-xs text-gray-700 dark:text-gray-200 sm:text-sm">
+            <button
+              type="button"
+              onClick={() => navigate('/settings')}
+              className="flex items-center gap-2 text-xs text-gray-700 dark:text-gray-200 sm:text-sm hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+            >
               <User className="w-4 h-4" />
               <span className="max-w-[140px] truncate sm:max-w-none">
                 {username || t('nav.userFallback')}
               </span>
-            </div>
+            </button>
             <Button
               variant="ghost"
               size="sm"

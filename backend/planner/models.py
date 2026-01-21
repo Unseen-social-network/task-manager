@@ -2,6 +2,8 @@
 Models for Planner application.
 """
 
+import uuid
+
 from django.conf import settings
 from django.db import models
 
@@ -230,3 +232,83 @@ class Attachment(models.Model):
         if self.file and not self.size:
             self.size = self.file.size
         super().save(*args, **kwargs)
+
+
+class Profile(models.Model):
+    """User profile with invitation quota and personal details."""
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='profile',
+        verbose_name='User',
+    )
+    full_name = models.CharField(max_length=255, blank=True, verbose_name='Full name')
+    telegram_username = models.CharField(
+        max_length=64,
+        blank=True,
+        verbose_name='Telegram username',
+    )
+    invite_quota = models.PositiveIntegerField(
+        default=3,
+        verbose_name='Invite quota',
+        help_text='Total number of invites available to this user.',
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
+
+    class Meta:
+        verbose_name = 'Profile'
+        verbose_name_plural = 'Profiles'
+
+    def __str__(self):
+        return f'Profile for {self.user.username}'
+
+
+class Invite(models.Model):
+    """Email invitation for onboarding a colleague."""
+
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'Pending'
+        ACCEPTED = 'accepted', 'Accepted'
+        REVOKED = 'revoked', 'Revoked'
+
+    invited_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='sent_invites',
+        verbose_name='Invited by',
+    )
+    invited_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='received_invites',
+        verbose_name='Invited user',
+    )
+    email = models.EmailField(verbose_name='Invitee email')
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+        verbose_name='Status',
+    )
+    invited_at = models.DateTimeField(auto_now_add=True, verbose_name='Invited at')
+    accepted_at = models.DateTimeField(
+        null=True, blank=True, verbose_name='Accepted at'
+    )
+    revoked_at = models.DateTimeField(null=True, blank=True, verbose_name='Revoked at')
+
+    class Meta:
+        verbose_name = 'Invite'
+        verbose_name_plural = 'Invites'
+        ordering = ['-invited_at']
+        indexes = [
+            models.Index(fields=['invited_by', 'status']),
+            models.Index(fields=['email', 'status']),
+        ]
+
+    def __str__(self):
+        return f'Invite to {self.email} from {self.invited_by.username}'

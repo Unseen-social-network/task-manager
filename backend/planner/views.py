@@ -2,21 +2,31 @@
 Views for Planner application.
 """
 
+from django.conf import settings
+from django.core.mail import send_mail
+from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, MultiPartParser
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from .filters import TaskFilter
-from .models import Attachment, Contact, Project, Task
+from .models import Attachment, Contact, Invite, Profile, Project, Task
 from .permissions import IsOwner, ProjectAccessPermission, TaskAccessPermission
 from .serializers import (
     AttachmentCreateSerializer,
     AttachmentSerializer,
     ContactSerializer,
+    InviteAcceptSerializer,
+    InviteCreateSerializer,
+    InviteSerializer,
+    PasswordChangeSerializer,
+    ProfileSerializer,
     ProjectSerializer,
     TaskSerializer,
 )
@@ -172,3 +182,111 @@ class ProjectViewSet(viewsets.ModelViewSet):
         obj = get_object_or_404(queryset, pk=self.kwargs.get('pk'))
         self.check_object_permissions(self.request, obj)
         return obj
+
+
+class ProfileView(APIView):
+    """Retrieve and update the current user's profile."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        profile, _ = Profile.objects.get_or_create(user=request.user)
+        serializer = ProfileSerializer(profile)
+        return Response(serializer.data)
+
+    def put(self, request):
+        profile, _ = Profile.objects.get_or_create(user=request.user)
+        serializer = ProfileSerializer(profile, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+
+class PasswordChangeView(APIView):
+    """Change the current user's password."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = PasswordChangeSerializer(
+            data=request.data,
+            context={'request': request},
+        )
+        serializer.is_valid(raise_exception=True)
+        request.user.set_password(serializer.validated_data['new_password'])
+        request.user.save(update_fields=['password'])
+        return Response({'detail': 'Password updated successfully.'})
+
+
+class InviteViewSet(viewsets.ModelViewSet):
+    """Manage invites sent by the current user."""
+
+    permission_classes = [IsAuthenticated]
+    http_method_names = ['get', 'post', 'delete']
+
+    def get_queryset(self):
+        return Invite.objects.filter(invited_by=self.request.user)
+
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return InviteCreateSerializer
+        return InviteSerializer
+
+    def perform_create(self, serializer):
+        invite = serializer.save()
+        frontend_base_url = getattr(
+            settings,
+            'FRONTEND_BASE_URL',
+            'http://localhost:3000',
+        )
+        invite_url = f'{frontend_base_url}/invite/{invite.token}'
+        profile, _ = Profile.objects.get_or_create(user=invite.invited_by)
+        inviter_name = profile.full_name or invite.invited_by.username
+        send_mail(
+            subject='You have been invited to Planner',
+            message=(
+                f'{inviter_name} invited you to Planner.\n'
+                f'Follow the link to join: {invite_url}'
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[invite.email],
+            fail_silently=False,
+        )
+
+    def destroy(self, request, *args, **kwargs):
+        invite = self.get_object()
+        if invite.status != Invite.Status.PENDING:
+            return Response(
+                {'detail': 'Only pending invites can be revoked.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        invite.status = Invite.Status.REVOKED
+        invite.revoked_at = timezone.now()
+        invite.save(update_fields=['status', 'revoked_at'])
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class InviteAcceptView(APIView):
+    """Accept invite via token."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request, token):
+        invite = get_object_or_404(Invite, token=token)
+        serializer = InviteSerializer(invite)
+        return Response(serializer.data)
+
+    def post(self, request, token):
+        invite = get_object_or_404(Invite, token=token)
+        if invite.status != Invite.Status.PENDING:
+            return Response(
+                {'detail': 'Invite is no longer active.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        serializer = InviteAcceptSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        with transaction.atomic():
+            serializer.save(invite=invite)
+        return Response(
+            {'detail': 'Invite accepted successfully.'}, status=status.HTTP_201_CREATED
+        )

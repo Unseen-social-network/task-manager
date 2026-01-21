@@ -3,9 +3,10 @@ Serializers for Planner application.
 """
 
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from rest_framework import serializers
 
-from .models import Attachment, Contact, Project, Task
+from .models import Attachment, Contact, Invite, Profile, Project, Task
 
 User = get_user_model()
 
@@ -175,3 +176,163 @@ class ProjectSerializer(serializers.ModelSerializer):
             'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class ProfileSerializer(serializers.ModelSerializer):
+    """Serializer for user profile."""
+
+    username = serializers.CharField(source='user.username', read_only=True)
+    invites_remaining = serializers.SerializerMethodField()
+    inviter_username = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Profile
+        fields = [
+            'username',
+            'full_name',
+            'telegram_username',
+            'invite_quota',
+            'invites_remaining',
+            'inviter_username',
+        ]
+        read_only_fields = [
+            'username',
+            'invite_quota',
+            'invites_remaining',
+            'inviter_username',
+        ]
+
+    def get_invites_remaining(self, obj):
+        used_invites = Invite.objects.filter(
+            invited_by=obj.user,
+            status__in=[Invite.Status.PENDING, Invite.Status.ACCEPTED],
+        ).count()
+        return max(obj.invite_quota - used_invites, 0)
+
+    def get_inviter_username(self, obj):
+        invite = (
+            Invite.objects.filter(
+                invited_user=obj.user,
+                status=Invite.Status.ACCEPTED,
+            )
+            .select_related('invited_by')
+            .order_by('-accepted_at')
+            .first()
+        )
+        if invite and invite.invited_by:
+            return invite.invited_by.username
+        return None
+
+
+class PasswordChangeSerializer(serializers.Serializer):
+    """Serializer for password change."""
+
+    old_password = serializers.CharField()
+    new_password = serializers.CharField()
+
+    def validate_old_password(self, value):
+        user = self.context['request'].user
+        if not user.check_password(value):
+            raise serializers.ValidationError('Old password is incorrect.')
+        return value
+
+
+class InviteSerializer(serializers.ModelSerializer):
+    """Serializer for listing invites."""
+
+    invited_by_username = serializers.CharField(
+        source='invited_by.username', read_only=True
+    )
+    invited_by_full_name = serializers.CharField(
+        source='invited_by.profile.full_name', read_only=True
+    )
+
+    class Meta:
+        model = Invite
+        fields = [
+            'id',
+            'email',
+            'status',
+            'token',
+            'invited_at',
+            'accepted_at',
+            'revoked_at',
+            'invited_by_username',
+            'invited_by_full_name',
+        ]
+        read_only_fields = [
+            'id',
+            'status',
+            'token',
+            'invited_at',
+            'accepted_at',
+            'revoked_at',
+            'invited_by_username',
+            'invited_by_full_name',
+        ]
+
+
+class InviteCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating invites."""
+
+    class Meta:
+        model = Invite
+        fields = ['email']
+
+    def validate(self, attrs):
+        request = self.context['request']
+        profile, _ = Profile.objects.get_or_create(user=request.user)
+        email = attrs.get('email')
+        if email and User.objects.filter(email__iexact=email).exists():
+            raise serializers.ValidationError('User with this email already exists.')
+        if (
+            email
+            and Invite.objects.filter(
+                email__iexact=email,
+                status=Invite.Status.PENDING,
+            ).exists()
+        ):
+            raise serializers.ValidationError('Invite has already been sent.')
+        used_invites = Invite.objects.filter(
+            invited_by=request.user,
+            status__in=[Invite.Status.PENDING, Invite.Status.ACCEPTED],
+        ).count()
+        if used_invites >= profile.invite_quota:
+            raise serializers.ValidationError('No invites remaining.')
+        return attrs
+
+    def create(self, validated_data):
+        request = self.context['request']
+        return Invite.objects.create(
+            invited_by=request.user,
+            email=validated_data['email'],
+        )
+
+
+class InviteAcceptSerializer(serializers.Serializer):
+    """Serializer for accepting invites."""
+
+    username = serializers.CharField()
+    full_name = serializers.CharField()
+    password = serializers.CharField()
+
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError('Username is already taken.')
+        return value
+
+    def save(self, invite):
+        user = User.objects.create_user(
+            username=self.validated_data['username'],
+            email=invite.email,
+            password=self.validated_data['password'],
+        )
+        profile = user.profile
+        profile.full_name = self.validated_data['full_name']
+        profile.save()
+
+        invite.status = Invite.Status.ACCEPTED
+        invite.invited_user = user
+        invite.accepted_at = timezone.now()
+        invite.save(update_fields=['status', 'invited_user', 'accepted_at'])
+        return user

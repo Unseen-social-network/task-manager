@@ -5,3 +5,6 @@ class PlannerConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'planner'
     verbose_name = 'Planner'
+
+    def ready(self):
+        from . import signals  # noqa: F401
