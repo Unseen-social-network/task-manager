@@ -162,6 +162,7 @@ class ProjectSerializer(serializers.ModelSerializer):
     """Serializer for Project model."""
 
     owner = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    is_owner = serializers.SerializerMethodField()
 
     class Meta:
         model = Project
@@ -172,10 +173,18 @@ class ProjectSerializer(serializers.ModelSerializer):
             'description',
             'phone',
             'links',
+            'is_owner',
             'created_at',
             'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def get_is_owner(self, obj):
+        """Return whether the current user owns this project."""
+        request = self.context.get('request')
+        if not request:
+            return False
+        return obj.owner_id == request.user.id
 
 
 class ProfileSerializer(serializers.ModelSerializer):

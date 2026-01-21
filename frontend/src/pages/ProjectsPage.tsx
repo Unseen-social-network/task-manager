@@ -128,6 +128,7 @@ export const ProjectsPage = () => {
           isOpen={isDetailsModalOpen}
           onClose={() => setIsDetailsModalOpen(false)}
           onUpdate={handleProjectUpdate}
+          isReadOnly={selectedProject.is_owner === false}
         />
       )}
     </Layout>
