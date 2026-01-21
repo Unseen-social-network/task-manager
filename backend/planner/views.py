@@ -12,7 +12,7 @@ from rest_framework.response import Response
 
 from .filters import TaskFilter
 from .models import Attachment, Contact, Project, Task
-from .permissions import IsOwner, TaskAccessPermission
+from .permissions import IsOwner, ProjectAccessPermission, TaskAccessPermission
 from .serializers import (
     AttachmentCreateSerializer,
     AttachmentSerializer,
@@ -149,14 +149,20 @@ class ProjectViewSet(viewsets.ModelViewSet):
     """
 
     serializer_class = ProjectSerializer
-    permission_classes = [IsAuthenticated, IsOwner]
+    permission_classes = [IsAuthenticated, ProjectAccessPermission]
     search_fields = ['name', 'description', 'phone']
     ordering_fields = ['name', 'created_at', 'updated_at']
     ordering = ['-created_at']
 
     def get_queryset(self):
-        """Return only projects owned by the current user."""
-        return Project.objects.filter(owner=self.request.user)
+        """Return projects owned by or tagged for the current user."""
+        user = self.request.user
+        base_queryset = Project.objects.filter(owner=user)
+        if self.request.method in ('GET', 'HEAD', 'OPTIONS'):
+            base_queryset = base_queryset | Project.objects.filter(
+                tasks__tagged_user=user
+            )
+        return base_queryset.distinct()
 
     def get_object(self):
         """
