@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Edit2, Trash2, Upload, Download, X, Calendar, User, FolderKanban, AtSign } from 'lucide-react'
+import { Edit2, Trash2, Upload, Download, X, Calendar, User, FolderKanban, AtSign, Link2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { Task, UpdateTaskInput, TaskMeta, Project } from '@/types'
 import { Modal } from '@/components/ui/Modal'
@@ -218,6 +218,18 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
     setSelectedProject(null)
   }
 
+  const handleShare = async () => {
+    const url = new URL(window.location.href)
+    url.pathname = '/tasks'
+    url.searchParams.set('task', String(task.id))
+    try {
+      await navigator.clipboard.writeText(url.toString())
+      toast.success(t('tasks.shareSuccess'))
+    } catch {
+      toast.error(t('tasks.shareFail'))
+    }
+  }
+
   if (isEditing) {
     return (
       <Modal isOpen={isOpen} onClose={onClose} title={t('tasks.editTitle')}>
@@ -256,6 +268,10 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
             >
               <Trash2 className="w-4 h-4 mr-2" />
               {t('actions.delete')}
+            </Button>
+            <Button variant="secondary" onClick={handleShare}>
+              <Link2 className="w-4 h-4 mr-2" />
+              {t('tasks.share')}
             </Button>
             <Button onClick={() => setIsEditing(true)} disabled={isTaggedViewer}>
               <Edit2 className="w-4 h-4 mr-2" />
