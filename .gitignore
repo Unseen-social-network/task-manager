@@ -44,3 +44,6 @@ poetry.lock
 # OS
 .DS_Store
 Thumbs.db
+
+/backend/media/
+!/backend/media/attachments/.gitkeep
