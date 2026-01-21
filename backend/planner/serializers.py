@@ -260,6 +260,14 @@ class InviteCreateSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         request = self.context['request']
         profile, _ = Profile.objects.get_or_create(user=request.user)
+        email = attrs.get('email')
+        if email and User.objects.filter(email__iexact=email).exists():
+            raise serializers.ValidationError('User with this email already exists.')
+        if email and Invite.objects.filter(
+            email__iexact=email,
+            status=Invite.Status.PENDING,
+        ).exists():
+            raise serializers.ValidationError('Invite has already been sent.')
         used_invites = Invite.objects.filter(
             invited_by=request.user,
             status__in=[Invite.Status.PENDING, Invite.Status.ACCEPTED],
