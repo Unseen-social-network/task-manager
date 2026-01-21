@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Plus } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useSearchParams } from 'react-router-dom'
 import { Layout } from '@/components/layout/Layout'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
@@ -19,7 +20,14 @@ export const TasksPage = () => {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [filters, setFilters] = useState<TaskFiltersType>({})
+  const [searchParams, setSearchParams] = useSearchParams()
   const { t } = useLocale()
+  const sharedTaskId = useMemo(() => {
+    const param = searchParams.get('task')
+    if (!param) return null
+    const parsed = Number(param)
+    return Number.isFinite(parsed) ? parsed : null
+  }, [searchParams])
 
   const loadTasks = useCallback(async () => {
     setIsLoading(true)
@@ -37,6 +45,44 @@ export const TasksPage = () => {
     loadTasks()
   }, [loadTasks])
 
+  useEffect(() => {
+    if (!sharedTaskId) return
+    const existingTask = tasks.find(task => task.id === sharedTaskId)
+    if (existingTask) {
+      setSelectedTask(existingTask)
+      setIsDetailsModalOpen(true)
+      return
+    }
+    let isActive = true
+    const loadSharedTask = async () => {
+      try {
+        const task = await tasksService.getTask(sharedTaskId)
+        if (!isActive) return
+        setSelectedTask(task)
+        setIsDetailsModalOpen(true)
+      } catch {
+        if (!isActive) return
+        toast.error(t('tasks.openFail'))
+      }
+    }
+    loadSharedTask()
+    return () => {
+      isActive = false
+    }
+  }, [sharedTaskId, tasks, t])
+
+  const updateTaskShareParam = (taskId: number | null) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev)
+      if (taskId) {
+        next.set('task', String(taskId))
+      } else {
+        next.delete('task')
+      }
+      return next
+    })
+  }
+
   const handleCreateTask = async (data: CreateTaskInput) => {
     try {
       await tasksService.createTask(data)
@@ -51,11 +97,18 @@ export const TasksPage = () => {
   const handleTaskClick = (task: Task) => {
     setSelectedTask(task)
     setIsDetailsModalOpen(true)
+    updateTaskShareParam(task.id)
   }
 
   const handleTaskUpdate = () => {
     setIsDetailsModalOpen(false)
+    updateTaskShareParam(null)
     loadTasks()
+  }
+
+  const handleTaskClose = () => {
+    setIsDetailsModalOpen(false)
+    updateTaskShareParam(null)
   }
 
   return (
@@ -117,7 +170,7 @@ export const TasksPage = () => {
         <TaskDetailsModal
           task={selectedTask}
           isOpen={isDetailsModalOpen}
-          onClose={() => setIsDetailsModalOpen(false)}
+          onClose={handleTaskClose}
           onUpdate={handleTaskUpdate}
         />
       )}
