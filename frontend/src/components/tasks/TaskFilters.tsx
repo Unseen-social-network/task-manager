@@ -1,5 +1,5 @@
 import { Search } from 'lucide-react'
-import type { TaskFilters as TaskFiltersType } from '@/types'
+import type { TaskFilters as TaskFiltersType, TaskStatus } from '@/types'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { useLocale } from '@/contexts/localeContext'
@@ -7,10 +7,17 @@ import { useLocale } from '@/contexts/localeContext'
 interface TaskFiltersProps {
   filters: TaskFiltersType
   onChange: (filters: TaskFiltersType) => void
+  statusOptions?: TaskStatus[]
 }
 
-export const TaskFilters = ({ filters, onChange }: TaskFiltersProps) => {
+export const TaskFilters = ({ filters, onChange, statusOptions }: TaskFiltersProps) => {
   const { t } = useLocale()
+  const availableStatuses: TaskStatus[] = statusOptions ?? [
+    'todo',
+    'in_progress',
+    'done',
+    'canceled',
+  ]
 
   const handleFilterChange = (key: keyof TaskFiltersType, value: string) => {
     onChange({
@@ -38,10 +45,10 @@ export const TaskFilters = ({ filters, onChange }: TaskFiltersProps) => {
         <Select
           options={[
             { value: '', label: t('tasks.filter.statusAll') },
-            { value: 'todo', label: t('tasks.filter.status.todo') },
-            { value: 'in_progress', label: t('tasks.filter.status.in_progress') },
-            { value: 'done', label: t('tasks.filter.status.done') },
-            { value: 'canceled', label: t('tasks.filter.status.canceled') },
+            ...availableStatuses.map(status => ({
+              value: status,
+              label: t(`tasks.filter.status.${status}`),
+            })),
           ]}
           value={filters.status || ''}
           onChange={e => handleFilterChange('status', e.target.value)}

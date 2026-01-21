@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Edit2, Trash2, Upload, Download, X, Calendar, User, FolderKanban, AtSign, Link2 } from 'lucide-react'
 import toast from 'react-hot-toast'
-import type { Task, UpdateTaskInput, TaskMeta, Project } from '@/types'
+import type { Task, UpdateTaskInput, TaskMeta, Project, TaskStatus } from '@/types'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -36,6 +36,7 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
   const [projectDetails, setProjectDetails] = useState<Project | null>(null)
   const [isTrackerRunning, setIsTrackerRunning] = useState(false)
   const [isPomodoroRunning, setIsPomodoroRunning] = useState(false)
+  const [displayStatus, setDisplayStatus] = useState<TaskStatus>(task.status)
   const [trackerStopSignal, setTrackerStopSignal] = useState(0)
   const [pomodoroStopSignal, setPomodoroStopSignal] = useState(0)
   const [metaState, setMetaState] = useState<TaskMeta>({
@@ -48,6 +49,8 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
   const fileInputRef = useRef<HTMLInputElement>(null)
   const pendingUpdatesRef = useRef<UpdateTaskInput>({})
   const isSavingRef = useRef(false)
+  const autoStatusRef = useRef(false)
+  const statusBeforeAutoRef = useRef<TaskStatus | null>(null)
   const { t } = useLocale()
   const username = useAuthStore(state => state.username)
   const projectName = projectDetails?.name ?? task.project_name
@@ -62,6 +65,9 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
       tracking_completed: task.tracking_completed ?? false,
       pomodoro_sessions: task.pomodoro_sessions ?? 0,
     })
+    setDisplayStatus(task.status)
+    autoStatusRef.current = false
+    statusBeforeAutoRef.current = null
     pendingUpdatesRef.current = {}
   }, [task])
 
@@ -141,6 +147,37 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
     [flushPending]
   )
 
+  const updateTaskStatus = useCallback(
+    async (status: TaskStatus) => {
+      setDisplayStatus(status)
+      try {
+        await tasksService.updateTask(task.id, { status })
+      } catch {
+        toast.error(t('tasks.updateFail'))
+      }
+    },
+    [task.id, t]
+  )
+
+  useEffect(() => {
+    const isWorkActive = isTrackerRunning || isPomodoroRunning
+    if (displayStatus === 'done' || displayStatus === 'canceled') {
+      return
+    }
+    if (isWorkActive && displayStatus === 'todo' && !autoStatusRef.current) {
+      autoStatusRef.current = true
+      statusBeforeAutoRef.current = displayStatus
+      void updateTaskStatus('in_progress')
+    } else if (!isWorkActive && autoStatusRef.current) {
+      autoStatusRef.current = false
+      const previousStatus = statusBeforeAutoRef.current
+      statusBeforeAutoRef.current = null
+      if (previousStatus === 'todo') {
+        void updateTaskStatus('todo')
+      }
+    }
+  }, [displayStatus, isPomodoroRunning, isTrackerRunning, updateTaskStatus])
+
   const handleUpdate = async (data: UpdateTaskInput) => {
     try {
       const { project_id, tagged_user, ...payload } = data
@@ -151,6 +188,7 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
         tagged_user,
         project_id: normalizedProjectId,
       })
+      setDisplayStatus(updated.status)
       setMetaState(prev => ({
         ...prev,
         project_id: updated.project_id ?? null,
@@ -252,7 +290,7 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
             title: task.title,
             description: task.description,
             urgency: task.urgency,
-            status: task.status,
+            status: displayStatus,
             due_date: task.due_date,
             contact: task.contact,
             contact_freeform: task.contact_freeform,
@@ -302,7 +340,9 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
           </h2>
           <div className="flex gap-2">
             <Badge className={getUrgencyColor(task.urgency)}>{t(`urgency.${task.urgency}`)}</Badge>
-            <Badge className={getStatusColor(task.status)}>{t(`status.${task.status}`)}</Badge>
+            <Badge className={getStatusColor(displayStatus)}>
+              {t(`status.${displayStatus}`)}
+            </Badge>
           </div>
         </div>
 
@@ -387,13 +427,13 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
             trackingCompleted={metaState.tracking_completed ?? false}
             isLocked={false}
             stopSignal={trackerStopSignal}
+            externalRunning={isPomodoroRunning}
             onRunningChange={setIsTrackerRunning}
             onUpdate={updateMeta}
           />
           <PomodoroTimer
             key={`pomodoro-${task.id}`}
             isLocked={metaState.tracking_completed ?? false}
-            currentSeconds={metaState.time_spent_seconds ?? 0}
             initialSessions={metaState.pomodoro_sessions ?? 0}
             stopSignal={pomodoroStopSignal}
             onRunningChange={setIsPomodoroRunning}

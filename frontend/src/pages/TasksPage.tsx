@@ -11,7 +11,7 @@ import { TaskFilters } from '@/components/tasks/TaskFilters'
 import { TaskDetailsModal } from '@/components/tasks/TaskDetailsModal'
 import { tasksService } from '@/services/tasks.service'
 import { useLocale } from '@/contexts/localeContext'
-import type { Task, CreateTaskInput, TaskFilters as TaskFiltersType } from '@/types'
+import type { Task, CreateTaskInput, TaskFilters as TaskFiltersType, TaskStatus } from '@/types'
 
 export const TasksPage = () => {
   const [tasks, setTasks] = useState<Task[]>([])
@@ -20,6 +20,7 @@ export const TasksPage = () => {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [filters, setFilters] = useState<TaskFiltersType>({})
+  const [activeTab, setActiveTab] = useState<'active' | 'archive'>('active')
   const [searchParams, setSearchParams] = useSearchParams()
   const { t } = useLocale()
   const sharedTaskId = useMemo(() => {
@@ -44,6 +45,17 @@ export const TasksPage = () => {
   useEffect(() => {
     loadTasks()
   }, [loadTasks])
+
+  useEffect(() => {
+    const allowedStatuses: TaskStatus[] =
+      activeTab === 'archive' ? ['done', 'canceled'] : ['todo', 'in_progress']
+    if (filters.status && !allowedStatuses.includes(filters.status)) {
+      setFilters(prev => ({
+        ...prev,
+        status: undefined,
+      }))
+    }
+  }, [activeTab, filters.status])
 
   useEffect(() => {
     if (!sharedTaskId) return
@@ -111,6 +123,17 @@ export const TasksPage = () => {
     updateTaskShareParam(null)
   }
 
+  const visibleTasks = useMemo(() => {
+    const statusFilter: TaskStatus[] =
+      activeTab === 'archive' ? ['done', 'canceled'] : ['todo', 'in_progress']
+    return tasks.filter(task => statusFilter.includes(task.status))
+  }, [activeTab, tasks])
+
+  const statusOptions = useMemo<TaskStatus[]>(
+    () => (activeTab === 'archive' ? ['done', 'canceled'] : ['todo', 'in_progress']),
+    [activeTab]
+  )
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -128,8 +151,25 @@ export const TasksPage = () => {
           </Button>
         </div>
 
+        <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant={activeTab === 'active' ? 'primary' : 'secondary'}
+            onClick={() => setActiveTab('active')}
+          >
+            {t('tasks.tabs.active')}
+          </Button>
+          <Button
+            size="sm"
+            variant={activeTab === 'archive' ? 'primary' : 'secondary'}
+            onClick={() => setActiveTab('archive')}
+          >
+            {t('tasks.tabs.archive')}
+          </Button>
+        </div>
+
         {/* Filters */}
-        <TaskFilters filters={filters} onChange={setFilters} />
+        <TaskFilters filters={filters} onChange={setFilters} statusOptions={statusOptions} />
 
         {/* Tasks List */}
         {isLoading ? (
@@ -137,7 +177,7 @@ export const TasksPage = () => {
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
             <p className="text-gray-600 dark:text-gray-300 mt-4">{t('tasks.loading')}</p>
           </div>
-        ) : tasks.length === 0 ? (
+        ) : visibleTasks.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-600 dark:text-gray-300">{t('tasks.empty')}</p>
             <Button onClick={() => setIsCreateModalOpen(true)} className="mt-4">
@@ -146,7 +186,7 @@ export const TasksPage = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {tasks.map(task => (
+            {visibleTasks.map(task => (
               <TaskCard key={task.id} task={task} onClick={() => handleTaskClick(task)} />
             ))}
           </div>

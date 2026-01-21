@@ -15,7 +15,6 @@ const FLASH_INTERVAL_MS = 1000
 interface PomodoroTimerProps {
   isLocked?: boolean
   onUpdate: (updates: TaskMeta) => void
-  currentSeconds?: number
   initialSessions?: number
   stopSignal?: number
   onRunningChange?: (isRunning: boolean) => void
@@ -24,7 +23,6 @@ interface PomodoroTimerProps {
 export const PomodoroTimer = ({
   isLocked = false,
   onUpdate,
-  currentSeconds = 0,
   initialSessions = 0,
   stopSignal = 0,
   onRunningChange,
@@ -151,7 +149,7 @@ export const PomodoroTimer = ({
     if (mode === 'focus') {
       setSessionsCompleted(prev => {
         const next = prev + 1
-        onUpdate({ pomodoro_sessions: next, time_spent_seconds: currentSeconds + FOCUS_SECONDS })
+        onUpdate({ pomodoro_sessions: next })
         return next
       })
       setMode('break')
@@ -160,7 +158,7 @@ export const PomodoroTimer = ({
       setMode('focus')
       setRemainingSeconds(FOCUS_SECONDS)
     }
-  }, [remainingSeconds, mode, notifySessionComplete, onUpdate, currentSeconds])
+  }, [remainingSeconds, mode, notifySessionComplete, onUpdate])
 
   useEffect(() => {
     return () => {

@@ -10,6 +10,7 @@ interface TaskTimeTrackerProps {
   isLocked?: boolean
   trackingCompleted?: boolean
   stopSignal?: number
+  externalRunning?: boolean
   onRunningChange?: (isRunning: boolean) => void
   onUpdate: (updates: TaskMeta) => void
 }
@@ -19,6 +20,7 @@ export const TaskTimeTracker = ({
   isLocked = false,
   trackingCompleted = false,
   stopSignal = 0,
+  externalRunning = false,
   onRunningChange,
   onUpdate,
 }: TaskTimeTrackerProps) => {
@@ -26,6 +28,7 @@ export const TaskTimeTracker = ({
   const [elapsedSeconds, setElapsedSeconds] = useState(initialSeconds)
   const [isRunning, setIsRunning] = useState(false)
   const [isCompleted, setIsCompleted] = useState(trackingCompleted)
+  const isActive = (isRunning || externalRunning) && !isCompleted && !isLocked
 
   useEffect(() => {
     setIsCompleted(trackingCompleted)
@@ -46,16 +49,16 @@ export const TaskTimeTracker = ({
   }, [stopSignal])
 
   useEffect(() => {
-    if (!isRunning || isCompleted || isLocked) return
+    if (!isActive) return
     const interval = window.setInterval(() => {
       setElapsedSeconds(prev => prev + 1)
     }, 1000)
     return () => window.clearInterval(interval)
-  }, [isRunning, isCompleted, isLocked])
+  }, [isActive])
 
   useEffect(() => {
-    onRunningChange?.(isRunning && !isCompleted && !isLocked)
-  }, [isRunning, isCompleted, isLocked, onRunningChange])
+    onRunningChange?.(isActive)
+  }, [isActive, onRunningChange])
 
   useEffect(() => {
     onUpdate({ time_spent_seconds: elapsedSeconds })
@@ -94,10 +97,10 @@ export const TaskTimeTracker = ({
           <Button
             size="sm"
             variant="secondary"
-            onClick={isRunning ? handlePause : handleStart}
+            onClick={isActive ? handlePause : handleStart}
             disabled={isLocked || isCompleted}
           >
-            {isRunning ? (
+            {isActive ? (
               <>
                 <Pause className="w-4 h-4 mr-2" />
                 {t('tasks.tracker.pause')}
