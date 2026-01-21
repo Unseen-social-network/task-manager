@@ -321,6 +321,10 @@ export const SettingsPage = () => {
                         {invite.email}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {t('settings.invites.invitedBy')}{' '}
+                        {invite.invited_by_username || 'System32'}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
                         {t(`settings.invites.status.${invite.status}`)}
                       </p>
                     </div>
