@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -17,6 +18,7 @@ type SettingsTab = 'profile' | 'password' | 'invites'
 
 export const SettingsPage = () => {
   const { t } = useLocale()
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile')
   const [profile, setProfile] = useState<Profile | null>(null)
   const [invites, setInvites] = useState<Invite[]>([])
@@ -163,11 +165,16 @@ export const SettingsPage = () => {
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-          {t('settings.title')}
-        </h1>
-        <p className="text-gray-500 dark:text-gray-400">{t('settings.subtitle')}</p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+            {t('settings.title')}
+          </h1>
+          <p className="text-gray-500 dark:text-gray-400">{t('settings.subtitle')}</p>
+        </div>
+        <Button variant="secondary" size="sm" onClick={() => navigate(-1)}>
+          {t('settings.back')}
+        </Button>
       </div>
 
       <div className="flex flex-wrap gap-2">
