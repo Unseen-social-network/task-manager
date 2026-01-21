@@ -49,3 +49,18 @@ class TaskAccessPermission(permissions.BasePermission):
         if request.method in permissions.SAFE_METHODS:
             return obj.owner == request.user or obj.tagged_user == request.user
         return obj.owner == request.user
+
+
+class ProjectAccessPermission(permissions.BasePermission):
+    """
+    Allow project owners full access; tagged users can only read.
+    """
+
+    message = 'Project not found or access denied.'
+
+    def has_object_permission(self, request, view, obj):
+        if request.method in permissions.SAFE_METHODS:
+            return obj.owner == request.user or obj.tasks.filter(
+                tagged_user=request.user
+            ).exists()
+        return obj.owner == request.user
