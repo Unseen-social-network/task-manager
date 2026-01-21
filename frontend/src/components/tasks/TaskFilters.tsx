@@ -9,6 +9,8 @@ interface TaskFiltersProps {
   onChange: (filters: TaskFiltersType) => void
   statusOptions?: TaskStatus[]
   projects?: Project[]
+  searchEverywhere: boolean
+  onSearchEverywhereChange: (value: boolean) => void
 }
 
 export const TaskFilters = ({
@@ -16,6 +18,8 @@ export const TaskFilters = ({
   onChange,
   statusOptions,
   projects = [],
+  searchEverywhere,
+  onSearchEverywhereChange,
 }: TaskFiltersProps) => {
   const { t } = useLocale()
   const availableStatuses: TaskStatus[] = statusOptions ?? [
@@ -54,6 +58,16 @@ export const TaskFilters = ({
           className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
         />
       </div>
+
+      <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+        <input
+          type="checkbox"
+          checked={searchEverywhere}
+          onChange={event => onSearchEverywhereChange(event.target.checked)}
+          className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+        />
+        {t('tasks.filter.searchEverywhere')}
+      </label>
 
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Select

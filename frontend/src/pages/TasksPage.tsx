@@ -29,6 +29,7 @@ export const TasksPage = () => {
   const [filters, setFilters] = useState<TaskFiltersType>({})
   const [activeTab, setActiveTab] = useState<'active' | 'archive'>('active')
   const [projects, setProjects] = useState<Project[]>([])
+  const [searchEverywhere, setSearchEverywhere] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
   const { t } = useLocale()
   const sharedTaskId = useMemo(() => {
@@ -73,6 +74,7 @@ export const TasksPage = () => {
   }, [t])
 
   useEffect(() => {
+    if (searchEverywhere) return
     const allowedStatuses: TaskStatus[] =
       activeTab === 'archive' ? ['done', 'canceled'] : ['todo', 'in_progress']
     if (filters.status && !allowedStatuses.includes(filters.status)) {
@@ -81,7 +83,7 @@ export const TasksPage = () => {
         status: undefined,
       }))
     }
-  }, [activeTab, filters.status])
+  }, [activeTab, filters.status, searchEverywhere])
 
   useEffect(() => {
     if (!filters.project) return
@@ -161,14 +163,22 @@ export const TasksPage = () => {
   }
 
   const visibleTasks = useMemo(() => {
+    if (searchEverywhere) {
+      return tasks
+    }
     const statusFilter: TaskStatus[] =
       activeTab === 'archive' ? ['done', 'canceled'] : ['todo', 'in_progress']
     return tasks.filter(task => statusFilter.includes(task.status))
-  }, [activeTab, tasks])
+  }, [activeTab, searchEverywhere, tasks])
 
   const statusOptions = useMemo<TaskStatus[]>(
-    () => (activeTab === 'archive' ? ['done', 'canceled'] : ['todo', 'in_progress']),
-    [activeTab]
+    () =>
+      searchEverywhere
+        ? ['todo', 'in_progress', 'done', 'canceled']
+        : activeTab === 'archive'
+          ? ['done', 'canceled']
+          : ['todo', 'in_progress'],
+    [activeTab, searchEverywhere]
   )
 
   return (
@@ -211,6 +221,8 @@ export const TasksPage = () => {
           onChange={setFilters}
           statusOptions={statusOptions}
           projects={projects}
+          searchEverywhere={searchEverywhere}
+          onSearchEverywhereChange={setSearchEverywhere}
         />
 
         {/* Tasks List */}
