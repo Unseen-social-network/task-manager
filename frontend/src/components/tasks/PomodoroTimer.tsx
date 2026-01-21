@@ -17,6 +17,8 @@ interface PomodoroTimerProps {
   onUpdate: (updates: TaskMeta) => void
   currentSeconds?: number
   initialSessions?: number
+  stopSignal?: number
+  onRunningChange?: (isRunning: boolean) => void
 }
 
 export const PomodoroTimer = ({
@@ -24,6 +26,8 @@ export const PomodoroTimer = ({
   onUpdate,
   currentSeconds = 0,
   initialSessions = 0,
+  stopSignal = 0,
+  onRunningChange,
 }: PomodoroTimerProps) => {
   const { t } = useLocale()
   const [mode, setMode] = useState<PomodoroMode>('focus')
@@ -45,6 +49,21 @@ export const PomodoroTimer = ({
     }, 1000)
     return () => window.clearInterval(interval)
   }, [isRunning, isLocked])
+
+  useEffect(() => {
+    if (isLocked) {
+      setIsRunning(false)
+    }
+  }, [isLocked])
+
+  useEffect(() => {
+    if (stopSignal === 0) return
+    setIsRunning(false)
+  }, [stopSignal])
+
+  useEffect(() => {
+    onRunningChange?.(isRunning && !isLocked)
+  }, [isRunning, isLocked, onRunningChange])
 
   const stopFlashing = useCallback(() => {
     if (flashIntervalRef.current !== null) {

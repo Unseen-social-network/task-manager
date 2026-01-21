@@ -9,6 +9,8 @@ interface TaskTimeTrackerProps {
   initialSeconds?: number
   isLocked?: boolean
   trackingCompleted?: boolean
+  stopSignal?: number
+  onRunningChange?: (isRunning: boolean) => void
   onUpdate: (updates: TaskMeta) => void
 }
 
@@ -16,6 +18,8 @@ export const TaskTimeTracker = ({
   initialSeconds = 0,
   isLocked = false,
   trackingCompleted = false,
+  stopSignal = 0,
+  onRunningChange,
   onUpdate,
 }: TaskTimeTrackerProps) => {
   const { t } = useLocale()
@@ -31,12 +35,27 @@ export const TaskTimeTracker = ({
   }, [trackingCompleted])
 
   useEffect(() => {
+    if (isLocked) {
+      setIsRunning(false)
+    }
+  }, [isLocked])
+
+  useEffect(() => {
+    if (stopSignal === 0) return
+    setIsRunning(false)
+  }, [stopSignal])
+
+  useEffect(() => {
     if (!isRunning || isCompleted || isLocked) return
     const interval = window.setInterval(() => {
       setElapsedSeconds(prev => prev + 1)
     }, 1000)
     return () => window.clearInterval(interval)
   }, [isRunning, isCompleted, isLocked])
+
+  useEffect(() => {
+    onRunningChange?.(isRunning && !isCompleted && !isLocked)
+  }, [isRunning, isCompleted, isLocked, onRunningChange])
 
   useEffect(() => {
     onUpdate({ time_spent_seconds: elapsedSeconds })
