@@ -3,6 +3,7 @@ Filters for Planner application.
 """
 
 from django_filters import rest_framework as filters
+from rest_framework.filters import SearchFilter
 
 from .models import Task
 
@@ -35,3 +36,15 @@ class TaskFilter(filters.FilterSet):
             'project',
             'tagged_user',
         ]
+
+
+class TaskSearchFilter(SearchFilter):
+    """Search filter with optional description inclusion."""
+
+    def get_search_fields(self, view, request):
+        include_description = request.query_params.get('search_in_description', '')
+        include_description = include_description.lower() in {'1', 'true', 'yes', 'on'}
+        fields = ['title', 'contact_freeform']
+        if include_description:
+            fields.append('description')
+        return fields

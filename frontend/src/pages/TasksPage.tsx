@@ -9,9 +9,16 @@ import { TaskCard } from '@/components/tasks/TaskCard'
 import { TaskForm } from '@/components/tasks/TaskForm'
 import { TaskFilters } from '@/components/tasks/TaskFilters'
 import { TaskDetailsModal } from '@/components/tasks/TaskDetailsModal'
+import { projectsService } from '@/services/projects.service'
 import { tasksService } from '@/services/tasks.service'
 import { useLocale } from '@/contexts/localeContext'
-import type { Task, CreateTaskInput, TaskFilters as TaskFiltersType, TaskStatus } from '@/types'
+import type {
+  Project,
+  Task,
+  CreateTaskInput,
+  TaskFilters as TaskFiltersType,
+  TaskStatus,
+} from '@/types'
 
 export const TasksPage = () => {
   const [tasks, setTasks] = useState<Task[]>([])
@@ -21,6 +28,8 @@ export const TasksPage = () => {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [filters, setFilters] = useState<TaskFiltersType>({})
   const [activeTab, setActiveTab] = useState<'active' | 'archive'>('active')
+  const [projects, setProjects] = useState<Project[]>([])
+  const [searchEverywhere, setSearchEverywhere] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
   const { t } = useLocale()
   const sharedTaskId = useMemo(() => {
@@ -47,6 +56,25 @@ export const TasksPage = () => {
   }, [loadTasks])
 
   useEffect(() => {
+    let isActive = true
+    const loadProjects = async () => {
+      try {
+        const response = await projectsService.getProjects()
+        if (!isActive) return
+        setProjects(response.results)
+      } catch {
+        if (!isActive) return
+        toast.error(t('projects.loadFail'))
+      }
+    }
+    loadProjects()
+    return () => {
+      isActive = false
+    }
+  }, [t])
+
+  useEffect(() => {
+    if (searchEverywhere) return
     const allowedStatuses: TaskStatus[] =
       activeTab === 'archive' ? ['done', 'canceled'] : ['todo', 'in_progress']
     if (filters.status && !allowedStatuses.includes(filters.status)) {
@@ -55,7 +83,18 @@ export const TasksPage = () => {
         status: undefined,
       }))
     }
-  }, [activeTab, filters.status])
+  }, [activeTab, filters.status, searchEverywhere])
+
+  useEffect(() => {
+    if (!filters.project) return
+    const hasProject = projects.some(project => project.id === filters.project)
+    if (!hasProject) {
+      setFilters(prev => ({
+        ...prev,
+        project: undefined,
+      }))
+    }
+  }, [filters.project, projects])
 
   useEffect(() => {
     if (!sharedTaskId) return
@@ -124,14 +163,22 @@ export const TasksPage = () => {
   }
 
   const visibleTasks = useMemo(() => {
+    if (searchEverywhere) {
+      return tasks
+    }
     const statusFilter: TaskStatus[] =
       activeTab === 'archive' ? ['done', 'canceled'] : ['todo', 'in_progress']
     return tasks.filter(task => statusFilter.includes(task.status))
-  }, [activeTab, tasks])
+  }, [activeTab, searchEverywhere, tasks])
 
   const statusOptions = useMemo<TaskStatus[]>(
-    () => (activeTab === 'archive' ? ['done', 'canceled'] : ['todo', 'in_progress']),
-    [activeTab]
+    () =>
+      searchEverywhere
+        ? ['todo', 'in_progress', 'done', 'canceled']
+        : activeTab === 'archive'
+          ? ['done', 'canceled']
+          : ['todo', 'in_progress'],
+    [activeTab, searchEverywhere]
   )
 
   return (
@@ -169,7 +216,14 @@ export const TasksPage = () => {
         </div>
 
         {/* Filters */}
-        <TaskFilters filters={filters} onChange={setFilters} statusOptions={statusOptions} />
+        <TaskFilters
+          filters={filters}
+          onChange={setFilters}
+          statusOptions={statusOptions}
+          projects={projects}
+          searchEverywhere={searchEverywhere}
+          onSearchEverywhereChange={setSearchEverywhere}
+        />
 
         {/* Tasks List */}
         {isLoading ? (

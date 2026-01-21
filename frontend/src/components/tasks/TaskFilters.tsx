@@ -1,5 +1,5 @@
 import { Search } from 'lucide-react'
-import type { TaskFilters as TaskFiltersType, TaskStatus } from '@/types'
+import type { Project, TaskFilters as TaskFiltersType, TaskStatus } from '@/types'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { useLocale } from '@/contexts/localeContext'
@@ -8,9 +8,19 @@ interface TaskFiltersProps {
   filters: TaskFiltersType
   onChange: (filters: TaskFiltersType) => void
   statusOptions?: TaskStatus[]
+  projects?: Project[]
+  searchEverywhere: boolean
+  onSearchEverywhereChange: (value: boolean) => void
 }
 
-export const TaskFilters = ({ filters, onChange, statusOptions }: TaskFiltersProps) => {
+export const TaskFilters = ({
+  filters,
+  onChange,
+  statusOptions,
+  projects = [],
+  searchEverywhere,
+  onSearchEverywhereChange,
+}: TaskFiltersProps) => {
   const { t } = useLocale()
   const availableStatuses: TaskStatus[] = statusOptions ?? [
     'todo',
@@ -20,9 +30,17 @@ export const TaskFilters = ({ filters, onChange, statusOptions }: TaskFiltersPro
   ]
 
   const handleFilterChange = (key: keyof TaskFiltersType, value: string) => {
+    const nextValue = (() => {
+      if (key === 'project') {
+        if (!value) return undefined
+        const parsed = Number(value)
+        return Number.isFinite(parsed) ? parsed : undefined
+      }
+      return value || undefined
+    })()
     onChange({
       ...filters,
-      [key]: value || undefined,
+      [key]: nextValue,
     })
   }
 
@@ -41,7 +59,32 @@ export const TaskFilters = ({ filters, onChange, statusOptions }: TaskFiltersPro
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+        <input
+          type="checkbox"
+          checked={searchEverywhere}
+          onChange={event => onSearchEverywhereChange(event.target.checked)}
+          className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+        />
+        {t('tasks.filter.searchEverywhere')}
+      </label>
+
+      <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+        <input
+          type="checkbox"
+          checked={filters.search_in_description ?? false}
+          onChange={event =>
+            onChange({
+              ...filters,
+              search_in_description: event.target.checked ? true : undefined,
+            })
+          }
+          className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+        />
+        {t('tasks.filter.searchInDescription')}
+      </label>
+
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Select
           options={[
             { value: '', label: t('tasks.filter.statusAll') },
@@ -64,6 +107,18 @@ export const TaskFilters = ({ filters, onChange, statusOptions }: TaskFiltersPro
           ]}
           value={filters.urgency || ''}
           onChange={e => handleFilterChange('urgency', e.target.value)}
+        />
+
+        <Select
+          options={[
+            { value: '', label: t('tasks.filter.projectAll') },
+            ...projects.map(project => ({
+              value: String(project.id),
+              label: project.name,
+            })),
+          ]}
+          value={filters.project ? String(filters.project) : ''}
+          onChange={e => handleFilterChange('project', e.target.value)}
         />
 
         <Select

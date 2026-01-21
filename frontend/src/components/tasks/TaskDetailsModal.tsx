@@ -539,7 +539,7 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
           isOpen={isProjectModalOpen}
           onClose={handleProjectClose}
           onUpdate={handleProjectClose}
-          isReadOnly={isTaggedViewer}
+          isReadOnly={selectedProject.is_owner === false}
         />
       )}
     </>

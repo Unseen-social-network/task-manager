@@ -8,14 +8,16 @@ from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.filters import OrderingFilter
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .filters import TaskFilter
+from .filters import TaskFilter, TaskSearchFilter
 from .models import Attachment, Contact, Invite, Profile, Project, Task
 from .permissions import IsOwner, ProjectAccessPermission, TaskAccessPermission
 from .serializers import (
@@ -69,7 +71,8 @@ class TaskViewSet(viewsets.ModelViewSet):
     serializer_class = TaskSerializer
     permission_classes = [IsAuthenticated, TaskAccessPermission]
     filterset_class = TaskFilter
-    search_fields = ['title', 'description', 'contact_freeform']
+    filter_backends = [DjangoFilterBackend, TaskSearchFilter, OrderingFilter]
+    search_fields = ['title', 'contact_freeform']
     ordering_fields = ['due_date', 'created_at', 'urgency', 'status']
     ordering = ['-created_at']
 

@@ -11,10 +11,12 @@ export interface ProjectLink {
 
 export interface Project {
   id: number
+  owner?: number
   name: string
   description: string
   phone: string
   links: ProjectLink[]
+  is_owner?: boolean
   created_at: string
   updated_at: string
 }
@@ -176,7 +178,9 @@ export interface TaskFilters {
   created_at_from?: string
   created_at_to?: string
   contact?: number
+  project?: number
   search?: string
+  search_in_description?: boolean
   ordering?: string
   page?: number
 }
