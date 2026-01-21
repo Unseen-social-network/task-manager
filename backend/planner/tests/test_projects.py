@@ -12,7 +12,9 @@ from planner.models import Project, Task
 class TestProjectAPI:
     """Tests for Project CRUD operations and permissions."""
 
-    def test_list_projects_includes_tagged(self, authenticated_client, project, other_user, user):
+    def test_list_projects_includes_tagged(
+        self, authenticated_client, project, other_user, user
+    ):
         """Ensure list includes owned projects and ones where user is tagged."""
         other_project = Project.objects.create(
             owner=other_user,
