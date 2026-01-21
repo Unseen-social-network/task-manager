@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Pause, Play, RefreshCw, Coffee, Brain } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { useLocale } from '@/contexts/localeContext'
@@ -9,6 +9,8 @@ type PomodoroMode = 'focus' | 'break'
 
 const FOCUS_SECONDS = 25 * 60
 const BREAK_SECONDS = 5 * 60
+const FLASH_DURATION_MS = 12000
+const FLASH_INTERVAL_MS = 1000
 
 interface PomodoroTimerProps {
   isLocked?: boolean
@@ -28,6 +30,9 @@ export const PomodoroTimer = ({
   const [remainingSeconds, setRemainingSeconds] = useState(FOCUS_SECONDS)
   const [isRunning, setIsRunning] = useState(false)
   const [sessionsCompleted, setSessionsCompleted] = useState(initialSessions)
+  const titleRef = useRef(typeof document !== 'undefined' ? document.title : '')
+  const flashIntervalRef = useRef<number | null>(null)
+  const flashTimeoutRef = useRef<number | null>(null)
 
   useEffect(() => {
     setSessionsCompleted(initialSessions)
@@ -41,9 +46,89 @@ export const PomodoroTimer = ({
     return () => window.clearInterval(interval)
   }, [isRunning, isLocked])
 
+  const stopFlashing = useCallback(() => {
+    if (flashIntervalRef.current !== null) {
+      window.clearInterval(flashIntervalRef.current)
+      flashIntervalRef.current = null
+    }
+    if (flashTimeoutRef.current !== null) {
+      window.clearTimeout(flashTimeoutRef.current)
+      flashTimeoutRef.current = null
+    }
+    if (titleRef.current) {
+      document.title = titleRef.current
+    }
+  }, [])
+
+  const startFlashing = useCallback(
+    (message: string) => {
+      stopFlashing()
+      let showAlert = false
+      flashIntervalRef.current = window.setInterval(() => {
+        document.title = showAlert ? titleRef.current : message
+        showAlert = !showAlert
+      }, FLASH_INTERVAL_MS)
+      flashTimeoutRef.current = window.setTimeout(() => {
+        stopFlashing()
+      }, FLASH_DURATION_MS)
+    },
+    [stopFlashing]
+  )
+
+  const playNotificationSound = useCallback(() => {
+    if (typeof window === 'undefined') return
+    const audioContextConstructor: (typeof AudioContext) | undefined =
+      window.AudioContext ||
+      (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+    if (!audioContextConstructor) return
+    const audioContext = new audioContextConstructor()
+    const oscillator = audioContext.createOscillator()
+    const gainNode = audioContext.createGain()
+    oscillator.type = 'sine'
+    oscillator.frequency.value = 880
+    gainNode.gain.value = 0.2
+    oscillator.connect(gainNode)
+    gainNode.connect(audioContext.destination)
+    oscillator.start()
+    oscillator.stop(audioContext.currentTime + 0.4)
+    oscillator.onended = () => {
+      audioContext.close()
+    }
+  }, [])
+
+  const showBrowserNotification = useCallback((message: string) => {
+    if (typeof window === 'undefined' || !('Notification' in window)) return
+    if (Notification.permission === 'granted') {
+      new Notification(message)
+      return
+    }
+    if (Notification.permission !== 'denied') {
+      Notification.requestPermission().then(permission => {
+        if (permission === 'granted') {
+          new Notification(message)
+        }
+      })
+    }
+  }, [])
+
+  const notifySessionComplete = useCallback(
+    (completedMode: PomodoroMode) => {
+      const sessionLabel =
+        completedMode === 'focus' ? t('tasks.pomodoro.focus') : t('tasks.pomodoro.break')
+      const message = `${t('tasks.pomodoro.title')}: ${sessionLabel} ${t(
+        'tasks.pomodoro.complete'
+      )}`
+      playNotificationSound()
+      startFlashing(message)
+      showBrowserNotification(message)
+    },
+    [playNotificationSound, showBrowserNotification, startFlashing, t]
+  )
+
   useEffect(() => {
     if (remainingSeconds !== 0) return
     setIsRunning(false)
+    notifySessionComplete(mode)
     if (mode === 'focus') {
       setSessionsCompleted(prev => {
         const next = prev + 1
@@ -56,7 +141,13 @@ export const PomodoroTimer = ({
       setMode('focus')
       setRemainingSeconds(FOCUS_SECONDS)
     }
-  }, [remainingSeconds, mode, onUpdate, currentSeconds])
+  }, [remainingSeconds, mode, notifySessionComplete, onUpdate, currentSeconds])
+
+  useEffect(() => {
+    return () => {
+      stopFlashing()
+    }
+  }, [stopFlashing])
 
   const handleStartPause = () => {
     if (isLocked) return
