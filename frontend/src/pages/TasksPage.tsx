@@ -157,6 +157,19 @@ export const TasksPage = () => {
     loadTasks()
   }
 
+  const handleTaskRefresh = useCallback(async () => {
+    if (!selectedTask) return
+    try {
+      const updatedTask = await tasksService.getTask(selectedTask.id)
+      setSelectedTask(updatedTask)
+      setTasks(prev =>
+        prev.map(task => (task.id === updatedTask.id ? updatedTask : task))
+      )
+    } catch {
+      toast.error(t('tasks.updateFail'))
+    }
+  }, [selectedTask, t])
+
   const handleTaskClose = () => {
     setIsDetailsModalOpen(false)
     updateTaskShareParam(null)
@@ -266,6 +279,7 @@ export const TasksPage = () => {
           isOpen={isDetailsModalOpen}
           onClose={handleTaskClose}
           onUpdate={handleTaskUpdate}
+          onRefresh={handleTaskRefresh}
         />
       )}
     </Layout>

@@ -5,10 +5,19 @@ Serializers for Planner application.
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db.models import Q
 from django.utils import timezone
 from rest_framework import serializers
 
-from .models import Attachment, Contact, Invite, Profile, Project, Task
+from .models import (
+    Attachment,
+    Contact,
+    Invite,
+    Profile,
+    Project,
+    Task,
+    TaskComment,
+)
 
 User = get_user_model()
 
@@ -157,6 +166,55 @@ class TaskSerializer(serializers.ModelSerializer):
             # This is allowed, but you could add a warning in logs
             pass
 
+        return attrs
+
+
+class TaskCommentSerializer(serializers.ModelSerializer):
+    """Serializer for Task comments with optional replies."""
+
+    task = serializers.PrimaryKeyRelatedField(read_only=True)
+    author = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    author_username = serializers.CharField(source='author.username', read_only=True)
+    parent = serializers.PrimaryKeyRelatedField(
+        queryset=TaskComment.objects.all(),
+        required=False,
+        allow_null=True,
+    )
+
+    class Meta:
+        model = TaskComment
+        fields = [
+            'id',
+            'task',
+            'parent',
+            'author',
+            'author_username',
+            'body',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'author_username', 'created_at', 'updated_at']
+
+    def validate(self, attrs):
+        parent = attrs.get('parent')
+        task = (
+            attrs.get('task')
+            or getattr(self.instance, 'task', None)
+            or self.context.get('task')
+        )
+        request = self.context.get('request')
+        if (
+            request
+            and task
+            and not Task.objects.filter(id=task.id)
+            .filter(Q(owner=request.user) | Q(tagged_user=request.user))
+            .exists()
+        ):
+            raise serializers.ValidationError('Task not found or access denied.')
+        if parent and task and parent.task_id != task.id:
+            raise serializers.ValidationError(
+                {'parent': 'Parent comment must belong to the same task.'}
+            )
         return attrs
 
 

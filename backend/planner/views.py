@@ -19,7 +19,12 @@ from rest_framework.views import APIView
 
 from .filters import TaskFilter, TaskSearchFilter
 from .models import Attachment, Contact, Invite, Profile, Project, Task
-from .permissions import IsOwner, ProjectAccessPermission, TaskAccessPermission
+from .permissions import (
+    IsOwner,
+    ProjectAccessPermission,
+    TaskAccessPermission,
+    TaskCommentAccessPermission,
+)
 from .serializers import (
     AttachmentCreateSerializer,
     AttachmentSerializer,
@@ -30,6 +35,7 @@ from .serializers import (
     PasswordChangeSerializer,
     ProfileSerializer,
     ProjectSerializer,
+    TaskCommentSerializer,
     TaskSerializer,
 )
 
@@ -120,13 +126,48 @@ class TaskViewSet(viewsets.ModelViewSet):
             )
             return Response(serializer.data)
 
-        task = get_object_or_404(Task, pk=pk, owner=request.user)
+        task = get_object_or_404(
+            Task.objects.filter(Q(owner=request.user) | Q(tagged_user=request.user)),
+            pk=pk,
+        )
         serializer = AttachmentCreateSerializer(
             data=request.data,
             context={'request': request},
         )
         serializer.is_valid(raise_exception=True)
         serializer.save(task=task, owner=request.user)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(
+        detail=True,
+        methods=['get', 'post'],
+        permission_classes=[IsAuthenticated, TaskCommentAccessPermission],
+    )
+    def comments(self, request, pk=None):
+        """
+        Nested endpoint for task comments.
+        GET: list all comments for this task
+        POST: add a new comment or reply
+        """
+        task = get_object_or_404(
+            Task.objects.filter(Q(owner=request.user) | Q(tagged_user=request.user)),
+            pk=pk,
+        )
+
+        if request.method == 'GET':
+            serializer = TaskCommentSerializer(
+                task.comments.select_related('author', 'parent').all(),
+                many=True,
+                context={'request': request, 'task': task},
+            )
+            return Response(serializer.data)
+
+        serializer = TaskCommentSerializer(
+            data=request.data,
+            context={'request': request, 'task': task},
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save(task=task, author=request.user)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
