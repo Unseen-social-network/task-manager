@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { format } from 'date-fns'
+import { format, isValid, parseISO } from 'date-fns'
 import type { CreateTaskInput, Contact, Project } from '@/types'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
@@ -30,16 +30,28 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
     return format(tomorrow, "yyyy-MM-dd'T'HH:mm")
   }
 
+  const formatDueDateForInput = (value?: string | null) => {
+    if (!value) return value ?? undefined
+    const parsed = parseISO(value)
+    if (!isValid(parsed)) return value
+    return format(parsed, "yyyy-MM-dd'T'HH:mm")
+  }
+
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<CreateTaskInput>({
-    defaultValues: initialData || {
+    defaultValues: initialData
+      ? {
+          ...initialData,
+          due_date: formatDueDateForInput(initialData.due_date),
+        }
+      : {
       urgency: 'medium',
       status: 'todo',
       due_date: getDefaultDueDate(),
-    },
+        },
   })
 
   useEffect(() => {
