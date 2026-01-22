@@ -11,7 +11,7 @@ type ApiErrorData = {
 export const formatDate = (dateString: string | null): string => {
   if (!dateString) return '-'
   try {
-    return format(parseISO(dateString), 'MMM d, yyyy HH:mm')
+    return format(parseISO(dateString), 'dd.MM.yyyy HH:mm')
   } catch {
     return dateString
   }
@@ -20,7 +20,7 @@ export const formatDate = (dateString: string | null): string => {
 export const formatDateOnly = (dateString: string | null): string => {
   if (!dateString) return '-'
   try {
-    return format(parseISO(dateString), 'MMM d, yyyy')
+    return format(parseISO(dateString), 'dd.MM.yyyy')
   } catch {
     return dateString
   }
