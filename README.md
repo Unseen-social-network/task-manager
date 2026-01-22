@@ -1,4 +1,9 @@
 # Planner
+[![CI](https://github.com/Unseen-social-network/task-manager/actions/workflows/ci.yml/badge.svg?branch=main)](
+https://github.com/Unseen-social-network/task-manager/actions/workflows/ci.yml
+)
+![CD](https://github.com/Unseen-social-network/task-manager/actions/workflows/cd.yml/badge.svg?event=workflow_run)
+
 
 ## Локальные проверки качества
 
