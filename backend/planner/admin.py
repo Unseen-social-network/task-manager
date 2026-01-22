@@ -4,7 +4,15 @@ Admin configuration for Planner models.
 
 from django.contrib import admin
 
-from .models import Attachment, Contact, Invite, Profile, Project, Task
+from .models import (
+    Attachment,
+    Contact,
+    Invite,
+    Profile,
+    Project,
+    Task,
+    TaskComment,
+)
 
 
 @admin.register(Contact)
@@ -83,6 +91,18 @@ class AttachmentAdmin(admin.ModelAdmin):
     fieldsets = (
         (None, {'fields': ('owner', 'task', 'file')}),
         ('Metadata', {'fields': ('original_name', 'size', 'created_at')}),
+    )
+
+
+@admin.register(TaskComment)
+class TaskCommentAdmin(admin.ModelAdmin):
+    list_display = ['task', 'author', 'parent', 'created_at', 'updated_at']
+    list_filter = ['created_at', 'author']
+    search_fields = ['task__title', 'author__username', 'body']
+    readonly_fields = ['created_at', 'updated_at']
+    fieldsets = (
+        (None, {'fields': ('task', 'author', 'parent', 'body')}),
+        ('Timestamps', {'fields': ('created_at', 'updated_at')}),
     )
 
 

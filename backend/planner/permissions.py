@@ -2,6 +2,7 @@
 Custom permissions for Planner application.
 """
 
+from django.db.models import Q
 from rest_framework import permissions
 
 
@@ -49,6 +50,25 @@ class TaskAccessPermission(permissions.BasePermission):
         if request.method in permissions.SAFE_METHODS:
             return obj.owner == request.user or obj.tagged_user == request.user
         return obj.owner == request.user
+
+
+class TaskCommentAccessPermission(permissions.BasePermission):
+    """
+    Allow task owners and tagged users to read/write comments.
+    """
+
+    message = 'Task not found or access denied.'
+
+    def has_permission(self, request, view):
+        task_id = view.kwargs.get('pk') or view.kwargs.get('task_pk')
+        if not task_id:
+            return False
+
+        from .models import Task
+
+        return Task.objects.filter(
+            id=task_id,
+        ).filter(Q(owner=request.user) | Q(tagged_user=request.user)).exists()
 
 
 class ProjectAccessPermission(permissions.BasePermission):

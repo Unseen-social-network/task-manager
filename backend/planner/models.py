@@ -148,6 +148,46 @@ class Task(models.Model):
         return f'{self.title} ({self.owner.username})'
 
 
+class TaskComment(models.Model):
+    """Comment on a task, with optional threaded replies."""
+
+    task = models.ForeignKey(
+        Task,
+        on_delete=models.CASCADE,
+        related_name='comments',
+        verbose_name='Task',
+    )
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='task_comments',
+        verbose_name='Author',
+    )
+    parent = models.ForeignKey(
+        'self',
+        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
+        related_name='replies',
+        verbose_name='Parent comment',
+    )
+    body = models.TextField(verbose_name='Body')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
+
+    class Meta:
+        verbose_name = 'Task Comment'
+        verbose_name_plural = 'Task Comments'
+        ordering = ['created_at']
+        indexes = [
+            models.Index(fields=['task', 'created_at']),
+            models.Index(fields=['author', 'created_at']),
+        ]
+
+    def __str__(self):
+        return f'Comment by {self.author.username} on {self.task.title}'
+
+
 class Project(models.Model):
     """
     Project entity with description, contact phone, and links.
