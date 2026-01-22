@@ -27,6 +27,7 @@ help:
 	@echo "  make prod-build      - Build production images"
 	@echo "  make prod-up         - Start production environment"
 	@echo "  make prod-down       - Stop production environment"
+	@echo "  make prod-restart    - Restart production environment"
 	@echo "  make prod-logs       - View production logs"
 	@echo "  make prod-superuser  - Create superuser"
 
@@ -102,7 +103,7 @@ prod-build:
 	docker compose -f docker-compose.production.yml build
 
 prod-up:
-	docker compose -f docker-compose.production.yml up -d
+	DOCKER_BUILDKIT=1 docker compose -f docker-compose.production.yml up -d
 	@echo "Waiting for database..."
 	@sleep 5
 	docker compose -f docker-compose.production.yml exec backend python manage.py migrate
@@ -112,6 +113,8 @@ prod-up:
 
 prod-down:
 	docker compose -f docker-compose.production.yml down
+
+prod-restart: prod-down prod-up
 
 prod-logs:
 	docker compose -f docker-compose.production.yml logs -f
