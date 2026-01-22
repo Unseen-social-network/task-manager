@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input'
 import { useLocale } from '@/contexts/localeContext'
 import { useTheme } from '@/contexts/themeContext'
 import { invitesService } from '@/services/invites.service'
+import { getApiErrorMessage } from '@/utils/helpers'
 import type { Invite, InviteAcceptInput } from '@/types'
 
 type InviteFormValues = InviteAcceptInput & { confirm_password: string }
@@ -26,6 +27,15 @@ export const InviteAcceptPage = () => {
     formState: { errors },
     watch,
   } = useForm<InviteFormValues>()
+
+  const getPasswordValidationError = (password?: string): string | null => {
+    if (!password) return t('invite.required')
+    if (password.length < 8) return t('invite.passwordMin')
+    if (!/[A-Z]/.test(password)) return t('invite.passwordUpper')
+    if (!/[a-z]/.test(password)) return t('invite.passwordLower')
+    if (!/[0-9]/.test(password)) return t('invite.passwordNumber')
+    return null
+  }
 
   useEffect(() => {
     const fetchInvite = async () => {
@@ -54,8 +64,33 @@ export const InviteAcceptPage = () => {
     return undefined
   }, [watch, t])
 
+  const password = watch('password')
+  const passwordStrength = useMemo(() => {
+    const hasMin = password?.length >= 8
+    const hasUpper = /[A-Z]/.test(password || '')
+    const hasLower = /[a-z]/.test(password || '')
+    const hasNumber = /[0-9]/.test(password || '')
+    const score = [hasMin, hasUpper, hasLower, hasNumber].filter(Boolean).length
+    const percent = (score / 4) * 100
+    let label = t('invite.passwordStrengthWeak')
+    let color = 'bg-red-500'
+    if (score >= 3) {
+      label = t('invite.passwordStrengthStrong')
+      color = 'bg-green-500'
+    } else if (score >= 2) {
+      label = t('invite.passwordStrengthMedium')
+      color = 'bg-yellow-500'
+    }
+    return { percent, label, color }
+  }, [password, t])
+
   const handleAccept = async (data: InviteFormValues) => {
     if (!token) return
+    const passwordError = getPasswordValidationError(data.password)
+    if (passwordError) {
+      toast.error(passwordError)
+      return
+    }
     if (data.password !== data.confirm_password) {
       toast.error(t('invite.passwordMismatch'))
       return
@@ -69,8 +104,8 @@ export const InviteAcceptPage = () => {
       })
       toast.success(t('invite.success'))
       navigate('/login')
-    } catch {
-      toast.error(t('invite.fail'))
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, t('invite.fail')))
     } finally {
       setSubmitting(false)
     }
@@ -146,9 +181,23 @@ export const InviteAcceptPage = () => {
             <Input
               label={t('invite.password')}
               type="password"
-              {...register('password', { required: t('invite.required') })}
+              {...register('password', {
+                validate: value => getPasswordValidationError(value) ?? true,
+              })}
               error={errors.password?.message}
             />
+            <div className="space-y-2 text-xs text-gray-500 dark:text-gray-400">
+              <p>{t('invite.passwordRequirements')}</p>
+              <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                <div
+                  className={`h-2 rounded-full transition-all duration-300 ${passwordStrength.color}`}
+                  style={{ width: `${passwordStrength.percent}%` }}
+                />
+              </div>
+              <p className="text-[11px] uppercase tracking-wide text-gray-400">
+                {t('invite.passwordStrengthLabel')} {passwordStrength.label}
+              </p>
+            </div>
             <Input
               label={t('invite.passwordConfirm')}
               type="password"

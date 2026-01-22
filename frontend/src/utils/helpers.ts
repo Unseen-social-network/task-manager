@@ -4,6 +4,8 @@ import type { TaskUrgency, TaskStatus } from '@/types'
 
 type ApiErrorData = {
   detail?: string
+  non_field_errors?: string[]
+  [key: string]: unknown
 }
 
 export const formatDate = (dateString: string | null): string => {
@@ -88,9 +90,26 @@ export const cn = (...classes: (string | undefined | null | false)[]): string =>
   return classes.filter(Boolean).join(' ')
 }
 
+const extractApiErrorMessage = (data: ApiErrorData | string | undefined): string | null => {
+  if (!data) return null
+  if (typeof data === 'string') return data
+  if (data.detail) return data.detail
+  if (data.non_field_errors?.length) return data.non_field_errors[0]
+
+  for (const value of Object.values(data)) {
+    if (typeof value === 'string') return value
+    if (Array.isArray(value) && value.length > 0) {
+      const firstEntry = value[0]
+      if (typeof firstEntry === 'string') return firstEntry
+    }
+  }
+
+  return null
+}
+
 export const getApiErrorMessage = (error: unknown, fallback: string): string => {
   if (isAxiosError<ApiErrorData>(error)) {
-    return error.response?.data?.detail ?? fallback
+    return extractApiErrorMessage(error.response?.data) ?? fallback
   }
   if (error instanceof Error && error.message) {
     return error.message

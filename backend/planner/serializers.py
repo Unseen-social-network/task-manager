@@ -4,6 +4,8 @@ Serializers for Planner application.
 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 
 from .models import Attachment, Contact, Invite, Profile, Project, Task
@@ -328,6 +330,13 @@ class InviteAcceptSerializer(serializers.Serializer):
     def validate_username(self, value):
         if User.objects.filter(username=value).exists():
             raise serializers.ValidationError('Username is already taken.')
+        return value
+
+    def validate_password(self, value):
+        try:
+            validate_password(value)
+        except DjangoValidationError as error:
+            raise serializers.ValidationError(list(error.messages))
         return value
 
     def save(self, invite):

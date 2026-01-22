@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useLocale } from '@/contexts/localeContext'
 import { invitesService } from '@/services/invites.service'
+import { getApiErrorMessage } from '@/utils/helpers'
 import { profileService } from '@/services/profile.service'
 import type {
   Invite,
@@ -132,8 +133,8 @@ export const SettingsPage = () => {
       const updatedProfile = await profileService.getProfile()
       setProfile(updatedProfile)
       resetProfile(updatedProfile)
-    } catch {
-      toast.error(t('settings.invites.sendFail'))
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, t('settings.invites.sendFail')))
     } finally {
       setSendingInvite(false)
     }
@@ -148,8 +149,8 @@ export const SettingsPage = () => {
       const updatedProfile = await profileService.getProfile()
       setProfile(updatedProfile)
       resetProfile(updatedProfile)
-    } catch {
-      toast.error(t('settings.invites.revokeFail'))
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, t('settings.invites.revokeFail')))
     }
   }
 
