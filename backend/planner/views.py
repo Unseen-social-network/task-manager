@@ -35,8 +35,8 @@ from .serializers import (
     PasswordChangeSerializer,
     ProfileSerializer,
     ProjectSerializer,
-    TaskSerializer,
     TaskCommentSerializer,
+    TaskSerializer,
 )
 
 

@@ -66,9 +66,13 @@ class TaskCommentAccessPermission(permissions.BasePermission):
 
         from .models import Task
 
-        return Task.objects.filter(
-            id=task_id,
-        ).filter(Q(owner=request.user) | Q(tagged_user=request.user)).exists()
+        return (
+            Task.objects.filter(
+                id=task_id,
+            )
+            .filter(Q(owner=request.user) | Q(tagged_user=request.user))
+            .exists()
+        )
 
 
 class ProjectAccessPermission(permissions.BasePermission):
