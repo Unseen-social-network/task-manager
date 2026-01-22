@@ -21,7 +21,7 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
   const [contacts, setContacts] = useState<Contact[]>([])
   const [projects, setProjects] = useState<Project[]>([])
   const [useContact, setUseContact] = useState(!!initialData?.contact)
-  const { t } = useLocale()
+  const { t, locale } = useLocale()
 
   const getDefaultDueDate = () => {
     const tomorrow = new Date()
@@ -107,6 +107,7 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
       <Input
         label={t('tasks.form.dueDate')}
         type="datetime-local"
+        lang={locale === 'ru' ? 'ru-RU' : 'en-GB'}
         {...register('due_date')}
         error={errors.due_date?.message}
       />
