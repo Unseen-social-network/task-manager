@@ -32,8 +32,8 @@ jobs:
 
     env:
       DATABASE_URL: postgres://planner_user:planner_pass@localhost:5432/planner_test
-      DJANGO_SETTINGS_MODULE: app.settings
-      SECRET_KEY: test
+#      DJANGO_SETTINGS_MODULE: config.settings
+      SECRET_KEY: test-secret-key-for-ci
       DEBUG: false
 
     steps:
