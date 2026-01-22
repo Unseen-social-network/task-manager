@@ -121,7 +121,7 @@ jobs:
           script: |
             cd /opt/planner
             docker compose -f docker-compose.production.yml pull
-            docker compose -f docker-compose.production.yml up -d
+            DOCKER_BUILDKIT=1 docker compose -f docker-compose.production.yml up -d
             docker compose -f docker-compose.production.yml exec -T backend python manage.py migrate --no-input
             docker compose -f docker-compose.production.yml exec -T backend python manage.py collectstatic --no-input
             docker system prune -af
