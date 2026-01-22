@@ -12,7 +12,7 @@ RUN npm run build
 # =========================
 # Production stage
 # =========================
-FROM nginx:1.26.3-alpine3.20
+FROM nginx:1.26.3-alpine3.23
 
 # ⬇️ ПОДМЕНЯЕМ ГЛАВНЫЙ nginx.conf
 COPY nginx-main.conf /etc/nginx/nginx.conf
