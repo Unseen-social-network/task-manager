@@ -65,13 +65,8 @@ jobs:
     if: github.event.workflow_run.conclusion == 'success'
 
     steps:
-      - name: Install Trivy
-        uses: aquasecurity/trivy-action@0.20.0
-        with:
-          version: latest
-
       - name: Scan backend image
-        uses: aquasecurity/trivy-action@0.20.0
+        uses: aquasecurity/trivy-action@0.33.1
         with:
           image-ref: fgeeha/task_manager_backend:${{ github.event.workflow_run.head_sha }}
           format: table
@@ -80,7 +75,7 @@ jobs:
           ignore-unfixed: true
 
       - name: Scan frontend image
-        uses: aquasecurity/trivy-action@0.20.0
+        uses: aquasecurity/trivy-action@0.33.1
         with:
           image-ref: fgeeha/task_manager_frontend:${{ github.event.workflow_run.head_sha }}
           format: table
