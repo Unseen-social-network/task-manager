@@ -25,9 +25,16 @@ interface TaskDetailsModalProps {
   isOpen: boolean
   onClose: () => void
   onUpdate: () => void
+  onRefresh?: () => void
 }
 
-export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetailsModalProps) => {
+export const TaskDetailsModal = ({
+  task,
+  isOpen,
+  onClose,
+  onUpdate,
+  onRefresh,
+}: TaskDetailsModalProps) => {
   const [isEditing, setIsEditing] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
@@ -250,7 +257,7 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
     try {
       await tasksService.uploadAttachment(task.id, file)
       toast.success(t('tasks.uploadSuccess'))
-      onUpdate()
+      onRefresh?.()
     } catch {
       toast.error(t('tasks.uploadFail'))
     } finally {
@@ -267,7 +274,7 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
     try {
       await tasksService.deleteAttachment(attachmentId)
       toast.success(t('tasks.attachmentDeleteSuccess'))
-      onUpdate()
+      onRefresh?.()
     } catch {
       toast.error(t('tasks.attachmentDeleteFail'))
     }
