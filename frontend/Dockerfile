@@ -1,7 +1,7 @@
 # =========================
 # Build stage
 # =========================
-FROM node:20-alpine AS builder
+FROM node:20.20-alpine3.23 AS builder
 
 WORKDIR /app
 COPY package*.json ./
@@ -12,7 +12,7 @@ RUN npm run build
 # =========================
 # Production stage
 # =========================
-FROM nginx:1.25-alpine
+FROM nginx:1.26.3-alpine3.20
 
 # ⬇️ ПОДМЕНЯЕМ ГЛАВНЫЙ nginx.conf
 COPY nginx-main.conf /etc/nginx/nginx.conf

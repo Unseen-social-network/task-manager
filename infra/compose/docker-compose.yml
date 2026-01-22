@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:16-alpine
+    image: postgres:16-alpine3.20
     container_name: planner_db_dev
     environment:
       POSTGRES_DB: planner_db
@@ -48,7 +48,7 @@ services:
 
   # Development mode with hot reload
   frontend-dev:
-    image: node:20-alpine
+    image: node:20.20-alpine3.23
     container_name: planner_frontend_dev
     working_dir: /app
     volumes:
