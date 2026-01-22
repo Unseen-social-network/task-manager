@@ -104,6 +104,22 @@ export interface TaskMeta {
   pomodoro_sessions?: number
 }
 
+export interface TaskComment {
+  id: number
+  task: number
+  parent: number | null
+  author: number
+  author_username: string
+  body: string
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateTaskCommentInput {
+  body: string
+  parent?: number | null
+}
+
 export interface Attachment {
   id: number
   owner?: number

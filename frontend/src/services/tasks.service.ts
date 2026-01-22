@@ -5,6 +5,8 @@ import type {
   UpdateTaskInput,
   PaginatedResponse,
   TaskFilters,
+  TaskComment,
+  CreateTaskCommentInput,
 } from '@/types'
 
 type TaskApi = Omit<Task, 'project_id'> & {
@@ -79,5 +81,18 @@ export const tasksService = {
 
   async deleteAttachment(attachmentId: number): Promise<void> {
     await api.delete(`/api/v1/attachments/${attachmentId}/`)
+  },
+
+  async getTaskComments(taskId: number): Promise<TaskComment[]> {
+    const response = await api.get<TaskComment[]>(`/api/v1/tasks/${taskId}/comments/`)
+    return response.data
+  },
+
+  async createTaskComment(
+    taskId: number,
+    data: CreateTaskCommentInput
+  ): Promise<TaskComment> {
+    const response = await api.post<TaskComment>(`/api/v1/tasks/${taskId}/comments/`, data)
+    return response.data
   },
 }

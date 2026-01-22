@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { Edit2, Trash2, Upload, Download, X, Calendar, User, FolderKanban, AtSign, Link2 } from 'lucide-react'
 import toast from 'react-hot-toast'
-import type { Task, UpdateTaskInput, TaskMeta, Project, TaskStatus } from '@/types'
+import type { Task, UpdateTaskInput, TaskMeta, Project, TaskStatus, TaskComment } from '@/types'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -51,6 +51,11 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
   const isSavingRef = useRef(false)
   const autoStatusRef = useRef(false)
   const statusBeforeAutoRef = useRef<TaskStatus | null>(null)
+  const [comments, setComments] = useState<TaskComment[]>([])
+  const [commentsLoading, setCommentsLoading] = useState(false)
+  const [commentBody, setCommentBody] = useState('')
+  const [commentSubmitting, setCommentSubmitting] = useState(false)
+  const [replyTo, setReplyTo] = useState<TaskComment | null>(null)
   const { t } = useLocale()
   const username = useAuthStore(state => state.username)
   const projectName = projectDetails?.name ?? task.project_name
@@ -69,7 +74,26 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
     autoStatusRef.current = false
     statusBeforeAutoRef.current = null
     pendingUpdatesRef.current = {}
+    setReplyTo(null)
+    setCommentBody('')
   }, [task])
+
+  const loadComments = useCallback(async () => {
+    setCommentsLoading(true)
+    try {
+      const response = await tasksService.getTaskComments(task.id)
+      setComments(response)
+    } catch {
+      toast.error(t('tasks.comments.loadFail'))
+    } finally {
+      setCommentsLoading(false)
+    }
+  }, [task.id, t])
+
+  useEffect(() => {
+    if (!isOpen) return
+    void loadComments()
+  }, [isOpen, loadComments])
 
   useEffect(() => {
     let isActive = true
@@ -260,6 +284,65 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
     setSelectedProject(null)
   }
 
+  const handleCommentSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const trimmedBody = commentBody.trim()
+    if (!trimmedBody) {
+      toast.error(t('tasks.comments.bodyRequired'))
+      return
+    }
+    setCommentSubmitting(true)
+    try {
+      const comment = await tasksService.createTaskComment(task.id, {
+        body: trimmedBody,
+        parent: replyTo?.id ?? null,
+      })
+      setComments(prev => [...prev, comment])
+      setCommentBody('')
+      setReplyTo(null)
+      toast.success(t('tasks.comments.createSuccess'))
+    } catch {
+      toast.error(t('tasks.comments.createFail'))
+    } finally {
+      setCommentSubmitting(false)
+    }
+  }
+
+  const commentsByParent = useMemo(() => {
+    const map = new Map<number | null, TaskComment[]>()
+    comments.forEach(comment => {
+      const key = comment.parent ?? null
+      const list = map.get(key) ?? []
+      list.push(comment)
+      map.set(key, list)
+    })
+    return map
+  }, [comments])
+
+  const renderComments = (parentId: number | null, depth = 0) => {
+    const entries = commentsByParent.get(parentId) ?? []
+    return entries.map(comment => (
+      <div key={comment.id} className={depth > 0 ? 'mt-3 ml-6 border-l border-gray-200 pl-4 dark:border-gray-800' : 'mt-3'}>
+        <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+          <span>
+            {comment.author_username} • {formatDate(comment.created_at)}
+          </span>
+          <button
+            type="button"
+            onClick={() => setReplyTo(comment)}
+            className="text-primary-600 hover:text-primary-700"
+          >
+            {t('tasks.comments.reply')}
+          </button>
+        </div>
+        <p className="mt-2 text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap">
+          {comment.body}
+        </p>
+        {renderComments(comment.id, depth + 1)}
+      </div>
+    ))
+  }
+
   const handleClose = () => {
     if (isTrackerRunning || isPomodoroRunning) {
       const shouldStop = confirm(t('tasks.timerCloseConfirm'))
@@ -311,28 +394,28 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
       onClose={handleClose}
       title={t('tasks.detailsTitle')}
       footer={
-          <>
-            <Button
-              variant="danger"
-              onClick={handleDelete}
-              isLoading={isDeleting}
-              disabled={isTaggedViewer}
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              {t('actions.delete')}
-            </Button>
-            <Button variant="secondary" onClick={handleShare}>
-              <Link2 className="w-4 h-4 mr-2" />
-              {t('tasks.share')}
-            </Button>
-            <Button onClick={() => setIsEditing(true)} disabled={isTaggedViewer}>
-              <Edit2 className="w-4 h-4 mr-2" />
-              {t('actions.edit')}
-            </Button>
-          </>
-        }
-      >
-        <div className="space-y-6">
+        <>
+          <Button
+            variant="danger"
+            onClick={handleDelete}
+            isLoading={isDeleting}
+            disabled={isTaggedViewer}
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            {t('actions.delete')}
+          </Button>
+          <Button variant="secondary" onClick={handleShare}>
+            <Link2 className="w-4 h-4 mr-2" />
+            {t('tasks.share')}
+          </Button>
+          <Button onClick={() => setIsEditing(true)} disabled={isTaggedViewer}>
+            <Edit2 className="w-4 h-4 mr-2" />
+            {t('actions.edit')}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-6">
         {/* Title and Badges */}
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-3">
@@ -479,6 +562,52 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
           </div>
         </div>
 
+        {/* Comments */}
+        <div>
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">
+            {t('tasks.comments.title')}
+          </h3>
+          {commentsLoading ? (
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {t('tasks.comments.loading')}
+            </p>
+          ) : comments.length > 0 ? (
+            <div>{renderComments(null)}</div>
+          ) : (
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {t('tasks.comments.empty')}
+            </p>
+          )}
+          <form onSubmit={handleCommentSubmit} className="mt-4 space-y-3">
+            {replyTo && (
+              <div className="flex items-center justify-between rounded-md bg-gray-50 px-3 py-2 text-xs text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                <span>
+                  {t('tasks.comments.replyingTo')} @{replyTo.author_username}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setReplyTo(null)}
+                  className="text-primary-600 hover:text-primary-700"
+                >
+                  {t('tasks.comments.cancelReply')}
+                </button>
+              </div>
+            )}
+            <textarea
+              value={commentBody}
+              onChange={event => setCommentBody(event.target.value)}
+              rows={3}
+              className="w-full rounded-lg border border-gray-200 p-3 text-sm text-gray-900 shadow-sm focus:border-primary-500 focus:outline-none dark:border-gray-800 dark:bg-gray-900 dark:text-gray-100"
+              placeholder={t('tasks.comments.placeholder')}
+            />
+            <div className="flex justify-end">
+              <Button type="submit" size="sm" isLoading={commentSubmitting}>
+                {t('tasks.comments.submit')}
+              </Button>
+            </div>
+          </form>
+        </div>
+
         {/* Attachments */}
         <div>
           <div className="flex items-center justify-between mb-3">
@@ -531,8 +660,8 @@ export const TaskDetailsModal = ({ task, isOpen, onClose, onUpdate }: TaskDetail
             <p className="text-sm text-gray-500 dark:text-gray-400">{t('tasks.noAttachments')}</p>
           )}
         </div>
-        </div>
-      </Modal>
+      </div>
+    </Modal>
       {selectedProject && (
         <ProjectDetailsModal
           project={selectedProject}
