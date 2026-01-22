@@ -126,7 +126,10 @@ class TaskViewSet(viewsets.ModelViewSet):
             )
             return Response(serializer.data)
 
-        task = get_object_or_404(Task, pk=pk, owner=request.user)
+        task = get_object_or_404(
+            Task.objects.filter(Q(owner=request.user) | Q(tagged_user=request.user)),
+            pk=pk,
+        )
         serializer = AttachmentCreateSerializer(
             data=request.data,
             context={'request': request},
