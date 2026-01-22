@@ -43,6 +43,15 @@ export const SettingsPage = () => {
     reset: resetPassword,
   } = useForm<PasswordChangeInput & { confirm_password: string }>()
 
+  const getPasswordValidationError = (password?: string): string | null => {
+    if (!password) return t('settings.password.required')
+    if (password.length < 8) return t('settings.password.min')
+    if (!/[A-Z]/.test(password)) return t('settings.password.upper')
+    if (!/[a-z]/.test(password)) return t('settings.password.lower')
+    if (!/[0-9]/.test(password)) return t('settings.password.number')
+    return null
+  }
+
   const {
     register: registerInvite,
     handleSubmit: handleInviteSubmit,
@@ -104,6 +113,11 @@ export const SettingsPage = () => {
   const handlePasswordSave = async (
     data: PasswordChangeInput & { confirm_password: string }
   ) => {
+    const passwordError = getPasswordValidationError(data.new_password)
+    if (passwordError) {
+      toast.error(passwordError)
+      return
+    }
     if (data.new_password !== data.confirm_password) {
       toast.error(t('settings.password.mismatch'))
       return
@@ -116,8 +130,8 @@ export const SettingsPage = () => {
       })
       toast.success(t('settings.password.saveSuccess'))
       resetPassword()
-    } catch {
-      toast.error(t('settings.password.saveFail'))
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, t('settings.password.saveFail')))
     } finally {
       setSavingPassword(false)
     }
@@ -163,6 +177,39 @@ export const SettingsPage = () => {
     }
     return undefined
   }, [watchPassword, t])
+
+  const newPassword = watchPassword('new_password')
+  const passwordStrength = useMemo(() => {
+    const hasMin = newPassword?.length >= 8
+    const hasUpper = /[A-Z]/.test(newPassword || '')
+    const hasLower = /[a-z]/.test(newPassword || '')
+    const hasNumber = /[0-9]/.test(newPassword || '')
+    const hasSpecial = /[^A-Za-z0-9]/.test(newPassword || '')
+    const hasLong = newPassword?.length >= 16
+    const meetsBase = hasMin && hasUpper && hasLower && hasNumber
+
+    if (!meetsBase) {
+      return {
+        percent: 33,
+        label: t('settings.password.strengthWeak'),
+        color: 'bg-red-500',
+      }
+    }
+
+    if (hasLong && hasSpecial) {
+      return {
+        percent: 100,
+        label: t('settings.password.strengthStrong'),
+        color: 'bg-green-500',
+      }
+    }
+
+    return {
+      percent: 66,
+      label: t('settings.password.strengthMedium'),
+      color: 'bg-yellow-500',
+    }
+  }, [newPassword, t])
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
@@ -252,10 +299,22 @@ export const SettingsPage = () => {
               label={t('settings.password.new')}
               type="password"
               {...registerPassword('new_password', {
-                required: t('settings.password.required'),
+                validate: value => getPasswordValidationError(value) ?? true,
               })}
               error={passwordErrors.new_password?.message}
             />
+            <div className="space-y-2 text-xs text-gray-500 dark:text-gray-400">
+              <p>{t('settings.password.requirements')}</p>
+              <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                <div
+                  className={`h-2 rounded-full transition-all duration-300 ${passwordStrength.color}`}
+                  style={{ width: `${passwordStrength.percent}%` }}
+                />
+              </div>
+              <p className="text-[11px] uppercase tracking-wide text-gray-400">
+                {t('settings.password.strengthLabel')} {passwordStrength.label}
+              </p>
+            </div>
             <Input
               label={t('settings.password.confirm')}
               type="password"

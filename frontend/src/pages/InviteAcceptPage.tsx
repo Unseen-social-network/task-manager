@@ -70,18 +70,31 @@ export const InviteAcceptPage = () => {
     const hasUpper = /[A-Z]/.test(password || '')
     const hasLower = /[a-z]/.test(password || '')
     const hasNumber = /[0-9]/.test(password || '')
-    const score = [hasMin, hasUpper, hasLower, hasNumber].filter(Boolean).length
-    const percent = (score / 4) * 100
-    let label = t('invite.passwordStrengthWeak')
-    let color = 'bg-red-500'
-    if (score >= 3) {
-      label = t('invite.passwordStrengthStrong')
-      color = 'bg-green-500'
-    } else if (score >= 2) {
-      label = t('invite.passwordStrengthMedium')
-      color = 'bg-yellow-500'
+    const hasSpecial = /[^A-Za-z0-9]/.test(password || '')
+    const hasLong = password?.length >= 16
+    const meetsBase = hasMin && hasUpper && hasLower && hasNumber
+
+    if (!meetsBase) {
+      return {
+        percent: 33,
+        label: t('invite.passwordStrengthWeak'),
+        color: 'bg-red-500',
+      }
     }
-    return { percent, label, color }
+
+    if (hasLong && hasSpecial) {
+      return {
+        percent: 100,
+        label: t('invite.passwordStrengthStrong'),
+        color: 'bg-green-500',
+      }
+    }
+
+    return {
+      percent: 66,
+      label: t('invite.passwordStrengthMedium'),
+      color: 'bg-yellow-500',
+    }
   }, [password, t])
 
   const handleAccept = async (data: InviteFormValues) => {
@@ -105,7 +118,12 @@ export const InviteAcceptPage = () => {
       toast.success(t('invite.success'))
       navigate('/login')
     } catch (error) {
-      toast.error(getApiErrorMessage(error, t('invite.fail')))
+      const errorMessage = getApiErrorMessage(error, t('invite.fail'))
+      const resolvedMessage =
+        errorMessage === 'User with this email already exists.'
+          ? t('invite.emailExists')
+          : errorMessage
+      toast.error(resolvedMessage)
     } finally {
       setSubmitting(false)
     }
