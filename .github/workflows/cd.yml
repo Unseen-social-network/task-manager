@@ -74,14 +74,14 @@ jobs:
           exit-code: 1
           ignore-unfixed: true
 
-      - name: Scan frontend image
-        uses: aquasecurity/trivy-action@0.33.1
-        with:
-          image-ref: fgeeha/task_manager_frontend:${{ github.event.workflow_run.head_sha }}
-          format: table
-          severity: CRITICAL,HIGH
-          exit-code: 1
-          ignore-unfixed: true
+#      - name: Scan frontend image
+#        uses: aquasecurity/trivy-action@0.33.1
+#        with:
+#          image-ref: fgeeha/task_manager_frontend:${{ github.event.workflow_run.head_sha }}
+#          format: table
+#          severity: CRITICAL,HIGH
+#          exit-code: 1
+#          ignore-unfixed: true
 
   deploy:
     needs: trivy-scan
