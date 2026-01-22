@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { format } from 'date-fns'
 import type { CreateTaskInput, Contact, Project } from '@/types'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
@@ -22,6 +23,13 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
   const [useContact, setUseContact] = useState(!!initialData?.contact)
   const { t } = useLocale()
 
+  const getDefaultDueDate = () => {
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    tomorrow.setSeconds(0, 0)
+    return format(tomorrow, "yyyy-MM-dd'T'HH:mm")
+  }
+
   const {
     register,
     handleSubmit,
@@ -30,6 +38,7 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
     defaultValues: initialData || {
       urgency: 'medium',
       status: 'todo',
+      due_date: getDefaultDueDate(),
     },
   })
 
