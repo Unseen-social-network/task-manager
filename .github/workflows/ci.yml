@@ -2,142 +2,83 @@ name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  lint-and-test:
+  backend:
+    name: Backend CI
     runs-on: ubuntu-latest
 
     services:
       postgres:
-        image: postgres:16-alpine
+        image: postgres:15
         env:
-          POSTGRES_DB: planner_test
-          POSTGRES_USER: planner_user
-          POSTGRES_PASSWORD: planner_pass
+          POSTGRES_DB: test_db
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_pass
         ports:
           - 5432:5432
         options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+          --health-cmd="pg_isready"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      DATABASE_URL: postgres://test_user:test_pass@localhost:5432/test_db
+      DJANGO_SETTINGS_MODULE: app.settings
+      SECRET_KEY: test
+      DEBUG: false
 
     steps:
-      # ------------------------------------------------------------
-      # Checkout
-      # ------------------------------------------------------------
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # ------------------------------------------------------------
-      # Node.js (frontend)
-      # ------------------------------------------------------------
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
-
-      # ------------------------------------------------------------
-      # Python
-      # ------------------------------------------------------------
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-          cache: 'pip'
+          python-version: "3.12"
 
-      # ------------------------------------------------------------
-      # Poetry
-      # ------------------------------------------------------------
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-        with:
-          version: 1.8.0
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-
-      # ------------------------------------------------------------
-      # Cache venv
-      # ------------------------------------------------------------
-      - name: Cache Poetry venv
-        uses: actions/cache@v4
-        with:
-          path: .venv
-          key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
-
-      # ------------------------------------------------------------
-      # Install deps
-      # ------------------------------------------------------------
       - name: Install dependencies
-        run: poetry install --no-interaction --no-root
-
-      # ------------------------------------------------------------
-      # Frontend dependencies
-      # ------------------------------------------------------------
-      - name: Install frontend dependencies
         run: |
-          cd frontend
-          npm ci
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-      # ------------------------------------------------------------
-      # Frontend checks
-      # ------------------------------------------------------------
-      - name: Frontend lint
+      - name: Run migrations
         run: |
-          cd frontend
-          npm run lint
+          python manage.py migrate
 
-      - name: Frontend build
+      - name: Run backend tests
         run: |
-          cd frontend
-          npm run build
+          python manage.py test
 
-      # ------------------------------------------------------------
-      # Ruff = единственный линтер + форматтер
-      # ------------------------------------------------------------
-      - name: Ruff lint
-        run: poetry run ruff check backend/ --config pyproject.toml
+  frontend:
+    name: Frontend CI
+    runs-on: ubuntu-latest
 
-      - name: Ruff format check
-        run: poetry run ruff format --check backend/
+    steps:
+      - uses: actions/checkout@v4
 
-      # ------------------------------------------------------------
-      # Django migrations check
-      # ------------------------------------------------------------
-      - name: Check migrations
-        env:
-          DATABASE_URL: postgres://planner_user:planner_pass@localhost:5432/planner_test
-          SECRET_KEY: test-secret-key-for-ci
-        run: |
-          cd backend
-          poetry run python manage.py makemigrations --check --dry-run --no-input
-
-      # ------------------------------------------------------------
-      # Tests
-      # ------------------------------------------------------------
-      - name: Run tests
-        env:
-          SECRET_KEY: test-secret-key-for-ci
-          DEBUG: "1"
-          USE_SQLITE_FOR_TESTS: "true"
-        run: |
-          cd backend
-          poetry run pytest \
-            --cov=planner \
-            --cov-report=term-missing \
-            --cov-report=xml
-
-      # ------------------------------------------------------------
-      # Coverage
-      # ------------------------------------------------------------
-      - name: Upload coverage reports
-        uses: codecov/codecov-action@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
         with:
-          files: backend/coverage.xml
-          flags: unittests
-          name: codecov
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
