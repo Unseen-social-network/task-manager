@@ -3,9 +3,9 @@ Serializers for Planner application.
 """
 
 from django.contrib.auth import get_user_model
-from django.utils import timezone
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.utils import timezone
 from rest_framework import serializers
 
 from .models import Attachment, Contact, Invite, Profile, Project, Task
