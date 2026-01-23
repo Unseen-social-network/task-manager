@@ -32,6 +32,7 @@ export interface Contact {
   id: number
   owner?: number
   name: string
+  username: string
   company: string
   phone: string
   email: string
@@ -44,6 +45,7 @@ export interface Contact {
 
 export interface CreateContactInput {
   name: string
+  username?: string
   company?: string
   phone?: string
   email?: string

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Edit2, Trash2, Mail, Phone, Building, MessageCircle } from 'lucide-react'
+import { Edit2, Trash2, Mail, Phone, Building, MessageCircle, AtSign } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { Contact, UpdateContactInput } from '@/types'
 import { Modal } from '@/components/ui/Modal'
@@ -59,6 +59,7 @@ export const ContactDetailsModal = ({
         <ContactForm
           initialData={{
             name: contact.name,
+            username: contact.username,
             company: contact.company,
             phone: contact.phone,
             email: contact.email,
@@ -106,6 +107,18 @@ export const ContactDetailsModal = ({
 
         {/* Contact Information */}
         <div className="space-y-3">
+          {contact.username && (
+            <div className="flex items-center gap-3">
+              <AtSign className="w-5 h-5 text-gray-400" />
+              <div>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {t('contacts.username')}
+                </p>
+                <span className="text-gray-900 dark:text-gray-100">@{contact.username}</span>
+              </div>
+            </div>
+          )}
+
           {contact.phone && (
             <div className="flex items-center gap-3">
               <Phone className="w-5 h-5 text-gray-400" />

@@ -1,4 +1,4 @@
-import { Mail, Phone, Building, MessageCircle } from 'lucide-react'
+import { Mail, Phone, Building, MessageCircle, AtSign } from 'lucide-react'
 import type { Contact } from '@/types'
 import { Card } from '@/components/ui/Card'
 
@@ -37,6 +37,13 @@ export const ContactCard = ({ contact, onClick }: ContactCardProps) => {
             <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
               <Mail className="w-4 h-4" />
               <span>{contact.email}</span>
+            </div>
+          )}
+
+          {contact.username && (
+            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+              <AtSign className="w-4 h-4" />
+              <span>@{contact.username}</span>
             </div>
           )}
 

@@ -33,6 +33,7 @@ class ContactSerializer(serializers.ModelSerializer):
             'id',
             'owner',
             'name',
+            'username',
             'company',
             'phone',
             'email',
