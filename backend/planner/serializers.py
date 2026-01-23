@@ -289,7 +289,9 @@ class ProfileSerializer(serializers.ModelSerializer):
         normalized = value.strip()
         if normalized.startswith('@'):
             normalized = normalized[1:]
-        if not normalized.replace('_', '').isalnum() or not (5 <= len(normalized) <= 32):
+        if not normalized.replace('_', '').isalnum() or not (
+            5 <= len(normalized) <= 32
+        ):
             raise serializers.ValidationError(
                 'Telegram username must be 5-32 characters and contain only letters, numbers, or underscores.'
             )
@@ -317,7 +319,9 @@ class ProfileSerializer(serializers.ModelSerializer):
         return None
 
     def get_telegram_link_url(self, obj):
-        bot_username = getattr(self.context.get('request'), 'telegram_bot_username', None)
+        bot_username = getattr(
+            self.context.get('request'), 'telegram_bot_username', None
+        )
         if not bot_username:
             from django.conf import settings
 
@@ -342,8 +346,6 @@ class PasswordChangeSerializer(serializers.Serializer):
         if not user.check_password(value):
             raise serializers.ValidationError('Old password is incorrect.')
         return value
-
-
 
 
 class InviteSerializer(serializers.ModelSerializer):

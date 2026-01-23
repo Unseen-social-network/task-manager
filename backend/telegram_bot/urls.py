@@ -32,8 +32,16 @@ urlpatterns = [
         TelegramWebhookView.as_view(),
         name='telegram-webhook',
     ),
-    path('telegram/tasks/quick/', TelegramQuickTaskCreateView.as_view(), name='tg-task-quick'),
-    path('telegram/tasks/full/', TelegramFullTaskCreateView.as_view(), name='tg-task-full'),
+    path(
+        'telegram/tasks/quick/',
+        TelegramQuickTaskCreateView.as_view(),
+        name='tg-task-quick',
+    ),
+    path(
+        'telegram/tasks/full/',
+        TelegramFullTaskCreateView.as_view(),
+        name='tg-task-full',
+    ),
     path(
         'telegram/tasks/<int:task_id>/',
         TelegramTaskDetailView.as_view(),

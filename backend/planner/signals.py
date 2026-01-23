@@ -6,8 +6,9 @@ from django.contrib.auth import get_user_model
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 
-from .models import Profile, Task
 from telegram_bot.services import send_telegram_message
+
+from .models import Profile, Task
 
 User = get_user_model()
 
@@ -21,9 +22,11 @@ def create_profile(sender, instance, created, **kwargs):
 @receiver(pre_save, sender=Task)
 def track_task_tag_change(sender, instance, **kwargs):
     if instance.pk:
-        instance._previous_tagged_user_id = Task.objects.filter(pk=instance.pk).values_list(
-            'tagged_user_id', flat=True
-        ).first()
+        instance._previous_tagged_user_id = (
+            Task.objects.filter(pk=instance.pk)
+            .values_list('tagged_user_id', flat=True)
+            .first()
+        )
     else:
         instance._previous_tagged_user_id = None
 

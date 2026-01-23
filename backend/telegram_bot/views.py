@@ -5,9 +5,9 @@ import uuid
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from django.db.models import Q
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -39,12 +39,16 @@ def _require_bot_token(request):
         )
     provided = request.headers.get('X-Telegram-Bot-Token', '')
     if not provided or not secrets.compare_digest(provided, bot_token):
-        return Response({'detail': 'Invalid bot token.'}, status=status.HTTP_401_UNAUTHORIZED)
+        return Response(
+            {'detail': 'Invalid bot token.'}, status=status.HTTP_401_UNAUTHORIZED
+        )
     return None
 
 
 def _get_profile_by_chat_id(chat_id):
-    return Profile.objects.select_related('user').filter(telegram_chat_id=chat_id).first()
+    return (
+        Profile.objects.select_related('user').filter(telegram_chat_id=chat_id).first()
+    )
 
 
 def _serialize_task_for_bot(task):
@@ -88,7 +92,11 @@ class TelegramLinkDisconnectView(APIView):
         profile.telegram_linked_at = None
         profile.telegram_link_token = uuid.uuid4()
         profile.save(
-            update_fields=['telegram_chat_id', 'telegram_linked_at', 'telegram_link_token']
+            update_fields=[
+                'telegram_chat_id',
+                'telegram_linked_at',
+                'telegram_link_token',
+            ]
         )
         serializer = ProfileSerializer(profile)
         return Response(serializer.data)
@@ -108,7 +116,9 @@ class TelegramLinkConfirmView(APIView):
         profile = get_object_or_404(
             Profile, telegram_link_token=serializer.validated_data['link_token']
         )
-        telegram_username = serializer.validated_data.get('telegram_username', '').strip()
+        telegram_username = serializer.validated_data.get(
+            'telegram_username', ''
+        ).strip()
         update_fields = ['telegram_chat_id', 'telegram_linked_at']
         profile.telegram_chat_id = serializer.validated_data['chat_id']
         profile.telegram_linked_at = timezone.now()
@@ -127,24 +137,33 @@ class TelegramWebhookView(APIView):
     def post(self, request, secret):
         expected_secret = getattr(settings, 'TELEGRAM_WEBHOOK_SECRET', '')
         if not expected_secret or not secrets.compare_digest(secret, expected_secret):
-            return Response({'detail': 'Invalid webhook secret.'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                {'detail': 'Invalid webhook secret.'},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
         message = request.data.get('message') or {}
         text = (message.get('text') or '').strip()
         if not text.startswith('/start'):
             return Response({'detail': 'Ignored.'})
         parts = text.split(maxsplit=1)
         if len(parts) < 2:
-            return Response({'detail': 'Missing start payload.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'detail': 'Missing start payload.'}, status=status.HTTP_400_BAD_REQUEST
+            )
         payload = parts[1].strip()
         try:
             link_token = uuid.UUID(payload)
         except ValueError:
-            return Response({'detail': 'Invalid start payload.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'detail': 'Invalid start payload.'}, status=status.HTTP_400_BAD_REQUEST
+            )
         chat = message.get('chat') or {}
         from_user = message.get('from') or {}
         chat_id = chat.get('id')
         if not chat_id:
-            return Response({'detail': 'Missing chat id.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'detail': 'Missing chat id.'}, status=status.HTTP_400_BAD_REQUEST
+            )
         profile = get_object_or_404(Profile, telegram_link_token=link_token)
         update_fields = ['telegram_chat_id', 'telegram_linked_at']
         profile.telegram_chat_id = chat_id
