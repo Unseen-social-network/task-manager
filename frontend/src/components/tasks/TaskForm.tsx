@@ -22,6 +22,7 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
   const [projects, setProjects] = useState<Project[]>([])
   const [useContact, setUseContact] = useState(!!initialData?.contact)
   const { t, locale } = useLocale()
+  const shouldShowProject = projects.length > 0
 
   const getDefaultDueDate = () => {
     const tomorrow = new Date()
@@ -71,7 +72,8 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
   const loadProjects = async () => {
     try {
       const response = await projectsService.getProjects()
-      setProjects(response.results)
+      const ownedProjects = response.results.filter(project => project.is_owner)
+      setProjects(ownedProjects)
     } catch (error) {
       console.error('Failed to load projects:', error)
     }
@@ -124,14 +126,16 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
         error={errors.due_date?.message}
       />
 
-      <Select
-        label={t('tasks.form.project')}
-        {...register('project_id', { valueAsNumber: true })}
-        options={[
-          { value: '', label: t('tasks.form.projectPlaceholder') },
-          ...projects.map(project => ({ value: String(project.id), label: project.name })),
-        ]}
-      />
+      {shouldShowProject && (
+        <Select
+          label={t('tasks.form.project')}
+          {...register('project_id', { valueAsNumber: true })}
+          options={[
+            { value: '', label: t('tasks.form.projectPlaceholder') },
+            ...projects.map(project => ({ value: String(project.id), label: project.name })),
+          ]}
+        />
+      )}
 
       <div className="space-y-2">
         <Input
