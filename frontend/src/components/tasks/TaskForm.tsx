@@ -38,6 +38,11 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
     return format(parsed, "yyyy-MM-dd'T'HH:mm")
   }
 
+  const formatContactLabel = (contact: Contact) => {
+    if (!contact.username) return contact.name
+    return `${contact.name} (@${contact.username})`
+  }
+
   const {
     register,
     handleSubmit,
@@ -181,7 +186,7 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
           {...register('contact', { valueAsNumber: true })}
           options={[
             { value: '', label: t('tasks.form.contactSelect') },
-            ...contacts.map(c => ({ value: String(c.id), label: c.name })),
+            ...contacts.map(c => ({ value: String(c.id), label: formatContactLabel(c) })),
           ]}
         />
       ) : (

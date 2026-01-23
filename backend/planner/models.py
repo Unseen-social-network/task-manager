@@ -21,6 +21,7 @@ class Contact(models.Model):
         verbose_name='Owner',
     )
     name = models.CharField(max_length=255, verbose_name='Name')
+    username = models.CharField(max_length=150, blank=True, verbose_name='Username')
     company = models.CharField(max_length=255, blank=True, verbose_name='Company')
     phone = models.CharField(max_length=50, blank=True, verbose_name='Phone')
     email = models.EmailField(blank=True, verbose_name='Email')

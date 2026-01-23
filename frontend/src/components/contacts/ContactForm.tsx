@@ -33,6 +33,13 @@ export const ContactForm = ({ initialData, onSubmit, onCancel, isLoading }: Cont
       />
 
       <Input
+        label={t('contacts.form.username')}
+        {...register('username')}
+        error={errors.username?.message}
+        placeholder="johndoe"
+      />
+
+      <Input
         label={t('contacts.form.company')}
         {...register('company')}
         error={errors.company?.message}
