@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState, type FocusEvent } from 'react'
 import { useForm } from 'react-hook-form'
 import { format, isValid, parseISO } from 'date-fns'
 import type { CreateTaskInput, Contact, Project } from '@/types'
@@ -21,6 +21,7 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
   const [contacts, setContacts] = useState<Contact[]>([])
   const [projects, setProjects] = useState<Project[]>([])
   const [useContact, setUseContact] = useState(!!initialData?.contact)
+  const [isTagMenuOpen, setIsTagMenuOpen] = useState(false)
   const { t, locale } = useLocale()
   const shouldShowProject = projects.length > 0
 
@@ -47,6 +48,8 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
     register,
     handleSubmit,
     formState: { errors },
+    setValue,
+    watch,
   } = useForm<CreateTaskInput>({
     defaultValues: initialData
       ? {
@@ -82,6 +85,50 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
     } catch (error) {
       console.error('Failed to load projects:', error)
     }
+  }
+
+  const taggedUserValue = watch('tagged_user') ?? ''
+  const taggableContacts = useMemo(
+    () => contacts.filter(contact => contact.username),
+    [contacts]
+  )
+  const filteredTaggableContacts = useMemo(() => {
+    const normalizedQuery = taggedUserValue.trim().toLowerCase()
+    if (!normalizedQuery) return taggableContacts
+    return taggableContacts.filter(contact => {
+      const nameMatch = contact.name.toLowerCase().includes(normalizedQuery)
+      const usernameMatch = contact.username?.toLowerCase().includes(normalizedQuery)
+      const labelMatch = formatContactLabel(contact).toLowerCase().includes(normalizedQuery)
+      return nameMatch || usernameMatch || labelMatch
+    })
+  }, [taggedUserValue, taggableContacts])
+
+  const taggedUserField = register('tagged_user')
+
+  const handleTaggedUserSelect = (username: string) => {
+    setValue('tagged_user', username, { shouldDirty: true, shouldTouch: true })
+    setIsTagMenuOpen(false)
+  }
+
+  const handleTaggedUserBlur = (event: FocusEvent<HTMLInputElement>) => {
+    taggedUserField.onBlur(event)
+    const enteredValue = event.target.value.trim()
+    if (enteredValue) {
+      const matchedContact = taggableContacts.find(contact => {
+        const nameMatch = contact.name.toLowerCase() === enteredValue.toLowerCase()
+        const usernameMatch = contact.username?.toLowerCase() === enteredValue.toLowerCase()
+        const labelMatch =
+          formatContactLabel(contact).toLowerCase() === enteredValue.toLowerCase()
+        return nameMatch || usernameMatch || labelMatch
+      })
+      if (matchedContact?.username && matchedContact.username !== enteredValue) {
+        setValue('tagged_user', matchedContact.username, {
+          shouldDirty: true,
+          shouldTouch: true,
+        })
+      }
+    }
+    setTimeout(() => setIsTagMenuOpen(false), 100)
   }
 
   return (
@@ -142,13 +189,48 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
         />
       )}
 
-      <div className="space-y-2">
+      <div className="space-y-2 relative">
         <Input
           label={t('tasks.form.taggedUser')}
           placeholder={t('tasks.form.taggedPlaceholder')}
-          {...register('tagged_user')}
+          autoComplete="off"
+          {...taggedUserField}
+          value={taggedUserValue}
+          onFocus={() => setIsTagMenuOpen(true)}
+          onChange={event => {
+            taggedUserField.onChange(event)
+            setIsTagMenuOpen(true)
+          }}
+          onBlur={handleTaggedUserBlur}
           error={errors.tagged_user?.message}
         />
+        {isTagMenuOpen && filteredTaggableContacts.length > 0 && (
+          <div className="absolute z-20 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900">
+            <ul className="max-h-48 overflow-y-auto py-1 text-sm text-gray-700 dark:text-gray-200">
+              {filteredTaggableContacts.map(contact => (
+                <li key={contact.id}>
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-800"
+                    onMouseDown={event => {
+                      event.preventDefault()
+                      if (contact.username) {
+                        handleTaggedUserSelect(contact.username)
+                      }
+                    }}
+                  >
+                    <span className="font-medium">{contact.name}</span>
+                    {contact.username && (
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        @{contact.username}
+                      </span>
+                    )}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         <p className="text-xs text-gray-500 dark:text-gray-400">
           {t('tasks.form.taggedHint')}
         </p>
