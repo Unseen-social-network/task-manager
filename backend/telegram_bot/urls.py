@@ -33,6 +33,11 @@ urlpatterns = [
         name='telegram-webhook',
     ),
     path(
+        'telegram/webhook/<str:secret>',
+        TelegramWebhookView.as_view(),
+        name='telegram-webhook-no-slash',
+    ),
+    path(
         'telegram/tasks/quick/',
         TelegramQuickTaskCreateView.as_view(),
         name='tg-task-quick',
