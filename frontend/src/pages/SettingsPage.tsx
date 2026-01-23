@@ -32,6 +32,7 @@ export const SettingsPage = () => {
     register: registerProfile,
     handleSubmit: handleProfileSubmit,
     formState: { errors: profileErrors },
+    watch: watchProfile,
     reset: resetProfile,
   } = useForm<Profile>()
 
@@ -99,6 +100,8 @@ export const SettingsPage = () => {
       const updated = await profileService.updateProfile({
         full_name: data.full_name,
         telegram_username: data.telegram_username,
+        telegram_notifications_enabled: data.telegram_notifications_enabled,
+        telegram_notify_on_tag: data.telegram_notify_on_tag,
       })
       setProfile(updated)
       resetProfile(updated)
@@ -211,6 +214,11 @@ export const SettingsPage = () => {
     }
   }, [newPassword, t])
 
+  const telegramUsername = watchProfile('telegram_username')
+  const canConnectTelegram = Boolean(
+    telegramUsername && telegramUsername.trim().length > 0 && profile?.telegram_link_url
+  )
+
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -267,6 +275,56 @@ export const SettingsPage = () => {
               error={profileErrors.telegram_username?.message}
               placeholder={t('settings.profile.telegramPlaceholder')}
             />
+            <div className="rounded-lg border border-dashed border-gray-200 dark:border-gray-700 p-4 space-y-3">
+              <div>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  {t('settings.profile.telegramConnectTitle')}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {t('settings.profile.telegramConnectHint')}
+                </p>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  disabled={!canConnectTelegram}
+                  onClick={() => {
+                    if (profile?.telegram_link_url) {
+                      window.open(profile.telegram_link_url, '_blank', 'noopener,noreferrer')
+                    }
+                  }}
+                >
+                  {profile?.telegram_connected
+                    ? t('settings.profile.telegramReconnect')
+                    : t('settings.profile.telegramConnect')}
+                </Button>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {profile?.telegram_connected
+                    ? t('settings.profile.telegramConnected')
+                    : t('settings.profile.telegramNotConnected')}
+                </span>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  {...registerProfile('telegram_notifications_enabled')}
+                />
+                {t('settings.profile.telegramNotifications')}
+              </label>
+              <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  {...registerProfile('telegram_notify_on_tag')}
+                />
+                {t('settings.profile.telegramTagNotifications')}
+              </label>
+            </div>
             <div className="flex justify-end">
               <Button type="submit" isLoading={savingProfile}>
                 {t('settings.profile.save')}
