@@ -262,6 +262,7 @@ class ProfileSerializer(serializers.ModelSerializer):
         fields = [
             'username',
             'full_name',
+            'telegram_chat_id',
             'telegram_username',
             'telegram_link_url',
             'telegram_connected',
@@ -273,6 +274,8 @@ class ProfileSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             'username',
+            'telegram_chat_id',
+            'telegram_username',
             'telegram_link_url',
             'telegram_connected',
             'invite_quota',

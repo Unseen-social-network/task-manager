@@ -146,6 +146,7 @@ export interface LoginCredentials {
 export interface Profile {
   username: string
   full_name: string
+  telegram_chat_id?: number | null
   telegram_username: string
   telegram_link_url?: string | null
   telegram_connected?: boolean

@@ -76,6 +76,23 @@ class TelegramLinkRefreshView(APIView):
         return Response(serializer.data)
 
 
+class TelegramLinkDisconnectView(APIView):
+    """Disconnect Telegram account from current user."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        profile, _ = Profile.objects.get_or_create(user=request.user)
+        profile.telegram_chat_id = None
+        profile.telegram_linked_at = None
+        profile.telegram_link_token = uuid.uuid4()
+        profile.save(
+            update_fields=['telegram_chat_id', 'telegram_linked_at', 'telegram_link_token']
+        )
+        serializer = ProfileSerializer(profile)
+        return Response(serializer.data)
+
+
 class TelegramLinkConfirmView(APIView):
     """Confirm Telegram link from the bot."""
 

@@ -5,6 +5,7 @@ from django.urls import path
 from .views import (
     TelegramFullTaskCreateView,
     TelegramLinkConfirmView,
+    TelegramLinkDisconnectView,
     TelegramLinkRefreshView,
     TelegramLoginView,
     TelegramNotificationsView,
@@ -15,6 +16,11 @@ from .views import (
 
 urlpatterns = [
     path('telegram/link/', TelegramLinkRefreshView.as_view(), name='telegram-link'),
+    path(
+        'telegram/link/disconnect/',
+        TelegramLinkDisconnectView.as_view(),
+        name='telegram-link-disconnect',
+    ),
     path(
         'telegram/link/confirm/',
         TelegramLinkConfirmView.as_view(),

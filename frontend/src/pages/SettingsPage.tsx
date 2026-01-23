@@ -27,12 +27,13 @@ export const SettingsPage = () => {
   const [savingProfile, setSavingProfile] = useState(false)
   const [savingPassword, setSavingPassword] = useState(false)
   const [sendingInvite, setSendingInvite] = useState(false)
+  const [connectingTelegram, setConnectingTelegram] = useState(false)
+  const [disconnectingTelegram, setDisconnectingTelegram] = useState(false)
 
   const {
     register: registerProfile,
     handleSubmit: handleProfileSubmit,
     formState: { errors: profileErrors },
-    watch: watchProfile,
     reset: resetProfile,
   } = useForm<Profile>()
 
@@ -99,7 +100,6 @@ export const SettingsPage = () => {
     try {
       const updated = await profileService.updateProfile({
         full_name: data.full_name,
-        telegram_username: data.telegram_username,
         telegram_notifications_enabled: data.telegram_notifications_enabled,
         telegram_notify_on_tag: data.telegram_notify_on_tag,
       })
@@ -214,10 +214,7 @@ export const SettingsPage = () => {
     }
   }, [newPassword, t])
 
-  const telegramUsername = watchProfile('telegram_username')
-  const canConnectTelegram = Boolean(
-    telegramUsername && telegramUsername.trim().length > 0 && profile?.telegram_link_url
-  )
+  const canConnectTelegram = Boolean(profile?.telegram_link_url)
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
@@ -270,10 +267,11 @@ export const SettingsPage = () => {
               placeholder={t('settings.profile.fullNamePlaceholder')}
             />
             <Input
-              label={t('settings.profile.telegram')}
-              {...registerProfile('telegram_username')}
-              error={profileErrors.telegram_username?.message}
-              placeholder={t('settings.profile.telegramPlaceholder')}
+              label={t('settings.profile.telegramId')}
+              value={profile?.telegram_chat_id ? String(profile.telegram_chat_id) : ''}
+              placeholder={t('settings.profile.telegramIdPlaceholder')}
+              disabled
+              readOnly
             />
             <div className="rounded-lg border border-dashed border-gray-200 dark:border-gray-700 p-4 space-y-3">
               <div>
@@ -290,16 +288,63 @@ export const SettingsPage = () => {
                   variant="secondary"
                   size="sm"
                   disabled={!canConnectTelegram}
+                  isLoading={connectingTelegram}
                   onClick={() => {
-                    if (profile?.telegram_link_url) {
-                      window.open(profile.telegram_link_url, '_blank', 'noopener,noreferrer')
-                    }
+                    if (!profile?.telegram_link_url) return
+                    setConnectingTelegram(true)
+                    profileService
+                      .refreshTelegramLink()
+                      .then(updated => {
+                        setProfile(updated)
+                        resetProfile(updated)
+                        if (updated.telegram_link_url) {
+                          window.open(
+                            updated.telegram_link_url,
+                            '_blank',
+                            'noopener,noreferrer'
+                          )
+                        } else {
+                          toast.error(t('settings.profile.telegramLinkMissing'))
+                        }
+                      })
+                      .catch(() => {
+                        toast.error(t('settings.profile.telegramLinkFail'))
+                      })
+                      .finally(() => {
+                        setConnectingTelegram(false)
+                      })
                   }}
                 >
                   {profile?.telegram_connected
                     ? t('settings.profile.telegramReconnect')
                     : t('settings.profile.telegramConnect')}
                 </Button>
+                {profile?.telegram_connected && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    isLoading={disconnectingTelegram}
+                    onClick={() => {
+                      setDisconnectingTelegram(true)
+                      profileService
+                        .disconnectTelegramLink()
+                        .then(updated => {
+                          setProfile(updated)
+                          resetProfile(updated)
+                          toast.success(t('settings.profile.telegramDisconnected'))
+                        })
+                        .catch(() => {
+                          toast.error(t('settings.profile.telegramDisconnectFail'))
+                        })
+                        .finally(() => {
+                          setDisconnectingTelegram(false)
+                        })
+                    }}
+                  >
+                    {t('settings.profile.telegramDisconnect')}
+                  </Button>
+                )}
                 <span className="text-xs text-gray-500 dark:text-gray-400">
                   {profile?.telegram_connected
                     ? t('settings.profile.telegramConnected')
