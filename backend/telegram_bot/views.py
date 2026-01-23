@@ -25,6 +25,7 @@ from .serializers import (
     TelegramPasswordResetSerializer,
     TelegramQuickTaskSerializer,
 )
+from .services import send_telegram_message
 
 User = get_user_model()
 
@@ -116,6 +117,45 @@ class TelegramLinkConfirmView(APIView):
             update_fields.append('telegram_username')
         profile.save(update_fields=update_fields)
         return Response({'detail': 'Telegram account linked.'})
+
+
+class TelegramWebhookView(APIView):
+    """Handle Telegram webhook updates for /start payload linking."""
+
+    permission_classes = [AllowAny]
+
+    def post(self, request, secret):
+        expected_secret = getattr(settings, 'TELEGRAM_WEBHOOK_SECRET', '')
+        if not expected_secret or not secrets.compare_digest(secret, expected_secret):
+            return Response({'detail': 'Invalid webhook secret.'}, status=status.HTTP_401_UNAUTHORIZED)
+        message = request.data.get('message') or {}
+        text = (message.get('text') or '').strip()
+        if not text.startswith('/start'):
+            return Response({'detail': 'Ignored.'})
+        parts = text.split(maxsplit=1)
+        if len(parts) < 2:
+            return Response({'detail': 'Missing start payload.'}, status=status.HTTP_400_BAD_REQUEST)
+        payload = parts[1].strip()
+        try:
+            link_token = uuid.UUID(payload)
+        except ValueError:
+            return Response({'detail': 'Invalid start payload.'}, status=status.HTTP_400_BAD_REQUEST)
+        chat = message.get('chat') or {}
+        from_user = message.get('from') or {}
+        chat_id = chat.get('id')
+        if not chat_id:
+            return Response({'detail': 'Missing chat id.'}, status=status.HTTP_400_BAD_REQUEST)
+        profile = get_object_or_404(Profile, telegram_link_token=link_token)
+        update_fields = ['telegram_chat_id', 'telegram_linked_at']
+        profile.telegram_chat_id = chat_id
+        profile.telegram_linked_at = timezone.now()
+        telegram_username = (from_user.get('username') or '').strip()
+        if telegram_username and not profile.telegram_username:
+            profile.telegram_username = telegram_username
+            update_fields.append('telegram_username')
+        profile.save(update_fields=update_fields)
+        send_telegram_message(chat_id, 'Аккаунт успешно привязан.')
+        return Response({'detail': 'Linked.'})
 
 
 class TelegramQuickTaskCreateView(APIView):

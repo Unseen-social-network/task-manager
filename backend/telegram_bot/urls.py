@@ -12,6 +12,7 @@ from .views import (
     TelegramPasswordResetView,
     TelegramQuickTaskCreateView,
     TelegramTaskDetailView,
+    TelegramWebhookView,
 )
 
 urlpatterns = [
@@ -25,6 +26,11 @@ urlpatterns = [
         'telegram/link/confirm/',
         TelegramLinkConfirmView.as_view(),
         name='telegram-link-confirm',
+    ),
+    path(
+        'telegram/webhook/<str:secret>/',
+        TelegramWebhookView.as_view(),
+        name='telegram-webhook',
     ),
     path('telegram/tasks/quick/', TelegramQuickTaskCreateView.as_view(), name='tg-task-quick'),
     path('telegram/tasks/full/', TelegramFullTaskCreateView.as_view(), name='tg-task-full'),
