@@ -10,8 +10,8 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/v1/', include('planner.urls')),
     path('api/v1/', include('telegram_bot.urls')),
+    path('api/v1/', include('planner.urls')),
     # OpenAPI schema
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path(
