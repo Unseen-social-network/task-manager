@@ -322,6 +322,7 @@ class ProfileSerializer(serializers.ModelSerializer):
             from django.conf import settings
 
             bot_username = getattr(settings, 'TELEGRAM_BOT_USERNAME', '')
+        bot_username = bot_username.lstrip('@')
         if not bot_username:
             return None
         return f'https://t.me/{bot_username}?start={obj.telegram_link_token}'
