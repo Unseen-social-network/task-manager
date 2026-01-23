@@ -130,51 +130,97 @@ class TelegramLinkConfirmView(APIView):
 
 
 class TelegramWebhookView(APIView):
-    """Handle Telegram webhook updates for /start payload linking."""
+    """
+    Handle Telegram webhook updates.
 
+    Telegram sends POST requests to a fixed URL.
+    The secret is validated via the HTTP header:
+    X-Telegram-Bot-Api-Secret-Token
+    """
+
+    authentication_classes = []
     permission_classes = [AllowAny]
 
-    def post(self, request, secret):
+    def post(self, request):
+        # 1️⃣ Проверка webhook secret (ОБЯЗАТЕЛЬНО)
+        provided_secret = request.headers.get('X-Telegram-Bot-Api-Secret-Token', '')
         expected_secret = getattr(settings, 'TELEGRAM_WEBHOOK_SECRET', '')
-        if not expected_secret or not secrets.compare_digest(secret, expected_secret):
+
+        if (
+            not expected_secret
+            or not provided_secret
+            or not secrets.compare_digest(provided_secret, expected_secret)
+        ):
             return Response(
                 {'detail': 'Invalid webhook secret.'},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
-        message = request.data.get('message') or {}
+
+        update = request.data or {}
+
+        # Telegram может прислать update без message
+        message = update.get('message')
+        if not message:
+            return Response({'detail': 'Ignored.'}, status=status.HTTP_200_OK)
+
         text = (message.get('text') or '').strip()
         if not text.startswith('/start'):
-            return Response({'detail': 'Ignored.'})
+            return Response({'detail': 'Ignored.'}, status=status.HTTP_200_OK)
+
+        # /start <payload>
         parts = text.split(maxsplit=1)
         if len(parts) < 2:
             return Response(
-                {'detail': 'Missing start payload.'}, status=status.HTTP_400_BAD_REQUEST
+                {'detail': 'Missing start payload.'},
+                status=status.HTTP_200_OK,
             )
+
         payload = parts[1].strip()
+
         try:
             link_token = uuid.UUID(payload)
         except ValueError:
             return Response(
-                {'detail': 'Invalid start payload.'}, status=status.HTTP_400_BAD_REQUEST
+                {'detail': 'Invalid start payload.'},
+                status=status.HTTP_200_OK,
             )
+
         chat = message.get('chat') or {}
         from_user = message.get('from') or {}
+
         chat_id = chat.get('id')
         if not chat_id:
             return Response(
-                {'detail': 'Missing chat id.'}, status=status.HTTP_400_BAD_REQUEST
+                {'detail': 'Missing chat id.'},
+                status=status.HTTP_200_OK,
             )
-        profile = get_object_or_404(Profile, telegram_link_token=link_token)
+
+        profile = Profile.objects.filter(telegram_link_token=link_token).first()
+
+        if not profile:
+            send_telegram_message(
+                chat_id,
+                '❌ Ссылка устарела или недействительна.',
+            )
+            return Response({'detail': 'Invalid token.'}, status=status.HTTP_200_OK)
+
+        # Идемпотентность: если уже привязан — просто отвечаем
+        if profile.telegram_chat_id == chat_id:
+            return Response({'detail': 'Already linked.'}, status=status.HTTP_200_OK)
+
         update_fields = ['telegram_chat_id', 'telegram_linked_at']
         profile.telegram_chat_id = chat_id
         profile.telegram_linked_at = timezone.now()
+
         telegram_username = (from_user.get('username') or '').strip()
         if telegram_username and not profile.telegram_username:
             profile.telegram_username = telegram_username
             update_fields.append('telegram_username')
+
         profile.save(update_fields=update_fields)
-        send_telegram_message(chat_id, 'Аккаунт успешно привязан.')
-        return Response({'detail': 'Linked.'})
+
+        send_telegram_message(chat_id, '✅ Аккаунт успешно привязан.')
+        return Response({'detail': 'Linked.'}, status=status.HTTP_200_OK)
 
 
 class TelegramQuickTaskCreateView(APIView):
