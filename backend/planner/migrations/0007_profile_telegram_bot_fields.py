@@ -7,9 +7,8 @@ from django.db import migrations, models
 def populate_link_tokens(apps, schema_editor):
     Profile = apps.get_model('planner', 'Profile')
     for profile in Profile.objects.all():
-        if not profile.telegram_link_token:
-            profile.telegram_link_token = uuid.uuid4()
-            profile.save(update_fields=['telegram_link_token'])
+        profile.telegram_link_token = uuid.uuid4()
+        profile.save(update_fields=['telegram_link_token'])
 
 
 class Migration(migrations.Migration):
@@ -32,11 +31,11 @@ class Migration(migrations.Migration):
             model_name='profile',
             name='telegram_link_token',
             field=models.UUIDField(
-                default=uuid.uuid4,
                 editable=False,
                 null=True,
                 verbose_name='Telegram link token',
             ),
+            preserve_default=False,
         ),
         migrations.RunPython(populate_link_tokens, migrations.RunPython.noop),
         migrations.AlterField(
