@@ -1,6 +1,6 @@
 """URL routing for Telegram bot integration."""
 
-from django.urls import path
+from django.urls import path, re_path
 
 from .views import (
     TelegramFullTaskCreateView,
@@ -27,15 +27,10 @@ urlpatterns = [
         TelegramLinkConfirmView.as_view(),
         name='telegram-link-confirm',
     ),
-    path(
-        'telegram/webhook/<str:secret>/',
+    re_path(
+        r'^telegram/webhook/(?P<secret>[^/]+)/?$',
         TelegramWebhookView.as_view(),
         name='telegram-webhook',
-    ),
-    path(
-        'telegram/webhook/<str:secret>',
-        TelegramWebhookView.as_view(),
-        name='telegram-webhook-no-slash',
     ),
     path(
         'telegram/tasks/quick/',
