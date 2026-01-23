@@ -28,6 +28,9 @@ env = environ.Env(
     EMAIL_HOST_PASSWORD=(str, ''),
     EMAIL_USE_TLS=(bool, True),
     DEFAULT_FROM_EMAIL=(str, 'no-reply@example.com'),
+    TELEGRAM_BOT_TOKEN=(str, ''),
+    TELEGRAM_BOT_USERNAME=(str, ''),
+    TELEGRAM_WEBHOOK_SECRET=(str, ''),
 )
 
 # Read .env file if exists
@@ -68,6 +71,7 @@ INSTALLED_APPS = [
     'drf_spectacular',
     # Local apps
     'planner.apps.PlannerConfig',
+    'telegram_bot.apps.TelegramBotConfig',
 ]
 
 MIDDLEWARE = [
@@ -210,6 +214,9 @@ EMAIL_HOST_USER = env('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
 EMAIL_USE_TLS = env('EMAIL_USE_TLS')
 DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL')
+TELEGRAM_BOT_TOKEN = env('TELEGRAM_BOT_TOKEN')
+TELEGRAM_BOT_USERNAME = env('TELEGRAM_BOT_USERNAME')
+TELEGRAM_WEBHOOK_SECRET = env('TELEGRAM_WEBHOOK_SECRET')
 FRONTEND_BASE_URL = env('FRONTEND_BASE_URL')
 
 # Logging

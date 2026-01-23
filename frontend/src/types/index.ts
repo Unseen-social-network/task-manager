@@ -146,7 +146,12 @@ export interface LoginCredentials {
 export interface Profile {
   username: string
   full_name: string
+  telegram_chat_id?: number | null
   telegram_username: string
+  telegram_link_url?: string | null
+  telegram_connected?: boolean
+  telegram_notifications_enabled?: boolean
+  telegram_notify_on_tag?: boolean
   invite_quota: number
   invites_remaining: number
   inviter_username?: string | null

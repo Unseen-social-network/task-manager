@@ -15,4 +15,14 @@ export const profileService = {
   async changePassword(data: PasswordChangeInput): Promise<void> {
     await api.post('/api/v1/profile/password/', data)
   },
+
+  async refreshTelegramLink(): Promise<Profile> {
+    const response = await api.post<Profile>('/api/v1/telegram/link/')
+    return response.data
+  },
+
+  async disconnectTelegramLink(): Promise<Profile> {
+    const response = await api.post<Profile>('/api/v1/telegram/link/disconnect/')
+    return response.data
+  },
 }

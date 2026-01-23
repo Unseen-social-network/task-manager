@@ -290,6 +290,31 @@ class Profile(models.Model):
         blank=True,
         verbose_name='Telegram username',
     )
+    telegram_chat_id = models.BigIntegerField(
+        blank=True,
+        null=True,
+        verbose_name='Telegram chat ID',
+        help_text='Linked Telegram chat identifier.',
+    )
+    telegram_link_token = models.UUIDField(
+        default=uuid.uuid4,
+        unique=True,
+        editable=False,
+        verbose_name='Telegram link token',
+    )
+    telegram_linked_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        verbose_name='Telegram linked at',
+    )
+    telegram_notifications_enabled = models.BooleanField(
+        default=True,
+        verbose_name='Telegram notifications enabled',
+    )
+    telegram_notify_on_tag = models.BooleanField(
+        default=True,
+        verbose_name='Notify on tag in Telegram',
+    )
     invite_quota = models.PositiveIntegerField(
         default=3,
         verbose_name='Invite quota',

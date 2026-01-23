@@ -68,7 +68,7 @@ ignore = [
 # Import sorting (ex-isort)
 # -------------------------------------------------------------
 [tool.ruff.lint.isort]
-known-first-party = ["config", "planner", "users"]
+known-first-party = ["config", "planner", "telegram_bot", "users"]
 combine-as-imports = true
 force-sort-within-sections = true
 

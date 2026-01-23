@@ -254,23 +254,48 @@ class ProfileSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', read_only=True)
     invites_remaining = serializers.SerializerMethodField()
     inviter_username = serializers.SerializerMethodField()
+    telegram_link_url = serializers.SerializerMethodField()
+    telegram_connected = serializers.SerializerMethodField()
 
     class Meta:
         model = Profile
         fields = [
             'username',
             'full_name',
+            'telegram_chat_id',
             'telegram_username',
+            'telegram_link_url',
+            'telegram_connected',
+            'telegram_notifications_enabled',
+            'telegram_notify_on_tag',
             'invite_quota',
             'invites_remaining',
             'inviter_username',
         ]
         read_only_fields = [
             'username',
+            'telegram_chat_id',
+            'telegram_username',
+            'telegram_link_url',
+            'telegram_connected',
             'invite_quota',
             'invites_remaining',
             'inviter_username',
         ]
+
+    def validate_telegram_username(self, value):
+        if not value:
+            return ''
+        normalized = value.strip()
+        if normalized.startswith('@'):
+            normalized = normalized[1:]
+        if not normalized.replace('_', '').isalnum() or not (
+            5 <= len(normalized) <= 32
+        ):
+            raise serializers.ValidationError(
+                'Telegram username must be 5-32 characters and contain only letters, numbers, or underscores.'
+            )
+        return f'@{normalized}'
 
     def get_invites_remaining(self, obj):
         used_invites = Invite.objects.filter(
@@ -292,6 +317,22 @@ class ProfileSerializer(serializers.ModelSerializer):
         if invite and invite.invited_by:
             return invite.invited_by.username
         return None
+
+    def get_telegram_link_url(self, obj):
+        bot_username = getattr(
+            self.context.get('request'), 'telegram_bot_username', None
+        )
+        if not bot_username:
+            from django.conf import settings
+
+            bot_username = getattr(settings, 'TELEGRAM_BOT_USERNAME', '')
+        bot_username = bot_username.lstrip('@')
+        if not bot_username:
+            return None
+        return f'https://t.me/{bot_username}?start={obj.telegram_link_token}'
+
+    def get_telegram_connected(self, obj):
+        return obj.telegram_chat_id is not None
 
 
 class PasswordChangeSerializer(serializers.Serializer):
