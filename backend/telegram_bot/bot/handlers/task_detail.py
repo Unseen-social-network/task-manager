@@ -3,6 +3,7 @@ from telegram_bot.bot.handlers.base import BaseCommand
 from telegram_bot.bot.middlewares import require_linked
 from telegram_bot.services.tasks import get_task_for_chat
 from telegram_bot.services.telegram_api import send_message
+from telegram_bot.utils.urls import build_task_url
 
 
 class TaskDetailCommand(BaseCommand):
@@ -34,9 +35,23 @@ class TaskDetailCommand(BaseCommand):
             await send_message(ctx.chat_id, '❌ Задача не найдена.')
             return
 
+        task_url = build_task_url(task.id)
+
+        text = (
+            f'📝 <b>{task.title}</b>\n'
+            f'Статус: <b>{task.status}</b>\n'
+            f'Описание: {task.description or "—"}'
+        )
+        reply_markup = None
+        if task_url:
+            reply_markup = {
+                'inline_keyboard': [[{'text': '🔗 Открыть в вебе', 'url': task_url}]]
+            }
+
         await send_message(
             ctx.chat_id,
-            f'📝 {task.title}\n'
-            f'Статус: {task.status}\n'
-            f'Описание: {task.description or "—"}',
+            text,
+            parse_mode='HTML',
+            reply_markup=reply_markup,
+            disable_web_page_preview=True,
         )
