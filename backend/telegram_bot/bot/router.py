@@ -23,6 +23,14 @@ async def dispatch(ctx):
     if await process_fsm(ctx):
         return
 
+    if ctx.callback_data:
+        for cmd in COMMANDS:
+            callback_prefix = getattr(cmd, 'callback_prefix', None)
+            if callback_prefix and ctx.callback_data.startswith(callback_prefix):
+                await cmd.handle(ctx)
+                return
+        return
+
     for cmd in COMMANDS:
         if cmd.match(ctx.text):
             await cmd.handle(ctx)

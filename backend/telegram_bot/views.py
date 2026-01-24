@@ -29,30 +29,59 @@ class TelegramWebhookView(APIView):
 
     def post(self, request):
         update = request.data or {}
-        message = update.get('message')
+
         expected_secret = (settings.TELEGRAM_WEBHOOK_SECRET or '').strip() or None
         provided_secret = request.headers.get('X-Telegram-Bot-Api-Secret-Token')
         if not is_test_env() and expected_secret:
             if not provided_secret or provided_secret != expected_secret:
                 return Response(status=status.HTTP_401_UNAUTHORIZED)
 
-        if not message:
+        # ==============================
+        # 1️⃣ ОБЫЧНОЕ СООБЩЕНИЕ
+        # ==============================
+        if 'message' in update:
+            message = update['message']
+
+            text = (message.get('text') or '').strip()
+            chat_id = message.get('chat', {}).get('id')
+            username = message.get('from', {}).get('username')
+
+            if not chat_id or not text:
+                return Response(status=200)
+
+            ctx = BotContext(
+                chat_id=chat_id,
+                text=text,
+                username=username,
+            )
+
+            async_to_sync(dispatch)(ctx)
             return Response(status=200)
 
-        text = (message.get('text') or '').strip()
-        chat_id = message.get('chat', {}).get('id')
-        username = message.get('from', {}).get('username')
+        # ==============================
+        # 2️⃣ INLINE-КНОПКИ (callback_query) 🔥
+        # ==============================
+        if 'callback_query' in update:
+            callback = update['callback_query']
 
-        if not chat_id or not text:
+            data = callback.get('data')
+            message = callback.get('message') or {}
+
+            chat_id = message.get('chat', {}).get('id')
+            message_id = message.get('message_id')
+
+            if not chat_id or not data or not message_id:
+                return Response(status=200)
+
+            ctx = BotContext(
+                chat_id=chat_id,
+                callback_data=data,
+                message_id=message_id,
+            )
+
+            async_to_sync(dispatch)(ctx)
             return Response(status=200)
 
-        ctx = BotContext(
-            chat_id=chat_id,
-            text=text,
-            username=username,
-        )
-
-        async_to_sync(dispatch)(ctx)
         return Response(status=200)
 
 
