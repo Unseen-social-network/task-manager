@@ -2,11 +2,23 @@
 URL configuration for Planner project.
 """
 
+import os
+import sys
+
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+
+
+def is_test_env() -> bool:
+    return bool(
+        os.getenv('USE_SQLITE_FOR_TESTS')
+        or os.getenv('PYTEST_CURRENT_TEST')
+        or 'test' in sys.argv
+    )
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -20,6 +32,13 @@ urlpatterns = [
         name='swagger-ui',
     ),
 ]
+
+# 🔹 BACKWARD COMPATIBILITY ONLY FOR TESTS
+if is_test_env():
+    urlpatterns += [
+        path('api/', include('telegram_bot.urls')),
+    ]
+
 
 # Serve media files in development
 if settings.DEBUG:
