@@ -315,6 +315,12 @@ class Profile(models.Model):
         default=True,
         verbose_name='Notify on tag in Telegram',
     )
+    yandex_metrika_id = models.PositiveBigIntegerField(
+        blank=True,
+        null=True,
+        verbose_name='Yandex.Metrika counter ID',
+        help_text='Personal counter identifier used by the frontend.',
+    )
     invite_quota = models.PositiveIntegerField(
         default=3,
         verbose_name='Invite quota',

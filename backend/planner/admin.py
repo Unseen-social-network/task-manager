@@ -109,12 +109,26 @@ class TaskCommentAdmin(admin.ModelAdmin):
 
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):
-    list_display = ['user', 'full_name', 'telegram_username', 'invite_quota']
-    search_fields = ['user__username', 'full_name', 'telegram_username']
+    list_display = [
+        'user',
+        'full_name',
+        'telegram_username',
+        'yandex_metrika_id',
+        'invite_quota',
+    ]
+    search_fields = [
+        'user__username',
+        'full_name',
+        'telegram_username',
+        'yandex_metrika_id',
+    ]
     list_filter = ['invite_quota']
     readonly_fields = ['created_at', 'updated_at']
     fieldsets = (
-        (None, {'fields': ('user', 'full_name', 'telegram_username')}),
+        (
+            None,
+            {'fields': ('user', 'full_name', 'telegram_username', 'yandex_metrika_id')},
+        ),
         ('Invites', {'fields': ('invite_quota',)}),
         ('Timestamps', {'fields': ('created_at', 'updated_at')}),
     )

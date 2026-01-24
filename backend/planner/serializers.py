@@ -290,6 +290,7 @@ class ProfileSerializer(serializers.ModelSerializer):
             'telegram_connected',
             'telegram_notifications_enabled',
             'telegram_notify_on_tag',
+            'yandex_metrika_id',
             'invite_quota',
             'invites_remaining',
             'inviter_username',
@@ -304,6 +305,12 @@ class ProfileSerializer(serializers.ModelSerializer):
             'invites_remaining',
             'inviter_username',
         ]
+
+    def validate_yandex_metrika_id(self, value):
+        """Allow clearing the counter ID with empty input."""
+        if value in ('', None):
+            return None
+        return value
 
     def validate_telegram_username(self, value):
         if not value:

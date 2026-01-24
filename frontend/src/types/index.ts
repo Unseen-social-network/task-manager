@@ -152,6 +152,7 @@ export interface Profile {
   telegram_connected?: boolean
   telegram_notifications_enabled?: boolean
   telegram_notify_on_tag?: boolean
+  yandex_metrika_id?: number | null
   invite_quota: number
   invites_remaining: number
   inviter_username?: string | null

@@ -8,7 +8,7 @@ import { ProjectsPage } from '@/pages/ProjectsPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { InviteAcceptPage } from '@/pages/InviteAcceptPage'
 import { PrivateRoute } from '@/components/PrivateRoute'
-import { api } from '@/services/api'
+import { api, isAuthenticated } from '@/services/api'
 
 function App() {
   useEffect(() => {
@@ -66,14 +66,14 @@ function App() {
       return
     }
 
+    if (!isAuthenticated()) return
+
     let cancelled = false
     api
-      .get('/api/v1/public/analytics-settings/')
+      .get('/api/v1/profile/')
       .then(response => {
         if (cancelled) return
-        const { yandex_metrika_id: metrikaId, enabled } = response.data ?? {}
-        if (enabled === false) return
-        const parsedId = parseMetrikaId(metrikaId)
+        const parsedId = parseMetrikaId(response.data?.yandex_metrika_id)
         if (parsedId) {
           initMetrika(parsedId)
         }

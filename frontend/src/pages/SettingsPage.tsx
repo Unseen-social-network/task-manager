@@ -54,6 +54,13 @@ export const SettingsPage = () => {
     return null
   }
 
+  const parseMetrikaId = (value: unknown): number | null => {
+    if (value === '' || value === null || value === undefined) return null
+    const parsed = Number(value)
+    if (!Number.isFinite(parsed) || parsed <= 0) return null
+    return Math.trunc(parsed)
+  }
+
   const {
     register: registerInvite,
     handleSubmit: handleInviteSubmit,
@@ -102,6 +109,7 @@ export const SettingsPage = () => {
         full_name: data.full_name,
         telegram_notifications_enabled: data.telegram_notifications_enabled,
         telegram_notify_on_tag: data.telegram_notify_on_tag,
+        yandex_metrika_id: parseMetrikaId(data.yandex_metrika_id),
       })
       setProfile(updated)
       resetProfile(updated)
@@ -266,6 +274,21 @@ export const SettingsPage = () => {
               error={profileErrors.full_name?.message}
               placeholder={t('settings.profile.fullNamePlaceholder')}
             />
+            <Input
+              label={t('settings.profile.metrikaId')}
+              type="number"
+              inputMode="numeric"
+              {...registerProfile('yandex_metrika_id', {
+                setValueAs: value => parseMetrikaId(value),
+              })}
+              error={profileErrors.yandex_metrika_id?.message}
+              placeholder={t('settings.profile.metrikaIdPlaceholder')}
+            />
+            {profile?.yandex_metrika_id && (
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {t('settings.profile.metrikaIdCurrent')} {profile.yandex_metrika_id}
+              </p>
+            )}
             <Input
               label={t('settings.profile.telegramId')}
               value={profile?.telegram_chat_id ? String(profile.telegram_chat_id) : ''}
