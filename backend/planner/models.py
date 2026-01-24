@@ -378,3 +378,35 @@ class Invite(models.Model):
 
     def __str__(self):
         return f'Invite to {self.email} from {self.invited_by.username}'
+
+
+class SiteSetting(models.Model):
+    """Singleton configuration for site-wide settings."""
+
+    SINGLETON_PK = 1
+
+    head_html = models.TextField(
+        blank=True,
+        verbose_name='Head HTML',
+        help_text='HTML snippets that will be injected into the <head> tag.',
+    )
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
+
+    class Meta:
+        verbose_name = 'Site setting'
+        verbose_name_plural = 'Site settings'
+
+    def __str__(self):
+        return 'Site settings'
+
+    def save(self, *args, **kwargs):
+        """Enforce singleton behavior by always using the same primary key."""
+        self.pk = self.SINGLETON_PK
+        super().save(*args, **kwargs)
+        self.__class__.objects.exclude(pk=self.pk).delete()
+
+    @classmethod
+    def get_solo(cls):
+        """Return the singleton instance, creating it if necessary."""
+        obj, _ = cls.objects.get_or_create(pk=cls.SINGLETON_PK)
+        return obj

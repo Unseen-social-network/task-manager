@@ -18,7 +18,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .filters import TaskFilter, TaskSearchFilter
-from .models import Attachment, Contact, Invite, Profile, Project, Task
+from .models import Attachment, Contact, Invite, Profile, Project, SiteSetting, Task
 from .permissions import (
     IsOwner,
     ProjectAccessPermission,
@@ -35,6 +35,7 @@ from .serializers import (
     PasswordChangeSerializer,
     ProfileSerializer,
     ProjectSerializer,
+    SiteSettingSerializer,
     TaskCommentSerializer,
     TaskSerializer,
 )
@@ -226,6 +227,17 @@ class ProjectViewSet(viewsets.ModelViewSet):
         obj = get_object_or_404(queryset, pk=self.kwargs.get('pk'))
         self.check_object_permissions(self.request, obj)
         return obj
+
+
+class SiteSettingView(APIView):
+    """Public endpoint for site-wide settings used by the frontend."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        settings_obj = SiteSetting.get_solo()
+        serializer = SiteSettingSerializer(settings_obj)
+        return Response(serializer.data)
 
 
 class ProfileView(APIView):

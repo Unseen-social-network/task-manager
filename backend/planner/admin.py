@@ -2,7 +2,11 @@
 Admin configuration for Planner models.
 """
 
+from django import forms
 from django.contrib import admin
+from django.db import models
+from django.http import HttpResponseRedirect
+from django.urls import reverse
 
 from .models import (
     Attachment,
@@ -10,6 +14,7 @@ from .models import (
     Invite,
     Profile,
     Project,
+    SiteSetting,
     Task,
     TaskComment,
 )
@@ -129,3 +134,38 @@ class InviteAdmin(admin.ModelAdmin):
         (None, {'fields': ('email', 'invited_by', 'invited_user', 'status')}),
         ('Tracking', {'fields': ('token', 'invited_at', 'accepted_at', 'revoked_at')}),
     )
+
+
+@admin.register(SiteSetting)
+class SiteSettingAdmin(admin.ModelAdmin):
+    """Admin for managing singleton site settings."""
+
+    formfield_overrides = {
+        models.TextField: {'widget': forms.Textarea(attrs={'rows': 20, 'cols': 120})}
+    }
+    readonly_fields = ['updated_at']
+    fieldsets = (
+        (
+            'Head injection',
+            {
+                'fields': ('head_html',),
+                'description': (
+                    'HTML entered here will be injected into the <head> tag '
+                    'of the frontend application.'
+                ),
+            },
+        ),
+        ('Timestamps', {'fields': ('updated_at',)}),
+    )
+
+    def has_add_permission(self, request):
+        """Allow adding only when the singleton does not yet exist."""
+        if SiteSetting.objects.exists():
+            return False
+        return super().has_add_permission(request)
+
+    def changelist_view(self, request, extra_context=None):
+        """Redirect the changelist to the singleton change form."""
+        obj = SiteSetting.get_solo()
+        url = reverse('admin:planner_sitesetting_change', args=[obj.pk])
+        return HttpResponseRedirect(url)

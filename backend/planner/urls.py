@@ -17,6 +17,7 @@ from .views import (
     PasswordChangeView,
     ProfileView,
     ProjectViewSet,
+    SiteSettingView,
     TaskViewSet,
 )
 
@@ -31,6 +32,7 @@ urlpatterns = [
     # JWT Authentication
     path('auth/jwt/create/', TokenObtainPairView.as_view(), name='jwt-create'),
     path('auth/jwt/refresh/', TokenRefreshView.as_view(), name='jwt-refresh'),
+    path('site-settings/', SiteSettingView.as_view(), name='site-settings'),
     path('profile/', ProfileView.as_view(), name='profile'),
     path('profile/password/', PasswordChangeView.as_view(), name='password-change'),
     path(

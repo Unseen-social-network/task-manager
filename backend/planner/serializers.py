@@ -15,6 +15,7 @@ from .models import (
     Invite,
     Profile,
     Project,
+    SiteSetting,
     Task,
     TaskComment,
 )
@@ -354,6 +355,15 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     def get_telegram_connected(self, obj):
         return obj.telegram_chat_id is not None
+
+
+class SiteSettingSerializer(serializers.ModelSerializer):
+    """Serializer for public site settings."""
+
+    class Meta:
+        model = SiteSetting
+        fields = ['head_html', 'updated_at']
+        read_only_fields = ['head_html', 'updated_at']
 
 
 class PasswordChangeSerializer(serializers.Serializer):
