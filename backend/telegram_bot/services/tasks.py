@@ -28,7 +28,12 @@ def create_quick_task(chat_id: int, title: str, description: str) -> Task:
 
 
 @sync_to_async
-def list_tasks_for_chat(chat_id: int, status: str | None, limit: int = 10):
+def list_tasks_for_chat(
+    chat_id: int,
+    status: str | None,
+    limit: int = 10,
+    offset: int = 0,
+):
     profile = (
         Profile.objects.select_related('user').filter(telegram_chat_id=chat_id).first()
     )
@@ -43,7 +48,7 @@ def list_tasks_for_chat(chat_id: int, status: str | None, limit: int = 10):
     if status:
         qs = qs.filter(status=status)
 
-    return list(qs[:limit])
+    return list(qs[offset : offset + limit])
 
 
 @sync_to_async
