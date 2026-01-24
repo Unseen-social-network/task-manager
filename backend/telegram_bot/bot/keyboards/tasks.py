@@ -4,6 +4,16 @@ TASKS_PER_PAGE = settings.TASKS_PER_PAGE
 BUTTONS_PER_ROW = settings.BUTTONS_PER_ROW
 
 
+def _truncate(text: str, max_len: int = 32) -> str:
+    """
+    Telegram ограничивает текст кнопки ~64 символами,
+    но для UX лучше короче.
+    """
+    if len(text) <= max_len:
+        return text
+    return text[: max_len - 1] + '…'
+
+
 def tasks_keyboard(tasks, page: int, has_next: bool, status: str | None) -> dict:
     keyboard: list[list[dict]] = []
     row: list[dict] = []
@@ -11,7 +21,7 @@ def tasks_keyboard(tasks, page: int, has_next: bool, status: str | None) -> dict
     for task in tasks:
         row.append(
             {
-                'text': f'#{task.id}',
+                'text': _truncate(f'{task.id}. {task.title}'),
                 'callback_data': f'task:{task.id}',
             }
         )
