@@ -1,38 +1,70 @@
+from django.conf import settings
+
 from telegram_bot.bot.context import BotContext
 from telegram_bot.bot.handlers.base import BaseCommand
+from telegram_bot.bot.keyboards.tasks import tasks_keyboard
 from telegram_bot.services.tasks import list_tasks_for_chat
-from telegram_bot.services.telegram_api import send_message
+from telegram_bot.services.telegram_api import edit_message, send_message
+
+PAGE_SIZE = settings.PAGE_SIZE
 
 
 class TasksCommand(BaseCommand):
     command = '/tasks'
 
     async def handle(self, ctx: BotContext) -> None:
-        """
-        Формат:
-        /tasks
-        /tasks todo
-        """
-
         parts = ctx.text.split()
         status = parts[1] if len(parts) > 1 else None
+        page = 0
 
-        try:
-            tasks = await list_tasks_for_chat(
-                chat_id=ctx.chat_id,
-                status=status,
-                limit=10,
-            )
-        except ValueError as exc:
-            await send_message(ctx.chat_id, f'❌ {exc}')
-            return
+        offset = page * PAGE_SIZE
+        limit = PAGE_SIZE + 1
+
+        tasks = await list_tasks_for_chat(
+            chat_id=ctx.chat_id,
+            status=status,
+            limit=limit,
+            offset=offset,
+        )
 
         if not tasks:
             await send_message(ctx.chat_id, '📭 Задач не найдено.')
             return
 
-        lines = ['📋 Ваши задачи:']
-        for task in tasks:
-            lines.append(f'• [{task.status}] {task.title} (ID {task.id})')
+        has_next = len(tasks) > PAGE_SIZE
+        tasks = tasks[:PAGE_SIZE]
 
-        await send_message(ctx.chat_id, '\n'.join(lines))
+        await send_message(
+            ctx.chat_id,
+            '📋 Ваши задачи:',
+            reply_markup=tasks_keyboard(tasks, page, has_next, status),
+        )
+
+
+class TasksPageCallback(BaseCommand):
+    callback_prefix = 'tasks_page:'
+
+    async def handle(self, ctx: BotContext) -> None:
+        _, page, status = ctx.callback_data.split(':')
+        page = int(page)
+        status = None if status == 'all' else status
+
+        offset = page * PAGE_SIZE
+        limit = PAGE_SIZE + 1
+
+        tasks = await list_tasks_for_chat(
+            chat_id=ctx.chat_id,
+            status=status,
+            limit=limit,
+            offset=offset,
+        )
+
+        has_next = len(tasks) > PAGE_SIZE
+        tasks = tasks[:PAGE_SIZE]
+
+        await edit_message(
+            chat_id=ctx.chat_id,
+            message_id=ctx.message_id,
+            text='📋 Ваши задачи:',
+            reply_markup=tasks_keyboard(tasks, page, has_next, status),
+        )

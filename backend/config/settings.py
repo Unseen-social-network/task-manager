@@ -252,3 +252,9 @@ LOGGING = {
         },
     },
 }
+
+
+# Telegram bot
+TASKS_PER_PAGE = 8
+BUTTONS_PER_ROW = 4
+PAGE_SIZE = 8
