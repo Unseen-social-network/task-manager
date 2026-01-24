@@ -169,6 +169,27 @@ class TaskSerializer(serializers.ModelSerializer):
 
         return attrs
 
+    def create(self, validated_data):
+        """Attach tagging actor to the instance before saving."""
+        request = self.context.get('request')
+        actor = getattr(request, 'user', None)
+        task = Task(**validated_data)
+        if actor and actor.is_authenticated:
+            task._tagged_by = actor
+        task.save()
+        return task
+
+    def update(self, instance, validated_data):
+        """Attach tagging actor to the instance before saving updates."""
+        request = self.context.get('request')
+        actor = getattr(request, 'user', None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        if actor and actor.is_authenticated:
+            instance._tagged_by = actor
+        instance.save()
+        return instance
+
 
 class TaskCommentSerializer(serializers.ModelSerializer):
     """Serializer for Task comments with optional replies."""

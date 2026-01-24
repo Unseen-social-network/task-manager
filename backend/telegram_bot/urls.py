@@ -4,6 +4,7 @@ from django.urls import path
 
 from .views import (
     TelegramFullTaskCreateView,
+    TelegramHelpView,
     TelegramLinkConfirmView,
     TelegramLinkDisconnectView,
     TelegramLinkRefreshView,
@@ -12,6 +13,7 @@ from .views import (
     TelegramPasswordResetView,
     TelegramQuickTaskCreateView,
     TelegramTaskDetailView,
+    TelegramTaskListView,
     TelegramWebhookView,
 )
 
@@ -43,6 +45,11 @@ urlpatterns = [
         name='tg-task-full',
     ),
     path(
+        'telegram/tasks/',
+        TelegramTaskListView.as_view(),
+        name='tg-task-list',
+    ),
+    path(
         'telegram/tasks/<int:task_id>/',
         TelegramTaskDetailView.as_view(),
         name='tg-task-detail',
@@ -58,4 +65,5 @@ urlpatterns = [
         name='tg-password-reset',
     ),
     path('telegram/login/', TelegramLoginView.as_view(), name='tg-login'),
+    path('telegram/help/', TelegramHelpView.as_view(), name='tg-help'),
 ]
