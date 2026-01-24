@@ -1,6 +1,3 @@
-import os
-import sys
-
 from asgiref.sync import async_to_sync
 from django.conf import settings
 from rest_framework import status
@@ -14,14 +11,7 @@ from telegram_bot.services.tasks import (
     create_quick_task,
     list_tasks_for_chat,
 )
-
-
-def is_test_env() -> bool:
-    return bool(
-        os.getenv('USE_SQLITE_FOR_TESTS')
-        or os.getenv('PYTEST_CURRENT_TEST')
-        or 'test' in sys.argv
-    )
+from telegram_bot.utils.urls import is_test_env
 
 
 class TelegramWebhookView(APIView):

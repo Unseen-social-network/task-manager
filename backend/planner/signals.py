@@ -2,6 +2,7 @@
 Signals for Planner application.
 """
 
+from asgiref.sync import async_to_sync
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db.models.signals import post_save, pre_save
@@ -64,4 +65,4 @@ def notify_tagged_user(sender, instance, created, **kwargs):
     if task_url:
         message_lines.append(f'🔗 {task_url}')
     message = '\n'.join(message_lines)
-    send_telegram_message(profile.telegram_chat_id, message)
+    async_to_sync(send_telegram_message)(profile.telegram_chat_id, message)
