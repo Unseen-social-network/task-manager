@@ -15,6 +15,7 @@ from .models import (
     Invite,
     Profile,
     Project,
+    SiteAnalyticsSettings,
     Task,
     TaskComment,
 )
@@ -354,6 +355,21 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     def get_telegram_connected(self, obj):
         return obj.telegram_chat_id is not None
+
+
+class SiteAnalyticsSettingsSerializer(serializers.ModelSerializer):
+    """Serializer for site-wide analytics settings."""
+
+    class Meta:
+        model = SiteAnalyticsSettings
+        fields = ['yandex_metrika_id', 'enabled', 'updated_at']
+        read_only_fields = ['updated_at']
+
+    def validate_yandex_metrika_id(self, value):
+        """Normalize empty values to null for easier disabling."""
+        if value in ('', None):
+            return None
+        return value
 
 
 class PasswordChangeSerializer(serializers.Serializer):

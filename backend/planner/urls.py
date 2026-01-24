@@ -17,6 +17,7 @@ from .views import (
     PasswordChangeView,
     ProfileView,
     ProjectViewSet,
+    SiteAnalyticsSettingsView,
     TaskViewSet,
 )
 
@@ -33,6 +34,11 @@ urlpatterns = [
     path('auth/jwt/refresh/', TokenRefreshView.as_view(), name='jwt-refresh'),
     path('profile/', ProfileView.as_view(), name='profile'),
     path('profile/password/', PasswordChangeView.as_view(), name='password-change'),
+    path(
+        'public/analytics-settings/',
+        SiteAnalyticsSettingsView.as_view(),
+        name='analytics-settings',
+    ),
     path(
         'invites/accept/<uuid:token>/', InviteAcceptView.as_view(), name='invite-accept'
     ),

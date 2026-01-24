@@ -1,18 +1,30 @@
-import aiohttp
+import asyncio
+import json
+from urllib import request
+
 from django.conf import settings
 
 BOT_TOKEN = settings.TELEGRAM_BOT_TOKEN
 BASE_URL = f'https://api.telegram.org/bot{BOT_TOKEN}'
-TIMEOUT = aiohttp.ClientTimeout(total=5)
+TIMEOUT_SECONDS = 5
+
+
+def _sync_post(method: str, payload: dict) -> None:
+    data = json.dumps(payload).encode('utf-8')
+    req = request.Request(
+        f'{BASE_URL}/{method}',
+        data=data,
+        headers={'Content-Type': 'application/json'},
+        method='POST',
+    )
+    with request.urlopen(req, timeout=TIMEOUT_SECONDS) as resp:
+        if resp.status >= 400:
+            raise RuntimeError(f'Telegram API error: {resp.status}')
+        resp.read()
 
 
 async def _post(method: str, payload: dict) -> None:
-    async with aiohttp.ClientSession(timeout=TIMEOUT) as session:
-        async with session.post(
-            f'{BASE_URL}/{method}',
-            json=payload,
-        ) as resp:
-            resp.raise_for_status()
+    await asyncio.to_thread(_sync_post, method, payload)
 
 
 async def send_message(chat_id: int, text: str, **kwargs) -> None:

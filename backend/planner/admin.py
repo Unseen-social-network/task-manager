@@ -10,6 +10,7 @@ from .models import (
     Invite,
     Profile,
     Project,
+    SiteAnalyticsSettings,
     Task,
     TaskComment,
 )
@@ -129,3 +130,25 @@ class InviteAdmin(admin.ModelAdmin):
         (None, {'fields': ('email', 'invited_by', 'invited_user', 'status')}),
         ('Tracking', {'fields': ('token', 'invited_at', 'accepted_at', 'revoked_at')}),
     )
+
+
+@admin.register(SiteAnalyticsSettings)
+class SiteAnalyticsSettingsAdmin(admin.ModelAdmin):
+    list_display = ['yandex_metrika_id', 'enabled', 'updated_at']
+    readonly_fields = ['created_at', 'updated_at']
+    fieldsets = (
+        (
+            None,
+            {
+                'fields': ('yandex_metrika_id', 'enabled'),
+                'description': 'Configure the global analytics counter ID.',
+            },
+        ),
+        ('Timestamps', {'fields': ('created_at', 'updated_at')}),
+    )
+
+    def has_add_permission(self, request):
+        """Prevent creating multiple singleton rows via the admin UI."""
+        if SiteAnalyticsSettings.objects.exists():
+            return False
+        return super().has_add_permission(request)

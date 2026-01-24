@@ -13,12 +13,20 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter
 from rest_framework.parsers import FormParser, MultiPartParser
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .filters import TaskFilter, TaskSearchFilter
-from .models import Attachment, Contact, Invite, Profile, Project, Task
+from .models import (
+    Attachment,
+    Contact,
+    Invite,
+    Profile,
+    Project,
+    SiteAnalyticsSettings,
+    Task,
+)
 from .permissions import (
     IsOwner,
     ProjectAccessPermission,
@@ -35,6 +43,7 @@ from .serializers import (
     PasswordChangeSerializer,
     ProfileSerializer,
     ProjectSerializer,
+    SiteAnalyticsSettingsSerializer,
     TaskCommentSerializer,
     TaskSerializer,
 )
@@ -241,6 +250,31 @@ class ProfileView(APIView):
     def put(self, request):
         profile, _ = Profile.objects.get_or_create(user=request.user)
         serializer = ProfileSerializer(profile, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+
+class SiteAnalyticsSettingsView(APIView):
+    """Expose site analytics settings for public reads and admin updates."""
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return [IsAdminUser()]
+
+    def get(self, request):
+        settings_obj = SiteAnalyticsSettings.get_solo()
+        serializer = SiteAnalyticsSettingsSerializer(settings_obj)
+        return Response(serializer.data)
+
+    def put(self, request):
+        settings_obj = SiteAnalyticsSettings.get_solo()
+        serializer = SiteAnalyticsSettingsSerializer(
+            settings_obj,
+            data=request.data,
+            partial=True,
+        )
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)

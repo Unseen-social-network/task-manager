@@ -331,6 +331,47 @@ class Profile(models.Model):
         return f'Profile for {self.user.username}'
 
 
+class SiteAnalyticsSettings(models.Model):
+    """Singleton settings for site-wide analytics integrations."""
+
+    singleton_id = models.PositiveSmallIntegerField(
+        default=1,
+        unique=True,
+        editable=False,
+    )
+    yandex_metrika_id = models.PositiveBigIntegerField(
+        blank=True,
+        null=True,
+        verbose_name='Yandex.Metrika counter ID',
+        help_text='Numeric counter identifier from Yandex.Metrika.',
+    )
+    enabled = models.BooleanField(
+        default=True,
+        verbose_name='Analytics enabled',
+        help_text='Toggle to enable or disable analytics scripts globally.',
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
+
+    class Meta:
+        verbose_name = 'Site analytics settings'
+        verbose_name_plural = 'Site analytics settings'
+
+    def save(self, *args, **kwargs):
+        """Ensure the singleton identifier stays fixed."""
+        self.singleton_id = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_solo(cls) -> 'SiteAnalyticsSettings':
+        """Return the singleton settings instance, creating it if needed."""
+        obj, _ = cls.objects.get_or_create(singleton_id=1)
+        return obj
+
+    def __str__(self):
+        return 'Site analytics settings'
+
+
 class Invite(models.Model):
     """Email invitation for onboarding a colleague."""
 
