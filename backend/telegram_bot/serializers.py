@@ -48,6 +48,25 @@ class TelegramNotificationsSerializer(serializers.Serializer):
     notify_on_tag = serializers.BooleanField(required=False)
 
 
+class TelegramTaskListSerializer(serializers.Serializer):
+    """Serializer for listing tasks via Telegram bot."""
+
+    chat_id = serializers.IntegerField(min_value=1)
+    status = serializers.ChoiceField(choices=Task.Status.choices, required=False)
+    limit = serializers.IntegerField(
+        min_value=1,
+        max_value=50,
+        required=False,
+        default=10,
+    )
+
+
+class TelegramHelpSerializer(serializers.Serializer):
+    """Serializer for Telegram help command."""
+
+    chat_id = serializers.IntegerField(min_value=1)
+
+
 class TelegramPasswordResetSerializer(serializers.Serializer):
     """Serializer for password reset via Telegram bot."""
 

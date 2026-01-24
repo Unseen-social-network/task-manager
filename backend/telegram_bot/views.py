@@ -19,11 +19,13 @@ from planner.serializers import ProfileSerializer
 
 from .serializers import (
     TelegramFullTaskSerializer,
+    TelegramHelpSerializer,
     TelegramLinkConfirmSerializer,
     TelegramLoginSerializer,
     TelegramNotificationsSerializer,
     TelegramPasswordResetSerializer,
     TelegramQuickTaskSerializer,
+    TelegramTaskListSerializer,
 )
 from .services import send_telegram_message
 
@@ -66,6 +68,20 @@ def _serialize_task_for_bot(task):
         'created_at': task.created_at,
         'updated_at': task.updated_at,
     }
+
+
+def _build_task_url(task_id):
+    base_url = getattr(settings, 'FRONTEND_BASE_URL', '').rstrip('/')
+    if not base_url:
+        return ''
+    return f'{base_url}/tasks?task={task_id}'
+
+
+def _build_task_url_template():
+    base_url = getattr(settings, 'FRONTEND_BASE_URL', '').rstrip('/')
+    if not base_url:
+        return '/tasks?task={id}'
+    return f'{base_url}/tasks?task={{id}}'
 
 
 class TelegramLinkRefreshView(APIView):
@@ -323,7 +339,92 @@ class TelegramTaskDetailView(APIView):
             Task.objects.filter(Q(owner=profile.user) | Q(tagged_user=profile.user)),
             pk=task_id,
         )
-        return Response(_serialize_task_for_bot(task))
+        data = _serialize_task_for_bot(task)
+        task_url = _build_task_url(task.id)
+        if task_url:
+            data['task_url'] = task_url
+        return Response(data)
+
+
+class TelegramTaskListView(APIView):
+    """Return task list for Telegram bot."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        auth_error = _require_bot_token(request)
+        if auth_error:
+            return auth_error
+        serializer = TelegramTaskListSerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        profile = _get_profile_by_chat_id(serializer.validated_data['chat_id'])
+        if not profile:
+            return Response(
+                {'detail': 'Telegram account is not linked.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        queryset = Task.objects.filter(
+            Q(owner=profile.user) | Q(tagged_user=profile.user)
+        ).order_by('-created_at')
+        status_filter = serializer.validated_data.get('status')
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        limit = serializer.validated_data['limit']
+        tasks = list(queryset[:limit])
+        task_url_template = _build_task_url_template()
+        results = []
+        for task in tasks:
+            data = _serialize_task_for_bot(task)
+            task_url = _build_task_url(task.id)
+            if task_url:
+                data['task_url'] = task_url
+            results.append(data)
+        return Response(
+            {
+                'results': results,
+                'count': queryset.count(),
+                'limit': limit,
+                'task_url_template': task_url_template,
+            }
+        )
+
+
+class TelegramHelpView(APIView):
+    """Return detailed Telegram bot help instructions."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        auth_error = _require_bot_token(request)
+        if auth_error:
+            return auth_error
+        serializer = TelegramHelpSerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        profile = _get_profile_by_chat_id(serializer.validated_data['chat_id'])
+        if not profile:
+            return Response(
+                {'detail': 'Telegram account is not linked.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        task_url_template = _build_task_url_template()
+        help_text = (
+            '📌 Команды бота:\n'
+            '/help — показать эту справку\n'
+            '/new Заголовок | Описание — быстрая задача\n'
+            '/newfull — пошаговое создание задачи со всеми полями\n'
+            '/tasks [status] — показать задачи (todo, in_progress, done, canceled)\n'
+            '/task <id> — показать задачу по ID\n\n'
+            '✅ Как создать задачу:\n'
+            '1) Быстро: отправьте /new и укажите заголовок. Описание можно добавить через "|".\n'
+            '   Пример: /new Подготовить смету | до пятницы\n'
+            '2) Подробно: используйте /newfull и заполните поля (срок, проект, контакт, исполнитель).\n\n'
+            '👀 Как смотреть задачи:\n'
+            '• /tasks — последние задачи.\n'
+            '• /tasks todo — только задачи со статусом todo.\n'
+            '• /task 123 — открыть конкретную задачу по ID.\n\n'
+            f'🔗 Ссылка на задачу в вебе: {task_url_template}'
+        )
+        return Response({'help': help_text, 'task_url_template': task_url_template})
 
 
 class TelegramNotificationsView(APIView):
