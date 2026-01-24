@@ -214,3 +214,8 @@ export interface ContactFilters {
   ordering?: string
   page?: number
 }
+
+export interface SiteSetting {
+  head_html: string
+  updated_at: string
+}

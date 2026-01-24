@@ -8,6 +8,43 @@ import { ProjectsPage } from '@/pages/ProjectsPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { InviteAcceptPage } from '@/pages/InviteAcceptPage'
 import { PrivateRoute } from '@/components/PrivateRoute'
+import { siteSettingsService } from '@/services/siteSettings.service'
+
+const injectHeadHtml = (headHtml: string) => {
+  const template = document.createElement('template')
+  template.innerHTML = headHtml
+  const appendedNodes: Element[] = []
+
+  template.content.childNodes.forEach(node => {
+    if (node.nodeType !== Node.ELEMENT_NODE) {
+      return
+    }
+    const element = node as HTMLElement
+
+    if (element.tagName === 'SCRIPT') {
+      const scriptElement = element as HTMLScriptElement
+      const script = document.createElement('script')
+      scriptElement.getAttributeNames().forEach(attr => {
+        const value = scriptElement.getAttribute(attr)
+        if (value !== null) {
+          script.setAttribute(attr, value)
+        }
+      })
+      script.text = scriptElement.text
+      document.head.appendChild(script)
+      appendedNodes.push(script)
+      return
+    }
+
+    const cloned = element.cloneNode(true) as Element
+    document.head.appendChild(cloned)
+    appendedNodes.push(cloned)
+  })
+
+  return () => {
+    appendedNodes.forEach(node => node.remove())
+  }
+}
 
 function App() {
   useEffect(() => {
@@ -53,6 +90,28 @@ function App() {
       noscript.id = 'yandex-metrika-noscript'
       noscript.innerHTML = `<div><img src="https://mc.yandex.ru/watch/${metrikaId}" style="position:absolute; left:-9999px;" alt="" /></div>`
       document.body.appendChild(noscript)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+
+    let cleanup = () => {}
+
+    const loadSiteSettings = async () => {
+      try {
+        const { head_html: headHtml } = await siteSettingsService.getSiteSettings()
+        if (!headHtml.trim()) return
+        cleanup = injectHeadHtml(headHtml)
+      } catch (error) {
+        console.error('Failed to load site settings', error)
+      }
+    }
+
+    void loadSiteSettings()
+
+    return () => {
+      cleanup()
     }
   }, [])
 
