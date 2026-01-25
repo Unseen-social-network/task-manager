@@ -1,3 +1,5 @@
+from django.utils import timezone
+
 from telegram_bot.bot.context import BotContext
 from telegram_bot.bot.handlers.base import BaseCommand
 from telegram_bot.bot.middlewares import require_linked
@@ -36,10 +38,21 @@ class TaskDetailCommand(BaseCommand):
             return
 
         task_url = build_task_url(task.id)
+        project_name = task.project.name if task.project else '—'
+        due_date = '—'
+        if task.due_date:
+            local_date = (
+                timezone.localtime(task.due_date)
+                if timezone.is_aware(task.due_date)
+                else task.due_date
+            )
+            due_date = local_date.strftime('%d.%m.%Y')
 
         text = (
             f'📝 <b>{task.title}</b>\n'
             f'Статус: <b>{task.status}</b>\n'
+            f'Проект: <b>{project_name}</b>\n'
+            f'Срок: <b>{due_date}</b>\n'
             f'Описание: {task.description or "—"}'
         )
         reply_markup = None

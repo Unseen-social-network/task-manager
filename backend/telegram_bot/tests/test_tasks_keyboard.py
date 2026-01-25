@@ -1,12 +1,27 @@
+from datetime import datetime
+
 import pytest
 
 from telegram_bot.bot.keyboards.tasks import tasks_keyboard
 
 
+class DummyProject:
+    def __init__(self, name: str):
+        self.name = name
+
+
 class DummyTask:
-    def __init__(self, task_id: int, title: str):
+    def __init__(
+        self,
+        task_id: int,
+        title: str,
+        project: DummyProject | None = None,
+        due_date: datetime | None = None,
+    ):
         self.id = task_id
         self.title = title
+        self.project = project
+        self.due_date = due_date
 
 
 @pytest.fixture
