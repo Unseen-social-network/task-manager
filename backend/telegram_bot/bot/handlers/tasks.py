@@ -14,7 +14,7 @@ class TasksCommand(BaseCommand):
 
     async def handle(self, ctx: BotContext) -> None:
         parts = ctx.text.split()
-        status = parts[1] if len(parts) > 1 else None
+        status = parts[1] if len(parts) > 1 else 'active'
         page = 0
 
         offset = page * PAGE_SIZE

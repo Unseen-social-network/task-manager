@@ -46,7 +46,10 @@ def list_tasks_for_chat(
     ).order_by('-created_at')
 
     if status:
-        qs = qs.filter(status=status)
+        if status == 'active':
+            qs = qs.filter(status__in=['todo', 'in_progress'])
+        else:
+            qs = qs.filter(status=status)
 
     return list(qs[offset : offset + limit])
 
