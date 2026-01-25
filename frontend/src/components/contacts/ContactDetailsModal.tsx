@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Edit2, Trash2, Mail, Phone, Building, MessageCircle, AtSign } from 'lucide-react'
+import { Edit2, Trash2, Mail, Phone, Building, MessageCircle, AtSign, Link2, Copy } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { Contact, UpdateContactInput } from '@/types'
 import { Modal } from '@/components/ui/Modal'
@@ -14,6 +14,7 @@ interface ContactDetailsModalProps {
   isOpen: boolean
   onClose: () => void
   onUpdate: () => void
+  isReadOnly?: boolean
 }
 
 export const ContactDetailsModal = ({
@@ -21,6 +22,7 @@ export const ContactDetailsModal = ({
   isOpen,
   onClose,
   onUpdate,
+  isReadOnly = false,
 }: ContactDetailsModalProps) => {
   const [isEditing, setIsEditing] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -53,7 +55,20 @@ export const ContactDetailsModal = ({
     }
   }
 
-  if (isEditing) {
+  const handleShare = async (mode: 'link' | 'copy') => {
+    const url = new URL(window.location.href)
+    url.pathname = '/contacts'
+    url.searchParams.set('contact', String(contact.id))
+    url.searchParams.set('share', mode)
+    try {
+      await navigator.clipboard.writeText(url.toString())
+      toast.success(mode === 'link' ? t('contacts.shareLinkSuccess') : t('contacts.shareCopySuccess'))
+    } catch {
+      toast.error(t('contacts.shareFail'))
+    }
+  }
+
+  if (isEditing && !isReadOnly) {
     return (
       <Modal isOpen={isOpen} onClose={onClose} title={t('contacts.editTitle')}>
         <ContactForm
@@ -80,18 +95,35 @@ export const ContactDetailsModal = ({
       title={t('contacts.detailsTitle')}
       footer={
         <>
-          <Button variant="danger" onClick={handleDelete} isLoading={isDeleting}>
-            <Trash2 className="w-4 h-4 mr-2" />
-            {t('actions.delete')}
+          {!isReadOnly && (
+            <Button variant="danger" onClick={handleDelete} isLoading={isDeleting}>
+              <Trash2 className="w-4 h-4 mr-2" />
+              {t('actions.delete')}
+            </Button>
+          )}
+          <Button variant="secondary" onClick={() => handleShare('link')}>
+            <Link2 className="w-4 h-4 mr-2" />
+            {t('contacts.shareLink')}
           </Button>
-          <Button onClick={() => setIsEditing(true)}>
-            <Edit2 className="w-4 h-4 mr-2" />
-            {t('actions.edit')}
+          <Button variant="secondary" onClick={() => handleShare('copy')}>
+            <Copy className="w-4 h-4 mr-2" />
+            {t('contacts.shareCopy')}
           </Button>
+          {!isReadOnly && (
+            <Button onClick={() => setIsEditing(true)}>
+              <Edit2 className="w-4 h-4 mr-2" />
+              {t('actions.edit')}
+            </Button>
+          )}
         </>
       }
     >
       <div className="space-y-6">
+        {isReadOnly && (
+          <p className="text-sm text-amber-600 dark:text-amber-400">
+            {t('contacts.shareReadOnly')}
+          </p>
+        )}
         {/* Name and Company */}
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">

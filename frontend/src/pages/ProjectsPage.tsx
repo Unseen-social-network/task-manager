@@ -1,6 +1,7 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { Plus } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useSearchParams } from 'react-router-dom'
 import { Layout } from '@/components/layout/Layout'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
@@ -36,7 +37,16 @@ export const ProjectsPage = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const copyHandledRef = useRef<number | null>(null)
   const { t } = useLocale()
+  const sharedProjectId = useMemo(() => {
+    const param = searchParams.get('project')
+    if (!param) return null
+    const parsed = Number(param)
+    return Number.isFinite(parsed) ? parsed : null
+  }, [searchParams])
+  const shareMode = searchParams.get('share')
 
   const loadProjects = useCallback(async () => {
     try {
@@ -52,6 +62,79 @@ export const ProjectsPage = () => {
     void loadProjects()
   }, [loadProjects])
 
+  const updateProjectShareParam = useCallback((projectId: number | null) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev)
+      if (projectId) {
+        next.set('project', String(projectId))
+      } else {
+        next.delete('project')
+        next.delete('share')
+      }
+      return next
+    })
+  }, [setSearchParams])
+
+  useEffect(() => {
+    if (!sharedProjectId) return
+    const existingProject = projects.find(project => project.id === sharedProjectId)
+    if (existingProject) {
+      setSelectedProject(existingProject)
+      setIsDetailsModalOpen(true)
+      return
+    }
+    let isActive = true
+    const loadSharedProject = async () => {
+      try {
+        const project = await projectsService.getProject(sharedProjectId)
+        if (!isActive) return
+        setSelectedProject(project)
+        setIsDetailsModalOpen(true)
+      } catch {
+        if (!isActive) return
+        toast.error(t('projects.openFail'))
+      }
+    }
+    void loadSharedProject()
+    return () => {
+      isActive = false
+    }
+  }, [projects, sharedProjectId, t])
+
+  useEffect(() => {
+    if (!sharedProjectId || shareMode !== 'copy' || !selectedProject) return
+    if (copyHandledRef.current === sharedProjectId) return
+    copyHandledRef.current = sharedProjectId
+    let isActive = true
+    const createCopy = async () => {
+      try {
+        const created = await projectsService.createProject({
+          name: selectedProject.name,
+          description: selectedProject.description || undefined,
+          phone: selectedProject.phone || undefined,
+          links: selectedProject.links ?? [],
+        })
+        if (!isActive) return
+        toast.success(t('projects.shareCopyCreated'))
+        setSelectedProject(created)
+        setIsDetailsModalOpen(true)
+        updateProjectShareParam(null)
+      } catch {
+        if (!isActive) return
+        toast.error(t('projects.shareCopyFail'))
+      }
+    }
+    void createCopy()
+    return () => {
+      isActive = false
+    }
+  }, [selectedProject, shareMode, sharedProjectId, t, updateProjectShareParam])
+
+  useEffect(() => {
+    if (sharedProjectId || shareMode === 'copy') return
+    copyHandledRef.current = null
+  }, [shareMode, sharedProjectId])
+
   const handleCreateProject = async (data: CreateProjectInput) => {
     try {
       await Promise.resolve(projectsService.createProject(data))
@@ -66,11 +149,18 @@ export const ProjectsPage = () => {
   const handleProjectClick = (project: Project) => {
     setSelectedProject(project)
     setIsDetailsModalOpen(true)
+    updateProjectShareParam(project.id)
   }
 
   const handleProjectUpdate = async () => {
     setIsDetailsModalOpen(false)
+    updateProjectShareParam(null)
     await loadProjects()
+  }
+
+  const handleProjectClose = () => {
+    setIsDetailsModalOpen(false)
+    updateProjectShareParam(null)
   }
 
   return (
@@ -126,9 +216,9 @@ export const ProjectsPage = () => {
         <ProjectDetailsModal
           project={selectedProject}
           isOpen={isDetailsModalOpen}
-          onClose={() => setIsDetailsModalOpen(false)}
+          onClose={handleProjectClose}
           onUpdate={handleProjectUpdate}
-          isReadOnly={selectedProject.is_owner === false}
+          isReadOnly={shareMode === 'link' || selectedProject.is_owner === false}
         />
       )}
     </Layout>

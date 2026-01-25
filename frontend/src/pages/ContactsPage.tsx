@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Plus, Search } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useSearchParams } from 'react-router-dom'
 import { Layout } from '@/components/layout/Layout'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
@@ -18,7 +19,16 @@ export const ContactsPage = () => {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null)
   const [filters, setFilters] = useState<ContactFilters>({})
+  const [searchParams, setSearchParams] = useSearchParams()
+  const copyHandledRef = useRef<number | null>(null)
   const { t } = useLocale()
+  const sharedContactId = useMemo(() => {
+    const param = searchParams.get('contact')
+    if (!param) return null
+    const parsed = Number(param)
+    return Number.isFinite(parsed) ? parsed : null
+  }, [searchParams])
+  const shareMode = searchParams.get('share')
 
   const loadContacts = useCallback(async () => {
     setIsLoading(true)
@@ -36,6 +46,83 @@ export const ContactsPage = () => {
     loadContacts()
   }, [loadContacts])
 
+  const updateContactShareParam = useCallback((contactId: number | null) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev)
+      if (contactId) {
+        next.set('contact', String(contactId))
+      } else {
+        next.delete('contact')
+        next.delete('share')
+      }
+      return next
+    })
+  }, [setSearchParams])
+
+  useEffect(() => {
+    if (!sharedContactId) return
+    const existingContact = contacts.find(contact => contact.id === sharedContactId)
+    if (existingContact) {
+      setSelectedContact(existingContact)
+      setIsDetailsModalOpen(true)
+      return
+    }
+    let isActive = true
+    const loadSharedContact = async () => {
+      try {
+        const contact = await contactsService.getContact(sharedContactId)
+        if (!isActive) return
+        setSelectedContact(contact)
+        setIsDetailsModalOpen(true)
+      } catch {
+        if (!isActive) return
+        toast.error(t('contacts.openFail'))
+      }
+    }
+    loadSharedContact()
+    return () => {
+      isActive = false
+    }
+  }, [contacts, sharedContactId, t])
+
+  useEffect(() => {
+    if (sharedContactId || shareMode === 'copy') return
+    copyHandledRef.current = null
+  }, [shareMode, sharedContactId])
+
+  useEffect(() => {
+    if (!sharedContactId || shareMode !== 'copy' || !selectedContact) return
+    if (copyHandledRef.current === sharedContactId) return
+    copyHandledRef.current = sharedContactId
+    let isActive = true
+    const createCopy = async () => {
+      try {
+        const created = await contactsService.createContact({
+          name: selectedContact.name,
+          username: selectedContact.username || undefined,
+          company: selectedContact.company || undefined,
+          phone: selectedContact.phone || undefined,
+          email: selectedContact.email || undefined,
+          telegram: selectedContact.telegram || undefined,
+          notes: selectedContact.notes || undefined,
+          other: selectedContact.other ?? undefined,
+        })
+        if (!isActive) return
+        toast.success(t('contacts.shareCopyCreated'))
+        setSelectedContact(created)
+        setIsDetailsModalOpen(true)
+        updateContactShareParam(null)
+      } catch {
+        if (!isActive) return
+        toast.error(t('contacts.shareCopyFail'))
+      }
+    }
+    createCopy()
+    return () => {
+      isActive = false
+    }
+  }, [selectedContact, shareMode, sharedContactId, t, updateContactShareParam])
+
   const handleCreateContact = async (data: CreateContactInput) => {
     try {
       await contactsService.createContact(data)
@@ -50,11 +137,18 @@ export const ContactsPage = () => {
   const handleContactClick = (contact: Contact) => {
     setSelectedContact(contact)
     setIsDetailsModalOpen(true)
+    updateContactShareParam(contact.id)
   }
 
   const handleContactUpdate = () => {
     setIsDetailsModalOpen(false)
+    updateContactShareParam(null)
     loadContacts()
+  }
+
+  const handleContactClose = () => {
+    setIsDetailsModalOpen(false)
+    updateContactShareParam(null)
   }
 
   const handleSearch = (value: string) => {
@@ -135,8 +229,9 @@ export const ContactsPage = () => {
         <ContactDetailsModal
           contact={selectedContact}
           isOpen={isDetailsModalOpen}
-          onClose={() => setIsDetailsModalOpen(false)}
+          onClose={handleContactClose}
           onUpdate={handleContactUpdate}
+          isReadOnly={shareMode === 'link'}
         />
       )}
     </Layout>
