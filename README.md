@@ -4,6 +4,47 @@ https://github.com/Unseen-social-network/task-manager/actions/workflows/ci.yml
 )
 ![CD](https://github.com/Unseen-social-network/task-manager/actions/workflows/cd.yml/badge.svg?event=workflow_run)
 
+## Описание
+
+Planner — Django-приложение для управления задачами с REST API, веб-интерфейсом и интеграцией с Telegram-ботом.
+
+## Стек
+
+- Backend: Django, DRF, PostgreSQL
+- Frontend: Vite + React (папка `frontend/`)
+- Инфраструктура: Docker Compose, Gunicorn
+
+## Быстрый старт (dev)
+
+1. Скопируйте и заполните переменные окружения:
+   ```bash
+   cp .env.example .env
+   ```
+2. Соберите и запустите сервисы:
+   ```bash
+   make build
+   make up
+   ```
+3. Полезные адреса после запуска:
+   - Backend: http://localhost:8000
+   - Admin: http://localhost:8000/admin
+   - API docs: http://localhost:8000/api/schema/swagger-ui/
+   - Frontend: http://localhost:3000
+
+### Frontend в режиме разработки (hot reload)
+
+Если нужен dev-сервер Vite, используйте профиль `dev`:
+
+```bash
+docker compose -f infra/compose/docker-compose.yml --profile dev up -d frontend-dev
+```
+
+## Production-режим
+
+```bash
+make prod-build
+make prod-up
+```
 
 ## Локальные проверки качества
 
