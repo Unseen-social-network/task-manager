@@ -14,7 +14,7 @@ RUN npm run build
 # =========================
 FROM nginx:1.29.4-alpine3.23
 
-RUN apk update && apk upgrade --no-cache
+RUN apk update && apk upgrade --no-cache && apk add --no-cache curl
 
 # ⬇️ ПОДМЕНЯЕМ ГЛАВНЫЙ nginx.conf
 COPY nginx-main.conf /etc/nginx/nginx.conf
