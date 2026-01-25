@@ -12,11 +12,15 @@ from rest_framework_simplejwt.views import (
 from .views import (
     AttachmentViewSet,
     ContactViewSet,
+    ContactShareCopyView,
+    ContactShareView,
     InviteAcceptView,
     InviteViewSet,
     PasswordChangeView,
     ProfileView,
     ProjectViewSet,
+    ProjectShareCopyView,
+    ProjectShareView,
     SiteSettingView,
     TaskViewSet,
 )
@@ -35,6 +39,18 @@ urlpatterns = [
     path('site-settings/', SiteSettingView.as_view(), name='site-settings'),
     path('profile/', ProfileView.as_view(), name='profile'),
     path('profile/password/', PasswordChangeView.as_view(), name='password-change'),
+    path('share/contacts/<uuid:token>/', ContactShareView.as_view(), name='contact-share'),
+    path(
+        'share/contacts/<uuid:token>/copy/',
+        ContactShareCopyView.as_view(),
+        name='contact-share-copy',
+    ),
+    path('share/projects/<uuid:token>/', ProjectShareView.as_view(), name='project-share'),
+    path(
+        'share/projects/<uuid:token>/copy/',
+        ProjectShareCopyView.as_view(),
+        name='project-share-copy',
+    ),
     path(
         'invites/accept/<uuid:token>/', InviteAcceptView.as_view(), name='invite-accept'
     ),

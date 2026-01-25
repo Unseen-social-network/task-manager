@@ -56,13 +56,13 @@ export const ContactDetailsModal = ({
   }
 
   const handleShare = async (mode: 'link' | 'copy') => {
-    const url = new URL(window.location.href)
-    url.pathname = '/contacts'
-    url.searchParams.set('contact', String(contact.id))
-    url.searchParams.set('share', mode)
     try {
-      await navigator.clipboard.writeText(url.toString())
-      toast.success(mode === 'link' ? t('contacts.shareLinkSuccess') : t('contacts.shareCopySuccess'))
+      const share = await contactsService.createShare(contact.id)
+      const url = mode === 'link' ? share.share_url : share.copy_url
+      await navigator.clipboard.writeText(url)
+      toast.success(
+        mode === 'link' ? t('contacts.shareLinkSuccess') : t('contacts.shareCopySuccess')
+      )
     } catch {
       toast.error(t('contacts.shareFail'))
     }

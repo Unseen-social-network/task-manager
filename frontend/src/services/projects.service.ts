@@ -42,4 +42,19 @@ export const projectsService = {
   async deleteProject(id: number): Promise<void> {
     await api.delete(`/api/v1/projects/${id}/`)
   },
+
+  async createShare(id: number): Promise<{ share_url: string; copy_url: string }> {
+    const response = await api.post(`/api/v1/projects/${id}/share/`)
+    return response.data
+  },
+
+  async getSharedProject(token: string): Promise<Project> {
+    const response = await api.get<Project>(`/api/v1/share/projects/${token}/`)
+    return response.data
+  },
+
+  async copySharedProject(token: string): Promise<Project> {
+    const response = await api.post<Project>(`/api/v1/share/projects/${token}/copy/`)
+    return response.data
+  },
 }

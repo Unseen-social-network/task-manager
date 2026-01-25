@@ -41,4 +41,19 @@ export const contactsService = {
   async deleteContact(id: number): Promise<void> {
     await api.delete(`/api/v1/contacts/${id}/`)
   },
+
+  async createShare(id: number): Promise<{ share_url: string; copy_url: string }> {
+    const response = await api.post(`/api/v1/contacts/${id}/share/`)
+    return response.data
+  },
+
+  async getSharedContact(token: string): Promise<Contact> {
+    const response = await api.get<Contact>(`/api/v1/share/contacts/${token}/`)
+    return response.data
+  },
+
+  async copySharedContact(token: string): Promise<Contact> {
+    const response = await api.post<Contact>(`/api/v1/share/contacts/${token}/copy/`)
+    return response.data
+  },
 }

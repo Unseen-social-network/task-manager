@@ -38,7 +38,7 @@ export const ProjectsPage = () => {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [searchParams, setSearchParams] = useSearchParams()
-  const copyHandledRef = useRef<number | null>(null)
+  const copyHandledRef = useRef<string | null>(null)
   const { t } = useLocale()
   const sharedProjectId = useMemo(() => {
     const param = searchParams.get('project')
@@ -46,7 +46,8 @@ export const ProjectsPage = () => {
     const parsed = Number(param)
     return Number.isFinite(parsed) ? parsed : null
   }, [searchParams])
-  const shareMode = searchParams.get('share')
+  const shareToken = searchParams.get('shareToken')
+  const copyToken = searchParams.get('copyToken')
 
   const loadProjects = useCallback(async () => {
     try {
@@ -69,14 +70,15 @@ export const ProjectsPage = () => {
         next.set('project', String(projectId))
       } else {
         next.delete('project')
-        next.delete('share')
       }
+      next.delete('shareToken')
+      next.delete('copyToken')
       return next
     })
   }, [setSearchParams])
 
   useEffect(() => {
-    if (!sharedProjectId) return
+    if (!sharedProjectId || shareToken || copyToken) return
     const existingProject = projects.find(project => project.id === sharedProjectId)
     if (existingProject) {
       setSelectedProject(existingProject)
@@ -99,26 +101,22 @@ export const ProjectsPage = () => {
     return () => {
       isActive = false
     }
-  }, [projects, sharedProjectId, t])
+  }, [projects, copyToken, shareToken, sharedProjectId, t])
 
   useEffect(() => {
-    if (!sharedProjectId || shareMode !== 'copy' || !selectedProject) return
-    if (copyHandledRef.current === sharedProjectId) return
-    copyHandledRef.current = sharedProjectId
+    if (!copyToken) return
+    if (copyHandledRef.current === copyToken) return
+    copyHandledRef.current = copyToken
     let isActive = true
     const createCopy = async () => {
       try {
-        const created = await projectsService.createProject({
-          name: selectedProject.name,
-          description: selectedProject.description || undefined,
-          phone: selectedProject.phone || undefined,
-          links: selectedProject.links ?? [],
-        })
+        const created = await projectsService.copySharedProject(copyToken)
         if (!isActive) return
         toast.success(t('projects.shareCopyCreated'))
         setSelectedProject(created)
         setIsDetailsModalOpen(true)
         updateProjectShareParam(null)
+        await loadProjects()
       } catch {
         if (!isActive) return
         toast.error(t('projects.shareCopyFail'))
@@ -128,12 +126,32 @@ export const ProjectsPage = () => {
     return () => {
       isActive = false
     }
-  }, [selectedProject, shareMode, sharedProjectId, t, updateProjectShareParam])
+  }, [copyToken, loadProjects, t, updateProjectShareParam])
 
   useEffect(() => {
-    if (sharedProjectId || shareMode === 'copy') return
+    if (sharedProjectId || shareToken || copyToken) return
     copyHandledRef.current = null
-  }, [shareMode, sharedProjectId])
+  }, [copyToken, shareToken, sharedProjectId])
+
+  useEffect(() => {
+    if (!shareToken) return
+    let isActive = true
+    const loadSharedProject = async () => {
+      try {
+        const project = await projectsService.getSharedProject(shareToken)
+        if (!isActive) return
+        setSelectedProject(project)
+        setIsDetailsModalOpen(true)
+      } catch {
+        if (!isActive) return
+        toast.error(t('projects.openFail'))
+      }
+    }
+    void loadSharedProject()
+    return () => {
+      isActive = false
+    }
+  }, [shareToken, t])
 
   const handleCreateProject = async (data: CreateProjectInput) => {
     try {
@@ -218,7 +236,7 @@ export const ProjectsPage = () => {
           isOpen={isDetailsModalOpen}
           onClose={handleProjectClose}
           onUpdate={handleProjectUpdate}
-          isReadOnly={shareMode === 'link' || selectedProject.is_owner === false}
+          isReadOnly={Boolean(shareToken) || selectedProject.is_owner === false}
         />
       )}
     </Layout>

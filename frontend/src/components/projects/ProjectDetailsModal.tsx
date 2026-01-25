@@ -44,13 +44,13 @@ export const ProjectDetailsModal = ({
   const { t } = useLocale()
 
   const handleShare = async (mode: 'link' | 'copy') => {
-    const url = new URL(window.location.href)
-    url.pathname = '/projects'
-    url.searchParams.set('project', String(project.id))
-    url.searchParams.set('share', mode)
     try {
-      await navigator.clipboard.writeText(url.toString())
-      toast.success(mode === 'link' ? t('projects.shareLinkSuccess') : t('projects.shareCopySuccess'))
+      const share = await projectsService.createShare(project.id)
+      const url = mode === 'link' ? share.share_url : share.copy_url
+      await navigator.clipboard.writeText(url)
+      toast.success(
+        mode === 'link' ? t('projects.shareLinkSuccess') : t('projects.shareCopySuccess')
+      )
     } catch {
       toast.error(t('projects.shareFail'))
     }

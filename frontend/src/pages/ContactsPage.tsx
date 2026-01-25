@@ -20,7 +20,7 @@ export const ContactsPage = () => {
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null)
   const [filters, setFilters] = useState<ContactFilters>({})
   const [searchParams, setSearchParams] = useSearchParams()
-  const copyHandledRef = useRef<number | null>(null)
+  const copyHandledRef = useRef<string | null>(null)
   const { t } = useLocale()
   const sharedContactId = useMemo(() => {
     const param = searchParams.get('contact')
@@ -28,7 +28,8 @@ export const ContactsPage = () => {
     const parsed = Number(param)
     return Number.isFinite(parsed) ? parsed : null
   }, [searchParams])
-  const shareMode = searchParams.get('share')
+  const shareToken = searchParams.get('shareToken')
+  const copyToken = searchParams.get('copyToken')
 
   const loadContacts = useCallback(async () => {
     setIsLoading(true)
@@ -53,14 +54,15 @@ export const ContactsPage = () => {
         next.set('contact', String(contactId))
       } else {
         next.delete('contact')
-        next.delete('share')
       }
+      next.delete('shareToken')
+      next.delete('copyToken')
       return next
     })
   }, [setSearchParams])
 
   useEffect(() => {
-    if (!sharedContactId) return
+    if (!sharedContactId || shareToken || copyToken) return
     const existingContact = contacts.find(contact => contact.id === sharedContactId)
     if (existingContact) {
       setSelectedContact(existingContact)
@@ -83,35 +85,47 @@ export const ContactsPage = () => {
     return () => {
       isActive = false
     }
-  }, [contacts, sharedContactId, t])
+  }, [contacts, copyToken, shareToken, sharedContactId, t])
 
   useEffect(() => {
-    if (sharedContactId || shareMode === 'copy') return
+    if (shareToken || copyToken) return
     copyHandledRef.current = null
-  }, [shareMode, sharedContactId])
+  }, [copyToken, shareToken])
 
   useEffect(() => {
-    if (!sharedContactId || shareMode !== 'copy' || !selectedContact) return
-    if (copyHandledRef.current === sharedContactId) return
-    copyHandledRef.current = sharedContactId
+    if (!shareToken) return
+    let isActive = true
+    const loadSharedContact = async () => {
+      try {
+        const contact = await contactsService.getSharedContact(shareToken)
+        if (!isActive) return
+        setSelectedContact(contact)
+        setIsDetailsModalOpen(true)
+      } catch {
+        if (!isActive) return
+        toast.error(t('contacts.openFail'))
+      }
+    }
+    loadSharedContact()
+    return () => {
+      isActive = false
+    }
+  }, [shareToken, t])
+
+  useEffect(() => {
+    if (!copyToken) return
+    if (copyHandledRef.current === copyToken) return
+    copyHandledRef.current = copyToken
     let isActive = true
     const createCopy = async () => {
       try {
-        const created = await contactsService.createContact({
-          name: selectedContact.name,
-          username: selectedContact.username || undefined,
-          company: selectedContact.company || undefined,
-          phone: selectedContact.phone || undefined,
-          email: selectedContact.email || undefined,
-          telegram: selectedContact.telegram || undefined,
-          notes: selectedContact.notes || undefined,
-          other: selectedContact.other ?? undefined,
-        })
+        const created = await contactsService.copySharedContact(copyToken)
         if (!isActive) return
         toast.success(t('contacts.shareCopyCreated'))
         setSelectedContact(created)
         setIsDetailsModalOpen(true)
         updateContactShareParam(null)
+        loadContacts()
       } catch {
         if (!isActive) return
         toast.error(t('contacts.shareCopyFail'))
@@ -121,7 +135,7 @@ export const ContactsPage = () => {
     return () => {
       isActive = false
     }
-  }, [selectedContact, shareMode, sharedContactId, t, updateContactShareParam])
+  }, [copyToken, t, updateContactShareParam, loadContacts])
 
   const handleCreateContact = async (data: CreateContactInput) => {
     try {
@@ -231,7 +245,7 @@ export const ContactsPage = () => {
           isOpen={isDetailsModalOpen}
           onClose={handleContactClose}
           onUpdate={handleContactUpdate}
-          isReadOnly={shareMode === 'link'}
+          isReadOnly={Boolean(shareToken)}
         />
       )}
     </Layout>
