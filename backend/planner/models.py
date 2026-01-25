@@ -289,6 +289,46 @@ class ProjectShare(models.Model):
         return f'ProjectShare({self.project_id})'
 
 
+class ProjectShareAccess(models.Model):
+    """Access grant for shared projects."""
+
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.CASCADE,
+        related_name='share_accesses',
+        verbose_name='Project',
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='shared_projects',
+        verbose_name='User',
+    )
+    granted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='project_share_grants',
+        verbose_name='Granted by',
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
+
+    class Meta:
+        verbose_name = 'Project Share Access'
+        verbose_name_plural = 'Project Share Accesses'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['project', 'user'], name='uniq_project_share_access'
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['project', 'user']),
+            models.Index(fields=['user', '-created_at']),
+        ]
+
+    def __str__(self):
+        return f'ProjectShareAccess({self.project_id}, {self.user_id})'
+
+
 class Attachment(models.Model):
     """
     File attachment for tasks.

@@ -138,10 +138,11 @@ export const ProjectsPage = () => {
     let isActive = true
     const loadSharedProject = async () => {
       try {
-        const project = await projectsService.getSharedProject(shareToken)
+        const project = await projectsService.acceptSharedProject(shareToken)
         if (!isActive) return
         setSelectedProject(project)
         setIsDetailsModalOpen(true)
+        await loadProjects()
       } catch {
         if (!isActive) return
         toast.error(t('projects.openFail'))
@@ -151,7 +152,7 @@ export const ProjectsPage = () => {
     return () => {
       isActive = false
     }
-  }, [shareToken, t])
+  }, [loadProjects, shareToken, t])
 
   const handleCreateProject = async (data: CreateProjectInput) => {
     try {
@@ -237,6 +238,16 @@ export const ProjectsPage = () => {
           onClose={handleProjectClose}
           onUpdate={handleProjectUpdate}
           isReadOnly={Boolean(shareToken) || selectedProject.is_owner === false}
+          onRemoveShare={async () => {
+            try {
+              await projectsService.revokeProjectAccess(selectedProject.id)
+              handleProjectClose()
+              await loadProjects()
+              toast.success(t('projects.shareRemoveSuccess'))
+            } catch {
+              toast.error(t('projects.shareRemoveFail'))
+            }
+          }}
         />
       )}
     </Layout>

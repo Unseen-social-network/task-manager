@@ -18,6 +18,7 @@ from .models import (
     Profile,
     Project,
     ProjectShare,
+    ProjectShareAccess,
     SiteSetting,
     Task,
     TaskComment,
@@ -329,6 +330,19 @@ class ProjectShareSerializer(serializers.ModelSerializer):
 
     def get_copy_url(self, obj):
         return self._build_frontend_url(f'/projects?copyToken={obj.token}')
+
+
+class ProjectShareAccessSerializer(serializers.ModelSerializer):
+    """Serializer for project share viewers."""
+
+    user_id = serializers.IntegerField(source='user.id', read_only=True)
+    username = serializers.CharField(source='user.username', read_only=True)
+    email = serializers.EmailField(source='user.email', read_only=True)
+
+    class Meta:
+        model = ProjectShareAccess
+        fields = ['user_id', 'username', 'email', 'created_at']
+        read_only_fields = fields
 
 
 class ProfileSerializer(serializers.ModelSerializer):

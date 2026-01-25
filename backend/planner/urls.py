@@ -18,6 +18,7 @@ from .views import (
     InviteViewSet,
     PasswordChangeView,
     ProfileView,
+    ProjectShareAcceptView,
     ProjectShareCopyView,
     ProjectShareView,
     ProjectViewSet,
@@ -54,6 +55,11 @@ urlpatterns = [
         'share/projects/<uuid:token>/copy/',
         ProjectShareCopyView.as_view(),
         name='project-share-copy',
+    ),
+    path(
+        'share/projects/<uuid:token>/accept/',
+        ProjectShareAcceptView.as_view(),
+        name='project-share-accept',
     ),
     path(
         'invites/accept/<uuid:token>/', InviteAcceptView.as_view(), name='invite-accept'

@@ -26,6 +26,7 @@ from .models import (
     Profile,
     Project,
     ProjectShare,
+    ProjectShareAccess,
     SiteSetting,
     Task,
 )
@@ -46,6 +47,7 @@ from .serializers import (
     PasswordChangeSerializer,
     ProfileSerializer,
     ProjectSerializer,
+    ProjectShareAccessSerializer,
     ProjectShareSerializer,
     SiteSettingSerializer,
     TaskCommentSerializer,
@@ -257,6 +259,9 @@ class ProjectViewSet(viewsets.ModelViewSet):
             base_queryset = base_queryset | Project.objects.filter(
                 tasks__tagged_user=user
             )
+            base_queryset = base_queryset | Project.objects.filter(
+                share_accesses__user=user
+            )
         return base_queryset.distinct()
 
     def get_object(self):
@@ -295,6 +300,34 @@ class ProjectViewSet(viewsets.ModelViewSet):
         share = get_object_or_404(ProjectShare, project=project, owner=request.user)
         serializer = ProjectShareSerializer(share)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['get', 'delete'], url_path='access')
+    def access(self, request, pk=None):
+        """List or revoke shared access to this project."""
+        project = get_object_or_404(
+            Project.objects.filter(
+                Q(owner=request.user) | Q(share_accesses__user=request.user)
+            ).distinct(),
+            pk=pk,
+        )
+        if request.method == 'GET':
+            if project.owner_id != request.user.id:
+                return Response(status=status.HTTP_404_NOT_FOUND)
+            accesses = ProjectShareAccess.objects.filter(
+                project=project
+            ).select_related('user')
+            serializer = ProjectShareAccessSerializer(accesses, many=True)
+            return Response(serializer.data)
+        user_id = request.query_params.get('user_id')
+        if user_id:
+            if project.owner_id != request.user.id:
+                return Response(status=status.HTTP_404_NOT_FOUND)
+            ProjectShareAccess.objects.filter(project=project, user_id=user_id).delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        if project.owner_id == request.user.id:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        ProjectShareAccess.objects.filter(project=project, user=request.user).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ContactShareView(APIView):
@@ -375,6 +408,28 @@ class ProjectShareCopyView(APIView):
         )
         serializer = ProjectSerializer(copied, context={'request': request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class ProjectShareAcceptView(APIView):
+    """Accept a share link and add the project to the recipient's list."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, token):
+        share = get_object_or_404(
+            ProjectShare.objects.select_related('project'),
+            token=token,
+            is_active=True,
+        )
+        project = share.project
+        if project.owner_id != request.user.id:
+            ProjectShareAccess.objects.get_or_create(
+                project=project,
+                user=request.user,
+                defaults={'granted_by': share.owner},
+            )
+        serializer = ProjectSerializer(project, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class SiteSettingView(APIView):

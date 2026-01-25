@@ -26,6 +26,7 @@ interface ProjectDetailsModalProps {
   onClose: () => void
   onUpdate: () => void
   isReadOnly?: boolean
+  onRemoveShare?: () => void
 }
 
 export const ProjectDetailsModal = ({
@@ -34,14 +35,21 @@ export const ProjectDetailsModal = ({
   onClose,
   onUpdate,
   isReadOnly = false,
+  onRemoveShare,
 }: ProjectDetailsModalProps) => {
   const [isEditing, setIsEditing] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
-  const [activeTab, setActiveTab] = useState<'details' | 'gantt'>('details')
+  const [activeTab, setActiveTab] = useState<'details' | 'gantt' | 'sharing'>('details')
   const [tasks, setTasks] = useState<Task[]>([])
   const [tasksLoading, setTasksLoading] = useState(false)
   const [tasksError, setTasksError] = useState<string | null>(null)
+  const [shareAccesses, setShareAccesses] = useState<
+    Array<{ user_id: number; username: string; email: string; created_at: string }>
+  >([])
+  const [shareAccessError, setShareAccessError] = useState<string | null>(null)
+  const [shareAccessLoading, setShareAccessLoading] = useState(false)
   const { t } = useLocale()
+  const isOwner = project.is_owner !== false
 
   const handleShare = async (mode: 'link' | 'copy') => {
     try {
@@ -87,6 +95,7 @@ export const ProjectDetailsModal = ({
     if (isOpen) {
       setActiveTab('details')
       setTasksError(null)
+      setShareAccessError(null)
     }
   }, [isOpen, project.id])
 
@@ -108,6 +117,29 @@ export const ProjectDetailsModal = ({
 
     fetchTasks()
   }, [activeTab, isOpen, project.id, t])
+
+  useEffect(() => {
+    if (!isOpen || activeTab !== 'sharing' || !isOwner) return
+    let isActive = true
+    const fetchAccesses = async () => {
+      setShareAccessLoading(true)
+      setShareAccessError(null)
+      try {
+        const accessList = await projectsService.getProjectAccess(project.id)
+        if (!isActive) return
+        setShareAccesses(accessList)
+      } catch {
+        if (!isActive) return
+        setShareAccessError(t('projects.shareAccessLoadFail'))
+      } finally {
+        if (isActive) setShareAccessLoading(false)
+      }
+    }
+    void fetchAccesses()
+    return () => {
+      isActive = false
+    }
+  }, [activeTab, isOpen, isOwner, project.id, t])
 
   const ganttData = useMemo(() => {
     if (tasks.length === 0) return null
@@ -210,6 +242,12 @@ export const ProjectDetailsModal = ({
               {t('actions.delete')}
             </Button>
           )}
+          {isReadOnly && !isOwner && onRemoveShare && (
+            <Button variant="secondary" onClick={onRemoveShare}>
+              <Trash2 className="w-4 h-4 mr-2" />
+              {t('projects.shareRemove')}
+            </Button>
+          )}
           <Button variant="secondary" onClick={() => handleShare('link')}>
             <Link2 className="w-4 h-4 mr-2" />
             {t('projects.shareLink')}
@@ -256,6 +294,19 @@ export const ProjectDetailsModal = ({
           >
             {t('projects.tabs.gantt')}
           </button>
+          {isOwner && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('sharing')}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${
+                activeTab === 'sharing'
+                  ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-200'
+                  : 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white'
+              }`}
+            >
+              {t('projects.tabs.sharing')}
+            </button>
+          )}
         </div>
 
         {activeTab === 'details' ? (
@@ -328,7 +379,7 @@ export const ProjectDetailsModal = ({
               </div>
             </div>
           </div>
-        ) : (
+        ) : activeTab === 'gantt' ? (
           <div className="space-y-4">
             {tasksLoading ? (
               <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -507,6 +558,52 @@ export const ProjectDetailsModal = ({
                 </div>
               </>
             ) : null}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              {t('projects.shareAccessHint')}
+            </p>
+            {shareAccessLoading ? (
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {t('projects.shareAccessLoading')}
+              </p>
+            ) : shareAccessError ? (
+              <p className="text-sm text-red-500">{shareAccessError}</p>
+            ) : shareAccesses.length === 0 ? (
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {t('projects.shareAccessEmpty')}
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {shareAccesses.map(access => (
+                  <div
+                    key={access.user_id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm dark:border-gray-800"
+                  >
+                    <div>
+                      <p className="font-medium text-gray-900 dark:text-gray-100">
+                        {access.username}
+                      </p>
+                      <p className="text-gray-500 dark:text-gray-400">{access.email}</p>
+                    </div>
+                    <Button
+                      variant="secondary"
+                      onClick={async () => {
+                        try {
+                          await projectsService.revokeProjectAccess(project.id, access.user_id)
+                          setShareAccesses(prev => prev.filter(item => item.user_id !== access.user_id))
+                        } catch {
+                          toast.error(t('projects.shareAccessRemoveFail'))
+                        }
+                      }}
+                    >
+                      {t('projects.shareAccessRemove')}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
