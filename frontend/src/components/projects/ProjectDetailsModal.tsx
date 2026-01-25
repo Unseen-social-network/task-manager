@@ -1,7 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Edit2, Trash2, Phone, Link2 } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { differenceInCalendarDays, format, max, min, parseISO } from 'date-fns'
+import {
+  addDays,
+  differenceInCalendarDays,
+  format,
+  isBefore,
+  max,
+  min,
+  parseISO,
+  startOfDay,
+} from 'date-fns'
 import type { Project, CreateProjectInput, Task } from '@/types'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
@@ -90,6 +99,9 @@ export const ProjectDetailsModal = ({
   const ganttData = useMemo(() => {
     if (tasks.length === 0) return null
 
+    const today = startOfDay(new Date())
+    const upcomingEnd = addDays(today, 7)
+
     const entries = tasks.map(task => {
       const startRaw = task.created_at
       const endRaw = task.due_date ?? task.created_at
@@ -97,11 +109,18 @@ export const ProjectDetailsModal = ({
       const endDate = parseISO(endRaw)
       const rangeStart = startDate <= endDate ? startDate : endDate
       const rangeEnd = startDate <= endDate ? endDate : startDate
+      const dueDate = task.due_date ? parseISO(task.due_date) : null
+      const isOverdue = !!dueDate && isBefore(dueDate, today) && task.status !== 'done'
+      const isDueSoon =
+        !!dueDate && !isOverdue && !isBefore(upcomingEnd, dueDate) && task.status !== 'done'
 
       return {
         task,
         rangeStart,
         rangeEnd,
+        dueDate,
+        isOverdue,
+        isDueSoon,
       }
     })
 
@@ -109,11 +128,42 @@ export const ProjectDetailsModal = ({
     const overallEnd = max(entries.map(entry => entry.rangeEnd))
     const totalDays = Math.max(1, differenceInCalendarDays(overallEnd, overallStart) + 1)
 
+    const summary = entries.reduce(
+      (acc, entry) => {
+        acc.total += 1
+        if (!entry.task.due_date) acc.noDueDate += 1
+        if (entry.isOverdue) acc.overdue += 1
+        if (entry.isDueSoon) acc.dueSoon += 1
+        acc.byUrgency[entry.task.urgency] += 1
+        acc.byStatus[entry.task.status] += 1
+        return acc
+      },
+      {
+        total: 0,
+        overdue: 0,
+        dueSoon: 0,
+        noDueDate: 0,
+        byUrgency: {
+          low: 0,
+          medium: 0,
+          high: 0,
+          critical: 0,
+        },
+        byStatus: {
+          todo: 0,
+          in_progress: 0,
+          done: 0,
+          canceled: 0,
+        },
+      }
+    )
+
     return {
       entries,
       overallStart,
       overallEnd,
       totalDays,
+      summary,
     }
   }, [tasks])
 
@@ -264,6 +314,92 @@ export const ProjectDetailsModal = ({
               </p>
             ) : ganttData ? (
               <>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3">
+                    <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      {t('projects.gantt.summary.total')}
+                    </p>
+                    <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+                      {ganttData.summary.total}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {t('projects.gantt.summary.noDue')}: {ganttData.summary.noDueDate}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-red-200 dark:border-red-900/60 bg-red-50/70 dark:bg-red-900/20 px-4 py-3">
+                    <p className="text-xs uppercase tracking-wide text-red-600 dark:text-red-300">
+                      {t('projects.gantt.summary.overdue')}
+                    </p>
+                    <p className="text-2xl font-semibold text-red-700 dark:text-red-200">
+                      {ganttData.summary.overdue}
+                    </p>
+                    <p className="text-xs text-red-600/80 dark:text-red-200/80">
+                      {t('projects.gantt.summary.dueSoon')}: {ganttData.summary.dueSoon}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3">
+                    <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      {t('projects.gantt.summary.urgency')}
+                    </p>
+                    <div className="mt-2 space-y-1 text-xs text-gray-600 dark:text-gray-300">
+                      <div className="flex justify-between">
+                        <span>{t('urgency.critical')}</span>
+                        <span className="font-medium text-gray-900 dark:text-gray-100">
+                          {ganttData.summary.byUrgency.critical}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>{t('urgency.high')}</span>
+                        <span className="font-medium text-gray-900 dark:text-gray-100">
+                          {ganttData.summary.byUrgency.high}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>{t('urgency.medium')}</span>
+                        <span className="font-medium text-gray-900 dark:text-gray-100">
+                          {ganttData.summary.byUrgency.medium}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>{t('urgency.low')}</span>
+                        <span className="font-medium text-gray-900 dark:text-gray-100">
+                          {ganttData.summary.byUrgency.low}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3">
+                    <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      {t('projects.gantt.summary.status')}
+                    </p>
+                    <div className="mt-2 space-y-1 text-xs text-gray-600 dark:text-gray-300">
+                      <div className="flex justify-between">
+                        <span>{t('status.todo')}</span>
+                        <span className="font-medium text-gray-900 dark:text-gray-100">
+                          {ganttData.summary.byStatus.todo}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>{t('status.in_progress')}</span>
+                        <span className="font-medium text-gray-900 dark:text-gray-100">
+                          {ganttData.summary.byStatus.in_progress}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>{t('status.done')}</span>
+                        <span className="font-medium text-gray-900 dark:text-gray-100">
+                          {ganttData.summary.byStatus.done}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>{t('status.canceled')}</span>
+                        <span className="font-medium text-gray-900 dark:text-gray-100">
+                          {ganttData.summary.byStatus.canceled}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40 px-4 py-2">
                   <div className="text-sm text-gray-600 dark:text-gray-300">
                     <span className="font-medium">{t('projects.gantt.range')}</span>{' '}
@@ -300,6 +436,19 @@ export const ProjectDetailsModal = ({
                                 ? formatDateOnly(entry.task.due_date)
                                 : t('projects.gantt.noDueDate')}
                             </p>
+                            {(entry.isOverdue || entry.isDueSoon) && (
+                              <p
+                                className={`text-xs font-medium ${
+                                  entry.isOverdue
+                                    ? 'text-red-600 dark:text-red-300'
+                                    : 'text-orange-600 dark:text-orange-300'
+                                }`}
+                              >
+                                {entry.isOverdue
+                                  ? t('projects.gantt.overdue')
+                                  : t('projects.gantt.dueSoon')}
+                              </p>
+                            )}
                           </div>
                           <span
                             className={`px-2 py-1 text-xs font-medium rounded-full ${getUrgencyColor(
@@ -311,7 +460,13 @@ export const ProjectDetailsModal = ({
                         </div>
                         <div className="relative h-3 rounded-full bg-gray-200 dark:bg-gray-700">
                           <div
-                            className="absolute h-3 rounded-full bg-primary-500"
+                            className={`absolute h-3 rounded-full ${
+                              entry.isOverdue
+                                ? 'bg-red-500'
+                                : entry.isDueSoon
+                                  ? 'bg-orange-500'
+                                  : 'bg-primary-500'
+                            }`}
                             style={{
                               left: `${left}%`,
                               width: `${width}%`,
