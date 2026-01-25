@@ -11,6 +11,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  dockerfile-backend-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: infra/docker/backend/Dockerfile
+
+
   backend:
     name: Backend CI
     runs-on: ubuntu-latest
@@ -48,7 +57,7 @@ jobs:
       - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
-          version: 1.8.0
+          version: 2.3.1
           virtualenvs-create: true
           virtualenvs-in-project: true
 
@@ -93,6 +102,15 @@ jobs:
           files: backend/coverage.xml
           flags: unittests
           name: codecov
+
+  dockerfile-frontend-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: frontend/Dockerfile
+
 
   frontend:
     name: Frontend CI
