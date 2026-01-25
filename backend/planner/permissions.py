@@ -5,6 +5,7 @@ Custom permissions for Planner application.
 from django.db.models import Q
 from rest_framework import permissions
 
+from .models import ProjectShareAccess
 
 class IsOwner(permissions.BasePermission):
     """
@@ -87,5 +88,8 @@ class ProjectAccessPermission(permissions.BasePermission):
             return (
                 obj.owner == request.user
                 or obj.tasks.filter(tagged_user=request.user).exists()
+                or ProjectShareAccess.objects.filter(
+                    project=obj, user=request.user
+                ).exists()
             )
         return obj.owner == request.user
