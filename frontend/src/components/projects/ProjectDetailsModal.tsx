@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Edit2, Trash2, Phone, Link2 } from 'lucide-react'
+import { Edit2, Trash2, Phone, Link2, Copy } from 'lucide-react'
 import toast from 'react-hot-toast'
 import {
   addDays,
@@ -42,6 +42,19 @@ export const ProjectDetailsModal = ({
   const [tasksLoading, setTasksLoading] = useState(false)
   const [tasksError, setTasksError] = useState<string | null>(null)
   const { t } = useLocale()
+
+  const handleShare = async (mode: 'link' | 'copy') => {
+    try {
+      const share = await projectsService.createShare(project.id)
+      const url = mode === 'link' ? share.share_url : share.copy_url
+      await navigator.clipboard.writeText(url)
+      toast.success(
+        mode === 'link' ? t('projects.shareLinkSuccess') : t('projects.shareCopySuccess')
+      )
+    } catch {
+      toast.error(t('projects.shareFail'))
+    }
+  }
 
   const handleUpdate = async (data: CreateProjectInput) => {
     try {
@@ -190,21 +203,36 @@ export const ProjectDetailsModal = ({
       onClose={onClose}
       title={t('projects.detailsTitle')}
       footer={
-        isReadOnly ? undefined : (
-          <>
+        <>
+          {!isReadOnly && (
             <Button variant="danger" onClick={handleDelete} isLoading={isDeleting}>
               <Trash2 className="w-4 h-4 mr-2" />
               {t('actions.delete')}
             </Button>
+          )}
+          <Button variant="secondary" onClick={() => handleShare('link')}>
+            <Link2 className="w-4 h-4 mr-2" />
+            {t('projects.shareLink')}
+          </Button>
+          <Button variant="secondary" onClick={() => handleShare('copy')}>
+            <Copy className="w-4 h-4 mr-2" />
+            {t('projects.shareCopy')}
+          </Button>
+          {!isReadOnly && (
             <Button onClick={() => setIsEditing(true)}>
               <Edit2 className="w-4 h-4 mr-2" />
               {t('actions.edit')}
             </Button>
-          </>
-        )
+          )}
+        </>
       }
     >
       <div className="space-y-6">
+        {isReadOnly && (
+          <p className="text-sm text-amber-600 dark:text-amber-400">
+            {t('projects.shareReadOnly')}
+          </p>
+        )}
         <div className="flex flex-wrap gap-2 border-b border-gray-200 dark:border-gray-700 pb-2">
           <button
             type="button"

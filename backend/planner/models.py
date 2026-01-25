@@ -48,6 +48,38 @@ class Contact(models.Model):
         return f'{self.name} ({self.owner.username})'
 
 
+class ContactShare(models.Model):
+    """Share token for a contact (read-only access for recipients)."""
+
+    contact = models.OneToOneField(
+        Contact,
+        on_delete=models.CASCADE,
+        related_name='share',
+        verbose_name='Contact',
+    )
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='contact_shares',
+        verbose_name='Owner',
+    )
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    is_active = models.BooleanField(default=True, verbose_name='Active')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
+    revoked_at = models.DateTimeField(blank=True, null=True, verbose_name='Revoked at')
+
+    class Meta:
+        verbose_name = 'Contact Share'
+        verbose_name_plural = 'Contact Shares'
+        indexes = [
+            models.Index(fields=['token']),
+            models.Index(fields=['owner', '-created_at']),
+        ]
+
+    def __str__(self):
+        return f'ContactShare({self.contact_id})'
+
+
 class Task(models.Model):
     """
     Task/Todo item with urgency, status, and optional contact reference.
@@ -223,6 +255,38 @@ class Project(models.Model):
 
     def __str__(self):
         return f'{self.name} ({self.owner.username})'
+
+
+class ProjectShare(models.Model):
+    """Share token for a project (read-only access for recipients)."""
+
+    project = models.OneToOneField(
+        Project,
+        on_delete=models.CASCADE,
+        related_name='share',
+        verbose_name='Project',
+    )
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='project_shares',
+        verbose_name='Owner',
+    )
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    is_active = models.BooleanField(default=True, verbose_name='Active')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
+    revoked_at = models.DateTimeField(blank=True, null=True, verbose_name='Revoked at')
+
+    class Meta:
+        verbose_name = 'Project Share'
+        verbose_name_plural = 'Project Shares'
+        indexes = [
+            models.Index(fields=['token']),
+            models.Index(fields=['owner', '-created_at']),
+        ]
+
+    def __str__(self):
+        return f'ProjectShare({self.project_id})'
 
 
 class Attachment(models.Model):

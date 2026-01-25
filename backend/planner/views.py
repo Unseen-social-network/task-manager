@@ -18,7 +18,17 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .filters import TaskFilter, TaskSearchFilter
-from .models import Attachment, Contact, Invite, Profile, Project, SiteSetting, Task
+from .models import (
+    Attachment,
+    Contact,
+    ContactShare,
+    Invite,
+    Profile,
+    Project,
+    ProjectShare,
+    SiteSetting,
+    Task,
+)
 from .permissions import (
     IsOwner,
     ProjectAccessPermission,
@@ -29,12 +39,14 @@ from .serializers import (
     AttachmentCreateSerializer,
     AttachmentSerializer,
     ContactSerializer,
+    ContactShareSerializer,
     InviteAcceptSerializer,
     InviteCreateSerializer,
     InviteSerializer,
     PasswordChangeSerializer,
     ProfileSerializer,
     ProjectSerializer,
+    ProjectShareSerializer,
     SiteSettingSerializer,
     TaskCommentSerializer,
     TaskSerializer,
@@ -67,6 +79,34 @@ class ContactViewSet(viewsets.ModelViewSet):
         obj = get_object_or_404(queryset, pk=self.kwargs.get('pk'))
         self.check_object_permissions(self.request, obj)
         return obj
+
+    @action(detail=True, methods=['get', 'post', 'delete'])
+    def share(self, request, pk=None):
+        """Manage share link for a contact owned by the current user."""
+        contact = self.get_object()
+        if request.method == 'POST':
+            share, created = ContactShare.objects.get_or_create(
+                contact=contact,
+                defaults={'owner': request.user},
+            )
+            if share.owner_id != request.user.id:
+                return Response(status=status.HTTP_404_NOT_FOUND)
+            if not share.is_active:
+                share.is_active = True
+                share.revoked_at = None
+                share.save(update_fields=['is_active', 'revoked_at'])
+            serializer = ContactShareSerializer(share)
+            return Response(serializer.data)
+        if request.method == 'DELETE':
+            share = get_object_or_404(ContactShare, contact=contact, owner=request.user)
+            if share.is_active:
+                share.is_active = False
+                share.revoked_at = timezone.now()
+                share.save(update_fields=['is_active', 'revoked_at'])
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        share = get_object_or_404(ContactShare, contact=contact, owner=request.user)
+        serializer = ContactShareSerializer(share)
+        return Response(serializer.data)
 
 
 class TaskViewSet(viewsets.ModelViewSet):
@@ -227,6 +267,114 @@ class ProjectViewSet(viewsets.ModelViewSet):
         obj = get_object_or_404(queryset, pk=self.kwargs.get('pk'))
         self.check_object_permissions(self.request, obj)
         return obj
+
+    @action(detail=True, methods=['get', 'post', 'delete'])
+    def share(self, request, pk=None):
+        """Manage share link for a project owned by the current user."""
+        project = self.get_object()
+        if request.method == 'POST':
+            share, created = ProjectShare.objects.get_or_create(
+                project=project,
+                defaults={'owner': request.user},
+            )
+            if share.owner_id != request.user.id:
+                return Response(status=status.HTTP_404_NOT_FOUND)
+            if not share.is_active:
+                share.is_active = True
+                share.revoked_at = None
+                share.save(update_fields=['is_active', 'revoked_at'])
+            serializer = ProjectShareSerializer(share)
+            return Response(serializer.data)
+        if request.method == 'DELETE':
+            share = get_object_or_404(ProjectShare, project=project, owner=request.user)
+            if share.is_active:
+                share.is_active = False
+                share.revoked_at = timezone.now()
+                share.save(update_fields=['is_active', 'revoked_at'])
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        share = get_object_or_404(ProjectShare, project=project, owner=request.user)
+        serializer = ProjectShareSerializer(share)
+        return Response(serializer.data)
+
+
+class ContactShareView(APIView):
+    """Public read-only access to shared contacts."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request, token):
+        share = get_object_or_404(
+            ContactShare.objects.select_related('contact'),
+            token=token,
+            is_active=True,
+        )
+        serializer = ContactSerializer(share.contact, context={'request': request})
+        return Response(serializer.data)
+
+
+class ContactShareCopyView(APIView):
+    """Create a personal copy of a shared contact."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, token):
+        share = get_object_or_404(
+            ContactShare.objects.select_related('contact'),
+            token=token,
+            is_active=True,
+        )
+        contact = share.contact
+        copied = Contact.objects.create(
+            owner=request.user,
+            name=contact.name,
+            username=contact.username,
+            company=contact.company,
+            phone=contact.phone,
+            email=contact.email,
+            telegram=contact.telegram,
+            other=contact.other,
+            notes=contact.notes,
+        )
+        serializer = ContactSerializer(copied, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class ProjectShareView(APIView):
+    """Public read-only access to shared projects."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request, token):
+        share = get_object_or_404(
+            ProjectShare.objects.select_related('project'),
+            token=token,
+            is_active=True,
+        )
+        serializer = ProjectSerializer(share.project, context={'request': request})
+        return Response(serializer.data)
+
+
+class ProjectShareCopyView(APIView):
+    """Create a personal copy of a shared project."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, token):
+        share = get_object_or_404(
+            ProjectShare.objects.select_related('project'),
+            token=token,
+            is_active=True,
+        )
+        project = share.project
+        copied = Project.objects.create(
+            owner=request.user,
+            name=project.name,
+            description=project.description,
+            phone=project.phone,
+            links=project.links or [],
+        )
+        serializer = ProjectSerializer(copied, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class SiteSettingView(APIView):

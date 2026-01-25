@@ -2,6 +2,7 @@
 Serializers for Planner application.
 """
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
@@ -12,9 +13,11 @@ from rest_framework import serializers
 from .models import (
     Attachment,
     Contact,
+    ContactShare,
     Invite,
     Profile,
     Project,
+    ProjectShare,
     SiteSetting,
     Task,
     TaskComment,
@@ -45,6 +48,35 @@ class ContactSerializer(serializers.ModelSerializer):
             'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class ContactShareSerializer(serializers.ModelSerializer):
+    """Serializer for contact share links."""
+
+    share_url = serializers.SerializerMethodField()
+    copy_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ContactShare
+        fields = [
+            'token',
+            'is_active',
+            'created_at',
+            'revoked_at',
+            'share_url',
+            'copy_url',
+        ]
+        read_only_fields = fields
+
+    def _build_frontend_url(self, suffix):
+        base_url = getattr(settings, 'FRONTEND_BASE_URL', '').rstrip('/')
+        return f'{base_url}{suffix}'
+
+    def get_share_url(self, obj):
+        return self._build_frontend_url(f'/contacts?shareToken={obj.token}')
+
+    def get_copy_url(self, obj):
+        return self._build_frontend_url(f'/contacts?copyToken={obj.token}')
 
 
 class AttachmentSerializer(serializers.ModelSerializer):
@@ -268,6 +300,35 @@ class ProjectSerializer(serializers.ModelSerializer):
         if not request:
             return False
         return obj.owner_id == request.user.id
+
+
+class ProjectShareSerializer(serializers.ModelSerializer):
+    """Serializer for project share links."""
+
+    share_url = serializers.SerializerMethodField()
+    copy_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ProjectShare
+        fields = [
+            'token',
+            'is_active',
+            'created_at',
+            'revoked_at',
+            'share_url',
+            'copy_url',
+        ]
+        read_only_fields = fields
+
+    def _build_frontend_url(self, suffix):
+        base_url = getattr(settings, 'FRONTEND_BASE_URL', '').rstrip('/')
+        return f'{base_url}{suffix}'
+
+    def get_share_url(self, obj):
+        return self._build_frontend_url(f'/projects?shareToken={obj.token}')
+
+    def get_copy_url(self, obj):
+        return self._build_frontend_url(f'/projects?copyToken={obj.token}')
 
 
 class ProfileSerializer(serializers.ModelSerializer):

@@ -1,6 +1,7 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { Plus } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useSearchParams } from 'react-router-dom'
 import { Layout } from '@/components/layout/Layout'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
@@ -36,7 +37,17 @@ export const ProjectsPage = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const copyHandledRef = useRef<string | null>(null)
   const { t } = useLocale()
+  const sharedProjectId = useMemo(() => {
+    const param = searchParams.get('project')
+    if (!param) return null
+    const parsed = Number(param)
+    return Number.isFinite(parsed) ? parsed : null
+  }, [searchParams])
+  const shareToken = searchParams.get('shareToken')
+  const copyToken = searchParams.get('copyToken')
 
   const loadProjects = useCallback(async () => {
     try {
@@ -52,6 +63,96 @@ export const ProjectsPage = () => {
     void loadProjects()
   }, [loadProjects])
 
+  const updateProjectShareParam = useCallback((projectId: number | null) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev)
+      if (projectId) {
+        next.set('project', String(projectId))
+      } else {
+        next.delete('project')
+      }
+      next.delete('shareToken')
+      next.delete('copyToken')
+      return next
+    })
+  }, [setSearchParams])
+
+  useEffect(() => {
+    if (!sharedProjectId || shareToken || copyToken) return
+    const existingProject = projects.find(project => project.id === sharedProjectId)
+    if (existingProject) {
+      setSelectedProject(existingProject)
+      setIsDetailsModalOpen(true)
+      return
+    }
+    let isActive = true
+    const loadSharedProject = async () => {
+      try {
+        const project = await projectsService.getProject(sharedProjectId)
+        if (!isActive) return
+        setSelectedProject(project)
+        setIsDetailsModalOpen(true)
+      } catch {
+        if (!isActive) return
+        toast.error(t('projects.openFail'))
+      }
+    }
+    void loadSharedProject()
+    return () => {
+      isActive = false
+    }
+  }, [projects, copyToken, shareToken, sharedProjectId, t])
+
+  useEffect(() => {
+    if (!copyToken) return
+    if (copyHandledRef.current === copyToken) return
+    copyHandledRef.current = copyToken
+    let isActive = true
+    const createCopy = async () => {
+      try {
+        const created = await projectsService.copySharedProject(copyToken)
+        if (!isActive) return
+        toast.success(t('projects.shareCopyCreated'))
+        setSelectedProject(created)
+        setIsDetailsModalOpen(true)
+        updateProjectShareParam(null)
+        await loadProjects()
+      } catch {
+        if (!isActive) return
+        toast.error(t('projects.shareCopyFail'))
+      }
+    }
+    void createCopy()
+    return () => {
+      isActive = false
+    }
+  }, [copyToken, loadProjects, t, updateProjectShareParam])
+
+  useEffect(() => {
+    if (sharedProjectId || shareToken || copyToken) return
+    copyHandledRef.current = null
+  }, [copyToken, shareToken, sharedProjectId])
+
+  useEffect(() => {
+    if (!shareToken) return
+    let isActive = true
+    const loadSharedProject = async () => {
+      try {
+        const project = await projectsService.getSharedProject(shareToken)
+        if (!isActive) return
+        setSelectedProject(project)
+        setIsDetailsModalOpen(true)
+      } catch {
+        if (!isActive) return
+        toast.error(t('projects.openFail'))
+      }
+    }
+    void loadSharedProject()
+    return () => {
+      isActive = false
+    }
+  }, [shareToken, t])
+
   const handleCreateProject = async (data: CreateProjectInput) => {
     try {
       await Promise.resolve(projectsService.createProject(data))
@@ -66,11 +167,18 @@ export const ProjectsPage = () => {
   const handleProjectClick = (project: Project) => {
     setSelectedProject(project)
     setIsDetailsModalOpen(true)
+    updateProjectShareParam(project.id)
   }
 
   const handleProjectUpdate = async () => {
     setIsDetailsModalOpen(false)
+    updateProjectShareParam(null)
     await loadProjects()
+  }
+
+  const handleProjectClose = () => {
+    setIsDetailsModalOpen(false)
+    updateProjectShareParam(null)
   }
 
   return (
@@ -126,9 +234,9 @@ export const ProjectsPage = () => {
         <ProjectDetailsModal
           project={selectedProject}
           isOpen={isDetailsModalOpen}
-          onClose={() => setIsDetailsModalOpen(false)}
+          onClose={handleProjectClose}
           onUpdate={handleProjectUpdate}
-          isReadOnly={selectedProject.is_owner === false}
+          isReadOnly={Boolean(shareToken) || selectedProject.is_owner === false}
         />
       )}
     </Layout>
