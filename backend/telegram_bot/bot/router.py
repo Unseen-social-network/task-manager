@@ -15,6 +15,7 @@ COMMANDS = [
     new_task.NewTaskCommand(),
     new_full.NewFullTaskCommand(),
     tasks.TasksCommand(),
+    tasks.TasksPageCallback(),
     task_detail.TaskDetailCommand(),
 ]
 
