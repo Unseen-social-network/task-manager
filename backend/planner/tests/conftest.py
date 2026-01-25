@@ -43,6 +43,14 @@ def authenticated_client(api_client, user):
 
 
 @pytest.fixture
+def other_authenticated_client(api_client, other_user):
+    """Return authenticated API client for another user."""
+    other_client = APIClient()
+    other_client.force_authenticate(user=other_user)
+    return other_client
+
+
+@pytest.fixture
 def contact(user):
     """Create and return a test contact."""
     return Contact.objects.create(

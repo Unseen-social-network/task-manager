@@ -42,4 +42,36 @@ export const projectsService = {
   async deleteProject(id: number): Promise<void> {
     await api.delete(`/api/v1/projects/${id}/`)
   },
+
+  async createShare(id: number): Promise<{ share_url: string; copy_url: string }> {
+    const response = await api.post(`/api/v1/projects/${id}/share/`)
+    return response.data
+  },
+
+  async getSharedProject(token: string): Promise<Project> {
+    const response = await api.get<Project>(`/api/v1/share/projects/${token}/`)
+    return response.data
+  },
+
+  async copySharedProject(token: string): Promise<Project> {
+    const response = await api.post<Project>(`/api/v1/share/projects/${token}/copy/`)
+    return response.data
+  },
+
+  async acceptSharedProject(token: string): Promise<Project> {
+    const response = await api.post<Project>(`/api/v1/share/projects/${token}/accept/`)
+    return response.data
+  },
+
+  async getProjectAccess(projectId: number): Promise<
+    Array<{ user_id: number; username: string; email: string; created_at: string }>
+  > {
+    const response = await api.get(`/api/v1/projects/${projectId}/access/`)
+    return response.data
+  },
+
+  async revokeProjectAccess(projectId: number, userId?: number): Promise<void> {
+    const params = userId ? { user_id: userId } : undefined
+    await api.delete(`/api/v1/projects/${projectId}/access/`, { params })
+  },
 }
