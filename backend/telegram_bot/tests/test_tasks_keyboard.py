@@ -31,10 +31,10 @@ def test_tasks_keyboard_first_page(tasks):
     rows = keyboard['inline_keyboard']
     assert len(rows) == 3
 
-    assert rows[0][0]['text'] == '1. Write tests'
+    assert rows[0][0]['text'] == 'Write tests'
     assert rows[0][0]['callback_data'] == 'task:1'
 
-    assert rows[1][3]['text'] == '8. Hotfix prod'
+    assert rows[1][3]['text'] == 'Hotfix prod'
 
     nav = rows[2]
     assert nav[0]['text'] == 'Forward ▶'
