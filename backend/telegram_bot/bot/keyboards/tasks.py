@@ -21,7 +21,7 @@ def tasks_keyboard(tasks, page: int, has_next: bool, status: str | None) -> dict
     for task in tasks:
         row.append(
             {
-                'text': _truncate(f'{task.title}'),
+                'text': str(task.id),
                 'callback_data': f'task:{task.id}',
             }
         )

@@ -34,9 +34,12 @@ class TasksCommand(BaseCommand):
         has_next = len(tasks) > PAGE_SIZE
         tasks = tasks[:PAGE_SIZE]
 
+        task_lines = '\n'.join(f'{task.id}. {task.title}' for task in tasks)
+        message_text = f'📋 Ваши задачи:\n{task_lines}\n\nВыберите номер задачи ниже.'
+
         await send_message(
             ctx.chat_id,
-            '📋 Ваши задачи:',
+            message_text,
             reply_markup=tasks_keyboard(tasks, page, has_next, status),
         )
 
@@ -62,9 +65,12 @@ class TasksPageCallback(BaseCommand):
         has_next = len(tasks) > PAGE_SIZE
         tasks = tasks[:PAGE_SIZE]
 
+        task_lines = '\n'.join(f'{task.id}. {task.title}' for task in tasks)
+        message_text = f'📋 Ваши задачи:\n{task_lines}\n\nВыберите номер задачи ниже.'
+
         await edit_message(
             chat_id=ctx.chat_id,
             message_id=ctx.message_id,
-            text='📋 Ваши задачи:',
+            text=message_text,
             reply_markup=tasks_keyboard(tasks, page, has_next, status),
         )
