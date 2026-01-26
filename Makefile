@@ -1,4 +1,4 @@
-.PHONY: help build up down restart logs shell migrate makemigrations createsuperuser test lint format clean prod-superuser frontend-install frontend-lint frontend-build frontend-check all-pre-CI
+.PHONY: help build up down restart logs shell migrate makemigrations createsuperuser send-backup test lint format clean prod-superuser prod-send-backup frontend-install frontend-lint frontend-build frontend-check all-pre-CI
 
 # Default target
 help:
@@ -13,6 +13,7 @@ help:
 	@echo "  make migrate         - Run database migrations"
 	@echo "  make makemigrations  - Create new migrations"
 	@echo "  make createsuperuser - Create superuser"
+	@echo "  make send-backup     - Send database dump via Telegram bot"
 	@echo "  make test            - Run tests"
 	@echo "  make lint            - Run linters"
 	@echo "  make format          - Format code"
@@ -30,6 +31,7 @@ help:
 	@echo "  make prod-restart    - Restart production environment"
 	@echo "  make prod-logs       - View production logs"
 	@echo "  make prod-superuser  - Create superuser"
+	@echo "  make prod-send-backup - Send production database dump via Telegram bot"
 
 # Development commands
 build:
@@ -72,6 +74,9 @@ makemigrations:
 
 createsuperuser:
 	docker compose -f infra/compose/docker-compose.yml exec backend python manage.py createsuperuser
+
+send-backup:
+	docker compose -f infra/compose/docker-compose.yml exec backend python manage.py send_backup_dump
 
 # Testing and linting
 test:
@@ -121,6 +126,9 @@ prod-logs:
 
 prod-superuser:
 	docker compose -f docker-compose.production.yml exec backend python manage.py createsuperuser
+
+prod-send-backup:
+	docker compose -f docker-compose.production.yml exec backend python manage.py send_backup_dump
 
 # Cleanup
 clean:

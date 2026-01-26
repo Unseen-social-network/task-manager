@@ -130,3 +130,12 @@ make all-pre-CI
 ```bash
 0 10 * * * cd /app/backend && python manage.py send_backup_dump
 ```
+
+### Ручной запуск
+
+Для ручной отправки дампа можно использовать Makefile:
+
+```bash
+make send-backup
+make prod-send-backup
+```
