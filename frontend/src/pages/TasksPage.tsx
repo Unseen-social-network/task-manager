@@ -5,6 +5,7 @@ import { useSearchParams } from 'react-router-dom'
 import { Layout } from '@/components/layout/Layout'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
+import { ManagerDashboard, type QuickFilter } from '@/components/tasks/ManagerDashboard'
 import { TaskCard } from '@/components/tasks/TaskCard'
 import { TaskForm } from '@/components/tasks/TaskForm'
 import { TaskFilters } from '@/components/tasks/TaskFilters'
@@ -12,6 +13,13 @@ import { TaskDetailsModal } from '@/components/tasks/TaskDetailsModal'
 import { projectsService } from '@/services/projects.service'
 import { tasksService } from '@/services/tasks.service'
 import { useLocale } from '@/contexts/localeContext'
+import {
+  getTaskAssignee,
+  isTaskAtRisk,
+  isTaskBlocked,
+  isTaskNeedsReview,
+  isTaskOverdue,
+} from '@/utils/taskInsights'
 import type {
   Project,
   Task,
@@ -30,6 +38,8 @@ export const TasksPage = () => {
   const [activeTab, setActiveTab] = useState<'active' | 'archive'>('active')
   const [projects, setProjects] = useState<Project[]>([])
   const [searchEverywhere, setSearchEverywhere] = useState(false)
+  const [assigneeFilter, setAssigneeFilter] = useState('')
+  const [quickFilter, setQuickFilter] = useState<QuickFilter>('all')
   const [searchParams, setSearchParams] = useSearchParams()
   const { t } = useLocale()
   const sharedTaskId = useMemo(() => {
@@ -176,13 +186,33 @@ export const TasksPage = () => {
   }
 
   const visibleTasks = useMemo(() => {
-    if (searchEverywhere) {
-      return tasks
-    }
-    const statusFilter: TaskStatus[] =
-      activeTab === 'archive' ? ['done', 'canceled'] : ['todo', 'in_progress']
-    return tasks.filter(task => statusFilter.includes(task.status))
-  }, [activeTab, searchEverywhere, tasks])
+    const baseTasks = searchEverywhere
+      ? tasks
+      : tasks.filter(task =>
+          (activeTab === 'archive'
+            ? ['done', 'canceled']
+            : ['todo', 'in_progress']
+          ).includes(task.status)
+        )
+    const assigneeFiltered = assigneeFilter
+      ? baseTasks.filter(task => getTaskAssignee(task) === assigneeFilter)
+      : baseTasks
+    const quickFiltered = (() => {
+      switch (quickFilter) {
+        case 'overdue':
+          return assigneeFiltered.filter(isTaskOverdue)
+        case 'blocked':
+          return assigneeFiltered.filter(isTaskBlocked)
+        case 'needs_review':
+          return assigneeFiltered.filter(isTaskNeedsReview)
+        case 'at_risk':
+          return assigneeFiltered.filter(isTaskAtRisk)
+        default:
+          return assigneeFiltered
+      }
+    })()
+    return quickFiltered
+  }, [activeTab, assigneeFilter, quickFilter, searchEverywhere, tasks])
 
   const statusOptions = useMemo<TaskStatus[]>(
     () =>
@@ -227,6 +257,14 @@ export const TasksPage = () => {
             {t('tasks.tabs.archive')}
           </Button>
         </div>
+
+        <ManagerDashboard
+          tasks={tasks}
+          assigneeFilter={assigneeFilter}
+          onAssigneeChange={setAssigneeFilter}
+          quickFilter={quickFilter}
+          onQuickFilterChange={setQuickFilter}
+        />
 
         {/* Filters */}
         <TaskFilters

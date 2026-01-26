@@ -36,6 +36,16 @@ export const getUrgencyColor = (urgency: TaskUrgency): string => {
   return colors[urgency] || colors.medium
 }
 
+export const getUrgencyBorder = (urgency: TaskUrgency): string => {
+  const colors = {
+    low: 'border-l-gray-200',
+    medium: 'border-l-blue-400',
+    high: 'border-l-orange-400',
+    critical: 'border-l-red-500',
+  }
+  return colors[urgency] || colors.medium
+}
+
 export const getStatusColor = (status: TaskStatus): string => {
   const colors = {
     todo: 'bg-gray-100 text-gray-800',

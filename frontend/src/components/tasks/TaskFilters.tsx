@@ -1,5 +1,6 @@
 import { Search } from 'lucide-react'
 import type { Project, TaskFilters as TaskFiltersType, TaskStatus } from '@/types'
+import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { useLocale } from '@/contexts/localeContext'
@@ -84,7 +85,7 @@ export const TaskFilters = ({
         {t('tasks.filter.searchInDescription')}
       </label>
 
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
         <Select
           options={[
             { value: '', label: t('tasks.filter.statusAll') },
@@ -140,6 +141,29 @@ export const TaskFilters = ({
           value={filters.due_date_from || ''}
           onChange={e => handleFilterChange('due_date_from', e.target.value)}
         />
+
+        <Input
+          type="date"
+          placeholder={t('tasks.filter.dueDateTo')}
+          value={filters.due_date_to || ''}
+          onChange={e => handleFilterChange('due_date_to', e.target.value)}
+        />
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-400">
+        <span>
+          {filters.search || filters.status || filters.urgency || filters.project
+            ? t('tasks.filter.active')
+            : t('tasks.filter.none')}
+        </span>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          onClick={() => onChange({})}
+        >
+          {t('tasks.filter.clear')}
+        </Button>
       </div>
     </div>
   )

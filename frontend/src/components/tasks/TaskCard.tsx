@@ -1,9 +1,27 @@
-import { AtSign, Calendar, FolderKanban, Paperclip, Timer, User } from 'lucide-react'
+import {
+  AlertCircle,
+  AlertTriangle,
+  AtSign,
+  Calendar,
+  Circle,
+  Flame,
+  FolderKanban,
+  Paperclip,
+  Timer,
+  User,
+} from 'lucide-react'
 import type { Task } from '@/types'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { useLocale } from '@/contexts/localeContext'
-import { formatDateOnly, formatDuration, getUrgencyColor, getStatusColor, truncate } from '@/utils/helpers'
+import {
+  formatDateOnly,
+  formatDuration,
+  getStatusColor,
+  getUrgencyBorder,
+  getUrgencyColor,
+  truncate,
+} from '@/utils/helpers'
 
 interface TaskCardProps {
   task: Task
@@ -12,9 +30,16 @@ interface TaskCardProps {
 
 export const TaskCard = ({ task, onClick }: TaskCardProps) => {
   const { t } = useLocale()
+  const urgencyIcons = {
+    low: Circle,
+    medium: AlertCircle,
+    high: Flame,
+    critical: AlertTriangle,
+  }
+  const UrgencyIcon = urgencyIcons[task.urgency] ?? AlertCircle
 
   return (
-    <Card className="p-4 hover:shadow-md transition-shadow cursor-pointer" onClick={onClick}>
+    <Card className={`p-4 border-l-4 ${getUrgencyBorder(task.urgency)}`} onClick={onClick}>
       <div className="space-y-3">
         {/* Title and Badges */}
         <div className="flex items-start justify-between gap-3">
@@ -22,7 +47,10 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
             {task.title}
           </h3>
           <div className="flex gap-2">
-            <Badge className={getUrgencyColor(task.urgency)}>{t(`urgency.${task.urgency}`)}</Badge>
+            <Badge className={getUrgencyColor(task.urgency)}>
+              <UrgencyIcon className="w-3 h-3 mr-1" />
+              {t(`urgency.${task.urgency}`)}
+            </Badge>
             <Badge className={getStatusColor(task.status)}>{t(`status.${task.status}`)}</Badge>
           </div>
         </div>
