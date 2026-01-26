@@ -462,10 +462,11 @@ export const TaskDetailsModal = ({
       onClose={handleClose}
       title={t('tasks.detailsTitle')}
       footer={
-        <>
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
           {isTaggedViewer && (
             <>
               <Button
+                className="w-full sm:w-auto"
                 variant="secondary"
                 onClick={handleQuestionFlag}
                 isLoading={isFlaggingQuestion}
@@ -474,6 +475,7 @@ export const TaskDetailsModal = ({
                 {t('tasks.actions.question')}
               </Button>
               <Button
+                className="w-full sm:w-auto"
                 onClick={handleReadyFlag}
                 isLoading={isMarkingReady}
                 disabled={completionRequested}
@@ -486,6 +488,7 @@ export const TaskDetailsModal = ({
             <>
               {hasQuestion && (
                 <Button
+                  className="w-full sm:w-auto"
                   variant="secondary"
                   onClick={handleClearQuestion}
                   isLoading={isClearingQuestion}
@@ -495,6 +498,7 @@ export const TaskDetailsModal = ({
               )}
               {completionRequested && (
                 <Button
+                  className="w-full sm:w-auto"
                   variant="secondary"
                   onClick={handleClearReady}
                   isLoading={isClearingReady}
@@ -506,6 +510,7 @@ export const TaskDetailsModal = ({
           )}
           {!isTaggedViewer && (
             <Button
+              className="w-full sm:w-auto"
               variant="danger"
               onClick={handleDelete}
               isLoading={isDeleting}
@@ -514,17 +519,21 @@ export const TaskDetailsModal = ({
               {t('actions.delete')}
             </Button>
           )}
-          <Button variant="secondary" onClick={handleShare}>
+          <Button
+            className="w-full sm:w-auto"
+            variant="secondary"
+            onClick={handleShare}
+          >
             <Link2 className="w-4 h-4 mr-2" />
             {t('tasks.share')}
           </Button>
           {!isTaggedViewer && (
-            <Button onClick={() => setIsEditing(true)}>
+            <Button className="w-full sm:w-auto" onClick={() => setIsEditing(true)}>
               <Edit2 className="w-4 h-4 mr-2" />
               {t('actions.edit')}
             </Button>
           )}
-        </>
+        </div>
       }
     >
       <div className="space-y-6">
