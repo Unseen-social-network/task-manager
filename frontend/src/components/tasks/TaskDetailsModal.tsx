@@ -65,11 +65,14 @@ export const TaskDetailsModal = ({
   const [replyTo, setReplyTo] = useState<TaskComment | null>(null)
   const [isFlaggingQuestion, setIsFlaggingQuestion] = useState(false)
   const [isMarkingReady, setIsMarkingReady] = useState(false)
+  const [isClearingQuestion, setIsClearingQuestion] = useState(false)
+  const [isClearingReady, setIsClearingReady] = useState(false)
   const { t } = useLocale()
   const username = useAuthStore(state => state.username)
   const projectName = projectDetails?.name ?? task.project_name
   const taggedUser = metaState.tagged_user ?? task.tagged_user
   const isTaggedViewer = !!(taggedUser && taggedUser === username)
+  const isOwnerViewer = !isTaggedViewer
   const hasQuestion = task.has_question ?? false
   const completionRequested = task.completion_requested ?? false
 
@@ -402,6 +405,32 @@ export const TaskDetailsModal = ({
     }
   }
 
+  const handleClearQuestion = async () => {
+    setIsClearingQuestion(true)
+    try {
+      await tasksService.updateTask(task.id, { has_question: false })
+      toast.success(t('tasks.flags.questionClearSuccess'))
+      onRefresh?.()
+    } catch {
+      toast.error(t('tasks.flags.questionClearFail'))
+    } finally {
+      setIsClearingQuestion(false)
+    }
+  }
+
+  const handleClearReady = async () => {
+    setIsClearingReady(true)
+    try {
+      await tasksService.updateTask(task.id, { completion_requested: false })
+      toast.success(t('tasks.flags.readyClearSuccess'))
+      onRefresh?.()
+    } catch {
+      toast.error(t('tasks.flags.readyClearFail'))
+    } finally {
+      setIsClearingReady(false)
+    }
+  }
+
   if (isEditing) {
     return (
       <Modal isOpen={isOpen} onClose={handleClose} title={t('tasks.editTitle')}>
@@ -449,6 +478,28 @@ export const TaskDetailsModal = ({
               >
                 {t('tasks.actions.ready')}
               </Button>
+            </>
+          )}
+          {isOwnerViewer && (
+            <>
+              {hasQuestion && (
+                <Button
+                  variant="secondary"
+                  onClick={handleClearQuestion}
+                  isLoading={isClearingQuestion}
+                >
+                  {t('tasks.actions.clearQuestion')}
+                </Button>
+              )}
+              {completionRequested && (
+                <Button
+                  variant="secondary"
+                  onClick={handleClearReady}
+                  isLoading={isClearingReady}
+                >
+                  {t('tasks.actions.clearReady')}
+                </Button>
+              )}
             </>
           )}
           {!isTaggedViewer && (
