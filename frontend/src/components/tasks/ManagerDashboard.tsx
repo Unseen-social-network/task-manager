@@ -137,7 +137,7 @@ export const ManagerDashboard = ({
       seen.add(task.id)
       return true
     })
-  }, [overdueTasks, blockedTasks, reviewTasks, atRiskTasks])
+  }, [overdueTasks, blockedTasks, reviewTasks, atRiskTasks, t])
 
   const quickFilters = [
     { id: 'all' as const, label: t('tasks.dashboard.filter.all'), count: activeTasks.length },

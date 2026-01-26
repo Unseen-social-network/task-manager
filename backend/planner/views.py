@@ -137,9 +137,11 @@ class TaskViewSet(viewsets.ModelViewSet):
             base_queryset = base_queryset | Task.objects.filter(
                 Q(tagged_user=user) | Q(tagged_users=user)
             )
-        return base_queryset.select_related(
-            'contact', 'project', 'tagged_user'
-        ).prefetch_related('tagged_users').distinct()
+        return (
+            base_queryset.select_related('contact', 'project', 'tagged_user')
+            .prefetch_related('tagged_users')
+            .distinct()
+        )
 
     def get_object(self):
         """
