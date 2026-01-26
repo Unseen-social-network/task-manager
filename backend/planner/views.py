@@ -167,7 +167,7 @@ class TaskViewSet(viewsets.ModelViewSet):
                 Q(owner=request.user)
                 | Q(tagged_user=request.user)
                 | Q(tagged_users=request.user)
-            ),
+            ).distinct(),
             pk=pk,
         )
 
@@ -184,7 +184,7 @@ class TaskViewSet(viewsets.ModelViewSet):
                 Q(owner=request.user)
                 | Q(tagged_user=request.user)
                 | Q(tagged_users=request.user)
-            ),
+            ).distinct(),
             pk=pk,
         )
         serializer = AttachmentCreateSerializer(
@@ -211,7 +211,7 @@ class TaskViewSet(viewsets.ModelViewSet):
                 Q(owner=request.user)
                 | Q(tagged_user=request.user)
                 | Q(tagged_users=request.user)
-            ),
+            ).distinct(),
             pk=pk,
         )
 
@@ -243,7 +243,7 @@ class TaskViewSet(viewsets.ModelViewSet):
                 Q(owner=request.user)
                 | Q(tagged_user=request.user)
                 | Q(tagged_users=request.user)
-            ),
+            ).distinct(),
             pk=pk,
         )
         if not task.has_question:
@@ -264,7 +264,7 @@ class TaskViewSet(viewsets.ModelViewSet):
                 Q(owner=request.user)
                 | Q(tagged_user=request.user)
                 | Q(tagged_users=request.user)
-            ),
+            ).distinct(),
             pk=pk,
         )
         if not task.completion_requested:
