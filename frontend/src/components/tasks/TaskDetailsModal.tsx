@@ -451,23 +451,26 @@ export const TaskDetailsModal = ({
               </Button>
             </>
           )}
-          <Button
-            variant="danger"
-            onClick={handleDelete}
-            isLoading={isDeleting}
-            disabled={isTaggedViewer}
-          >
-            <Trash2 className="w-4 h-4 mr-2" />
-            {t('actions.delete')}
-          </Button>
+          {!isTaggedViewer && (
+            <Button
+              variant="danger"
+              onClick={handleDelete}
+              isLoading={isDeleting}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              {t('actions.delete')}
+            </Button>
+          )}
           <Button variant="secondary" onClick={handleShare}>
             <Link2 className="w-4 h-4 mr-2" />
             {t('tasks.share')}
           </Button>
-          <Button onClick={() => setIsEditing(true)} disabled={isTaggedViewer}>
-            <Edit2 className="w-4 h-4 mr-2" />
-            {t('actions.edit')}
-          </Button>
+          {!isTaggedViewer && (
+            <Button onClick={() => setIsEditing(true)}>
+              <Edit2 className="w-4 h-4 mr-2" />
+              {t('actions.edit')}
+            </Button>
+          )}
         </>
       }
     >
