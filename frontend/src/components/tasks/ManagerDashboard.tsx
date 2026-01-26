@@ -41,7 +41,37 @@ export const ManagerDashboard = ({
   quickFilter,
   onQuickFilterChange,
 }: ManagerDashboardProps) => {
-  const { t } = useLocale()
+  const { t, locale } = useLocale()
+
+  const formatTaskCount = (count: number) => {
+    if (locale === 'ru') {
+      const mod10 = count % 10
+      const mod100 = count % 100
+      const noun =
+        mod10 === 1 && mod100 !== 11
+          ? 'задача'
+          : mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)
+            ? 'задачи'
+            : 'задач'
+      return `${count} ${noun}`
+    }
+    return `${count} ${count === 1 ? 'task' : 'tasks'}`
+  }
+
+  const formatPersonCount = (count: number) => {
+    if (locale === 'ru') {
+      const mod10 = count % 10
+      const mod100 = count % 100
+      const noun =
+        mod10 === 1 && mod100 !== 11
+          ? 'сотрудник'
+          : mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)
+            ? 'сотрудника'
+            : 'сотрудников'
+      return `${count} ${noun}`
+    }
+    return `${count} ${count === 1 ? 'employee' : 'employees'}`
+  }
   const activeTasks = useMemo(
     () => tasks.filter(task => !['done', 'canceled'].includes(task.status)),
     [tasks]
@@ -138,7 +168,7 @@ export const ManagerDashboard = ({
                 {activeTasks.length}
               </p>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                {atRiskTasks.length} {t('tasks.dashboard.kpi.atRisk')}
+                {formatTaskCount(atRiskTasks.length)} {t('tasks.dashboard.kpi.atRisk')}
               </p>
             </div>
             <div className="p-2 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-200">
@@ -157,7 +187,7 @@ export const ManagerDashboard = ({
                 {overdueTasks.length}
               </p>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                {blockedTasks.length} {t('tasks.dashboard.kpi.blocked')}
+                {formatTaskCount(blockedTasks.length)} {t('tasks.dashboard.kpi.blocked')}
               </p>
             </div>
             <div className="p-2 rounded-full bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-200">
@@ -176,7 +206,7 @@ export const ManagerDashboard = ({
                 {reviewTasks.length}
               </p>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                {availableAssignees.length} {t('tasks.dashboard.kpi.available')}
+                {formatPersonCount(availableAssignees.length)} {t('tasks.dashboard.kpi.available')}
               </p>
             </div>
             <div className="p-2 rounded-full bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-200">
@@ -195,7 +225,7 @@ export const ManagerDashboard = ({
                 {overloadedAssignees.length}
               </p>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                {assigneeSummary.length} {t('tasks.dashboard.kpi.assignees')}
+                {formatPersonCount(assigneeSummary.length)} {t('tasks.dashboard.kpi.assignees')}
               </p>
             </div>
             <div className="p-2 rounded-full bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-200">
@@ -386,7 +416,7 @@ export const ManagerDashboard = ({
               <div>
                 <p className="font-semibold">{t('tasks.dashboard.insights.riskTitle')}</p>
                 <p>
-                  {atRiskTasks.length} {t('tasks.dashboard.insights.riskBody')}
+                  {formatTaskCount(atRiskTasks.length)} {t('tasks.dashboard.insights.riskBody')}
                 </p>
               </div>
             </div>
@@ -409,7 +439,7 @@ export const ManagerDashboard = ({
               <div>
                 <p className="font-semibold">{t('tasks.dashboard.insights.reviewTitle')}</p>
                 <p>
-                  {reviewTasks.length} {t('tasks.dashboard.insights.reviewBody')}
+                  {formatTaskCount(reviewTasks.length)} {t('tasks.dashboard.insights.reviewBody')}
                 </p>
               </div>
             </div>
