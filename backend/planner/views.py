@@ -134,10 +134,14 @@ class TaskViewSet(viewsets.ModelViewSet):
             return Task.objects.none()
         base_queryset = Task.objects.filter(owner=user)
         if self.request.method in ('GET', 'HEAD', 'OPTIONS'):
-            base_queryset = base_queryset | Task.objects.filter(tagged_user=user)
-        return base_queryset.select_related(
-            'contact', 'project', 'tagged_user'
-        ).distinct()
+            base_queryset = base_queryset | Task.objects.filter(
+                Q(tagged_user=user) | Q(tagged_users=user)
+            )
+        return (
+            base_queryset.select_related('contact', 'project', 'tagged_user')
+            .prefetch_related('tagged_users')
+            .distinct()
+        )
 
     def get_object(self):
         """
@@ -161,7 +165,11 @@ class TaskViewSet(viewsets.ModelViewSet):
         POST: upload new attachment to this task
         """
         task = get_object_or_404(
-            Task.objects.filter(Q(owner=request.user) | Q(tagged_user=request.user)),
+            Task.objects.filter(
+                Q(owner=request.user)
+                | Q(tagged_user=request.user)
+                | Q(tagged_users=request.user)
+            ).distinct(),
             pk=pk,
         )
 
@@ -174,7 +182,11 @@ class TaskViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
 
         task = get_object_or_404(
-            Task.objects.filter(Q(owner=request.user) | Q(tagged_user=request.user)),
+            Task.objects.filter(
+                Q(owner=request.user)
+                | Q(tagged_user=request.user)
+                | Q(tagged_users=request.user)
+            ).distinct(),
             pk=pk,
         )
         serializer = AttachmentCreateSerializer(
@@ -197,7 +209,11 @@ class TaskViewSet(viewsets.ModelViewSet):
         POST: add a new comment or reply
         """
         task = get_object_or_404(
-            Task.objects.filter(Q(owner=request.user) | Q(tagged_user=request.user)),
+            Task.objects.filter(
+                Q(owner=request.user)
+                | Q(tagged_user=request.user)
+                | Q(tagged_users=request.user)
+            ).distinct(),
             pk=pk,
         )
 
@@ -216,6 +232,48 @@ class TaskViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save(task=task, author=request.user)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(
+        detail=True,
+        methods=['post'],
+        permission_classes=[IsAuthenticated, TaskCommentAccessPermission],
+    )
+    def question(self, request, pk=None):
+        """Flag a question for the task owner."""
+        task = get_object_or_404(
+            Task.objects.filter(
+                Q(owner=request.user)
+                | Q(tagged_user=request.user)
+                | Q(tagged_users=request.user)
+            ).distinct(),
+            pk=pk,
+        )
+        if not task.has_question:
+            task.has_question = True
+            task.save(update_fields=['has_question', 'updated_at'])
+        serializer = TaskSerializer(task, context={'request': request})
+        return Response(serializer.data)
+
+    @action(
+        detail=True,
+        methods=['post'],
+        permission_classes=[IsAuthenticated, TaskCommentAccessPermission],
+    )
+    def ready(self, request, pk=None):
+        """Mark task as ready for review by the owner."""
+        task = get_object_or_404(
+            Task.objects.filter(
+                Q(owner=request.user)
+                | Q(tagged_user=request.user)
+                | Q(tagged_users=request.user)
+            ).distinct(),
+            pk=pk,
+        )
+        if not task.completion_requested:
+            task.completion_requested = True
+            task.save(update_fields=['completion_requested', 'updated_at'])
+        serializer = TaskSerializer(task, context={'request': request})
+        return Response(serializer.data)
 
 
 class AttachmentViewSet(viewsets.ModelViewSet):

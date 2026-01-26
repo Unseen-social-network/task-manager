@@ -5,6 +5,7 @@ import { useSearchParams } from 'react-router-dom'
 import { Layout } from '@/components/layout/Layout'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
+import { ManagerDashboard, type QuickFilter } from '@/components/tasks/ManagerDashboard'
 import { TaskCard } from '@/components/tasks/TaskCard'
 import { TaskForm } from '@/components/tasks/TaskForm'
 import { TaskFilters } from '@/components/tasks/TaskFilters'
@@ -12,6 +13,13 @@ import { TaskDetailsModal } from '@/components/tasks/TaskDetailsModal'
 import { projectsService } from '@/services/projects.service'
 import { tasksService } from '@/services/tasks.service'
 import { useLocale } from '@/contexts/localeContext'
+import {
+  getTaskAssignee,
+  isTaskAtRisk,
+  isTaskBlocked,
+  isTaskNeedsReview,
+  isTaskOverdue,
+} from '@/utils/taskInsights'
 import type {
   Project,
   Task,
@@ -30,6 +38,9 @@ export const TasksPage = () => {
   const [activeTab, setActiveTab] = useState<'active' | 'archive'>('active')
   const [projects, setProjects] = useState<Project[]>([])
   const [searchEverywhere, setSearchEverywhere] = useState(false)
+  const [assigneeFilter, setAssigneeFilter] = useState('')
+  const [quickFilter, setQuickFilter] = useState<QuickFilter>('all')
+  const [isManagerView, setIsManagerView] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
   const { t } = useLocale()
   const sharedTaskId = useMemo(() => {
@@ -176,13 +187,35 @@ export const TasksPage = () => {
   }
 
   const visibleTasks = useMemo(() => {
-    if (searchEverywhere) {
-      return tasks
-    }
-    const statusFilter: TaskStatus[] =
-      activeTab === 'archive' ? ['done', 'canceled'] : ['todo', 'in_progress']
-    return tasks.filter(task => statusFilter.includes(task.status))
-  }, [activeTab, searchEverywhere, tasks])
+    const baseTasks = searchEverywhere
+      ? tasks
+      : tasks.filter(task =>
+          (activeTab === 'archive'
+            ? ['done', 'canceled']
+            : ['todo', 'in_progress']
+          ).includes(task.status)
+        )
+    const assigneeFiltered = assigneeFilter
+      ? baseTasks.filter(
+          task => getTaskAssignee(task, t('tasks.dashboard.unassigned')) === assigneeFilter
+        )
+      : baseTasks
+    const quickFiltered = (() => {
+      switch (quickFilter) {
+        case 'overdue':
+          return assigneeFiltered.filter(isTaskOverdue)
+        case 'blocked':
+          return assigneeFiltered.filter(isTaskBlocked)
+        case 'needs_review':
+          return assigneeFiltered.filter(isTaskNeedsReview)
+        case 'at_risk':
+          return assigneeFiltered.filter(isTaskAtRisk)
+        default:
+          return assigneeFiltered
+      }
+    })()
+    return quickFiltered
+  }, [activeTab, assigneeFilter, quickFilter, searchEverywhere, t, tasks])
 
   const statusOptions = useMemo<TaskStatus[]>(
     () =>
@@ -198,17 +231,27 @@ export const TasksPage = () => {
     <Layout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-center">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
               {t('tasks.title')}
             </h1>
             <p className="text-gray-600 dark:text-gray-300 mt-1">{t('tasks.subtitle')}</p>
           </div>
-          <Button onClick={() => setIsCreateModalOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            {t('tasks.new')}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => setIsManagerView(prev => !prev)}
+            >
+              {isManagerView
+                ? t('tasks.dashboard.toggle.simple')
+                : t('tasks.dashboard.toggle.manager')}
+            </Button>
+            <Button onClick={() => setIsCreateModalOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              {t('tasks.new')}
+            </Button>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -227,6 +270,16 @@ export const TasksPage = () => {
             {t('tasks.tabs.archive')}
           </Button>
         </div>
+
+        {isManagerView && (
+          <ManagerDashboard
+            tasks={tasks}
+            assigneeFilter={assigneeFilter}
+            onAssigneeChange={setAssigneeFilter}
+            quickFilter={quickFilter}
+            onQuickFilterChange={setQuickFilter}
+          />
+        )}
 
         {/* Filters */}
         <TaskFilters

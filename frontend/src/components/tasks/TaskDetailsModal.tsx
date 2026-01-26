@@ -63,11 +63,19 @@ export const TaskDetailsModal = ({
   const [commentBody, setCommentBody] = useState('')
   const [commentSubmitting, setCommentSubmitting] = useState(false)
   const [replyTo, setReplyTo] = useState<TaskComment | null>(null)
+  const [isFlaggingQuestion, setIsFlaggingQuestion] = useState(false)
+  const [isMarkingReady, setIsMarkingReady] = useState(false)
+  const [isClearingQuestion, setIsClearingQuestion] = useState(false)
+  const [isClearingReady, setIsClearingReady] = useState(false)
   const { t } = useLocale()
   const username = useAuthStore(state => state.username)
   const projectName = projectDetails?.name ?? task.project_name
+  const taggedUsers = task.tagged_users ?? []
   const taggedUser = metaState.tagged_user ?? task.tagged_user
-  const isTaggedViewer = !!(taggedUser && taggedUser === username)
+  const isTaggedViewer = taggedUsers.includes(username ?? '') || !!(taggedUser && taggedUser === username)
+  const isOwnerViewer = !isTaggedViewer
+  const hasQuestion = task.has_question ?? false
+  const completionRequested = task.completion_requested ?? false
 
   useEffect(() => {
     setMetaState({
@@ -372,10 +380,62 @@ export const TaskDetailsModal = ({
     }
   }
 
+  const handleQuestionFlag = async () => {
+    setIsFlaggingQuestion(true)
+    try {
+      await tasksService.markTaskQuestion(task.id)
+      toast.success(t('tasks.flags.questionSuccess'))
+      onRefresh?.()
+    } catch {
+      toast.error(t('tasks.flags.questionFail'))
+    } finally {
+      setIsFlaggingQuestion(false)
+    }
+  }
+
+  const handleReadyFlag = async () => {
+    setIsMarkingReady(true)
+    try {
+      await tasksService.markTaskReady(task.id)
+      toast.success(t('tasks.flags.readySuccess'))
+      onRefresh?.()
+    } catch {
+      toast.error(t('tasks.flags.readyFail'))
+    } finally {
+      setIsMarkingReady(false)
+    }
+  }
+
+  const handleClearQuestion = async () => {
+    setIsClearingQuestion(true)
+    try {
+      await tasksService.updateTask(task.id, { has_question: false })
+      toast.success(t('tasks.flags.questionClearSuccess'))
+      onRefresh?.()
+    } catch {
+      toast.error(t('tasks.flags.questionClearFail'))
+    } finally {
+      setIsClearingQuestion(false)
+    }
+  }
+
+  const handleClearReady = async () => {
+    setIsClearingReady(true)
+    try {
+      await tasksService.updateTask(task.id, { completion_requested: false })
+      toast.success(t('tasks.flags.readyClearSuccess'))
+      onRefresh?.()
+    } catch {
+      toast.error(t('tasks.flags.readyClearFail'))
+    } finally {
+      setIsClearingReady(false)
+    }
+  }
+
   if (isEditing) {
     return (
       <Modal isOpen={isOpen} onClose={handleClose} title={t('tasks.editTitle')}>
-        <TaskForm
+          <TaskForm
           initialData={{
             title: task.title,
             description: task.description,
@@ -386,6 +446,7 @@ export const TaskDetailsModal = ({
             contact_freeform: task.contact_freeform,
             project_id: metaState.project_id ?? undefined,
             tagged_user: metaState.tagged_user,
+            tagged_users: task.tagged_users,
           }}
           onSubmit={handleUpdate}
           onCancel={() => setIsEditing(false)}
@@ -401,25 +462,78 @@ export const TaskDetailsModal = ({
       onClose={handleClose}
       title={t('tasks.detailsTitle')}
       footer={
-        <>
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
+          {isTaggedViewer && (
+            <>
+              <Button
+                className="w-full sm:w-auto"
+                variant="secondary"
+                onClick={handleQuestionFlag}
+                isLoading={isFlaggingQuestion}
+                disabled={hasQuestion}
+              >
+                {t('tasks.actions.question')}
+              </Button>
+              <Button
+                className="w-full sm:w-auto"
+                onClick={handleReadyFlag}
+                isLoading={isMarkingReady}
+                disabled={completionRequested}
+              >
+                {t('tasks.actions.ready')}
+              </Button>
+            </>
+          )}
+          {isOwnerViewer && (
+            <>
+              {hasQuestion && (
+                <Button
+                  className="w-full sm:w-auto"
+                  variant="secondary"
+                  onClick={handleClearQuestion}
+                  isLoading={isClearingQuestion}
+                >
+                  {t('tasks.actions.clearQuestion')}
+                </Button>
+              )}
+              {completionRequested && (
+                <Button
+                  className="w-full sm:w-auto"
+                  variant="secondary"
+                  onClick={handleClearReady}
+                  isLoading={isClearingReady}
+                >
+                  {t('tasks.actions.clearReady')}
+                </Button>
+              )}
+            </>
+          )}
+          {!isTaggedViewer && (
+            <Button
+              className="w-full sm:w-auto"
+              variant="danger"
+              onClick={handleDelete}
+              isLoading={isDeleting}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              {t('actions.delete')}
+            </Button>
+          )}
           <Button
-            variant="danger"
-            onClick={handleDelete}
-            isLoading={isDeleting}
-            disabled={isTaggedViewer}
+            className="w-full sm:w-auto"
+            variant="secondary"
+            onClick={handleShare}
           >
-            <Trash2 className="w-4 h-4 mr-2" />
-            {t('actions.delete')}
-          </Button>
-          <Button variant="secondary" onClick={handleShare}>
             <Link2 className="w-4 h-4 mr-2" />
             {t('tasks.share')}
           </Button>
-          <Button onClick={() => setIsEditing(true)} disabled={isTaggedViewer}>
-            <Edit2 className="w-4 h-4 mr-2" />
-            {t('actions.edit')}
-          </Button>
-        </>
+          {!isTaggedViewer && (
+            <Button className="w-full sm:w-auto" onClick={() => setIsEditing(true)}>
+              <Edit2 className="w-4 h-4 mr-2" />
+              {t('actions.edit')}
+            </Button>
+          )}
+        </div>
       }
     >
       <div className="space-y-6">
@@ -433,6 +547,8 @@ export const TaskDetailsModal = ({
             <Badge className={getStatusColor(displayStatus)}>
               {t(`status.${displayStatus}`)}
             </Badge>
+            {hasQuestion && <Badge variant="warning">{t('tasks.flags.question')}</Badge>}
+            {completionRequested && <Badge variant="success">{t('tasks.flags.ready')}</Badge>}
           </div>
         </div>
 
@@ -493,13 +609,27 @@ export const TaskDetailsModal = ({
             </div>
           )}
 
-          {taggedUser && (
+          {(taggedUsers.length > 0 || taggedUser) && (
             <div>
               <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-1">
                 <AtSign className="w-4 h-4" />
                 <span className="font-medium">{t('tasks.taggedUser')}</span>
               </div>
-              <p className="text-gray-900 dark:text-gray-100">@{taggedUser}</p>
+              <div className="flex flex-wrap gap-2 text-gray-900 dark:text-gray-100">
+                {(taggedUsers.length > 0
+                  ? taggedUsers
+                  : taggedUser
+                    ? [taggedUser]
+                    : []
+                ).map(user => (
+                  <span
+                    key={user}
+                    className="rounded-full bg-gray-100 px-2 py-1 text-xs dark:bg-gray-800"
+                  >
+                    @{user}
+                  </span>
+                ))}
+              </div>
             </div>
           )}
         </div>

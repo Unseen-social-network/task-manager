@@ -119,6 +119,12 @@ class Task(models.Model):
         related_name='tagged_tasks',
         verbose_name='Tagged user',
     )
+    tagged_users = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        blank=True,
+        related_name='multi_tagged_tasks',
+        verbose_name='Tagged users',
+    )
     title = models.CharField(max_length=500, verbose_name='Title')
     description = models.TextField(blank=True, verbose_name='Description')
     urgency = models.CharField(
@@ -163,6 +169,16 @@ class Task(models.Model):
         default=0,
         verbose_name='Pomodoro sessions',
         help_text='Number of completed pomodoro focus sessions',
+    )
+    has_question = models.BooleanField(
+        default=False,
+        verbose_name='Has question',
+        help_text='Whether the assignee flagged a question for the owner',
+    )
+    completion_requested = models.BooleanField(
+        default=False,
+        verbose_name='Completion requested',
+        help_text='Whether the assignee marked the task as ready for review',
     )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')

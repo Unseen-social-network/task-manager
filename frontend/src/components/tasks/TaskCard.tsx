@@ -1,9 +1,27 @@
-import { AtSign, Calendar, FolderKanban, Paperclip, Timer, User } from 'lucide-react'
+import {
+  AlertCircle,
+  AlertTriangle,
+  AtSign,
+  Calendar,
+  Circle,
+  Flame,
+  FolderKanban,
+  Paperclip,
+  Timer,
+  User,
+} from 'lucide-react'
 import type { Task } from '@/types'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { useLocale } from '@/contexts/localeContext'
-import { formatDateOnly, formatDuration, getUrgencyColor, getStatusColor, truncate } from '@/utils/helpers'
+import {
+  formatDateOnly,
+  formatDuration,
+  getStatusColor,
+  getUrgencyBorder,
+  getUrgencyColor,
+  truncate,
+} from '@/utils/helpers'
 
 interface TaskCardProps {
   task: Task
@@ -12,18 +30,34 @@ interface TaskCardProps {
 
 export const TaskCard = ({ task, onClick }: TaskCardProps) => {
   const { t } = useLocale()
+  const urgencyIcons = {
+    low: Circle,
+    medium: AlertCircle,
+    high: Flame,
+    critical: AlertTriangle,
+  }
+  const UrgencyIcon = urgencyIcons[task.urgency] ?? AlertCircle
 
   return (
-    <Card className="p-4 hover:shadow-md transition-shadow cursor-pointer" onClick={onClick}>
+    <Card className={`p-4 border-l-4 ${getUrgencyBorder(task.urgency)}`} onClick={onClick}>
       <div className="space-y-3">
         {/* Title and Badges */}
         <div className="flex items-start justify-between gap-3">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex-1 min-w-0 break-words">
             {task.title}
           </h3>
-          <div className="flex gap-2">
-            <Badge className={getUrgencyColor(task.urgency)}>{t(`urgency.${task.urgency}`)}</Badge>
+          <div className="flex flex-wrap gap-2 justify-end">
+            <Badge className={getUrgencyColor(task.urgency)}>
+              <UrgencyIcon className="w-3 h-3 mr-1" />
+              {t(`urgency.${task.urgency}`)}
+            </Badge>
             <Badge className={getStatusColor(task.status)}>{t(`status.${task.status}`)}</Badge>
+            {task.has_question && (
+              <Badge variant="warning">{t('tasks.flags.question')}</Badge>
+            )}
+            {task.completion_requested && (
+              <Badge variant="success">{t('tasks.flags.ready')}</Badge>
+            )}
           </div>
         </div>
 
@@ -57,10 +91,14 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
             </div>
           )}
 
-          {task.tagged_user && (
+          {(task.tagged_users?.length || task.tagged_user) && (
             <div className="flex items-center gap-1 min-w-0">
               <AtSign className="w-4 h-4" />
-              <span className="break-words">@{task.tagged_user}</span>
+              <span className="break-words">
+                {task.tagged_users?.length
+                  ? `@${task.tagged_users[0]}${task.tagged_users.length > 1 ? ` +${task.tagged_users.length - 1}` : ''}`
+                  : `@${task.tagged_user}`}
+              </span>
             </div>
           )}
 

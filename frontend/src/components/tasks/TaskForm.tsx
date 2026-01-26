@@ -22,6 +22,7 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
   const [projects, setProjects] = useState<Project[]>([])
   const [useContact, setUseContact] = useState(!!initialData?.contact)
   const [isTagMenuOpen, setIsTagMenuOpen] = useState(false)
+  const [tagSearch, setTagSearch] = useState('')
   const { t, locale } = useLocale()
   const shouldShowProject = projects.length > 0
 
@@ -54,6 +55,9 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
     defaultValues: initialData
       ? {
           ...initialData,
+          tagged_users:
+            initialData.tagged_users ??
+            (initialData.tagged_user ? [initialData.tagged_user] : []),
           due_date: formatDueDateForInput(initialData.due_date),
         }
       : {
@@ -62,6 +66,10 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
       due_date: getDefaultDueDate(),
         },
   })
+
+  useEffect(() => {
+    register('tagged_users')
+  }, [register])
 
   useEffect(() => {
     loadContacts()
@@ -87,13 +95,13 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
     }
   }
 
-  const taggedUserValue = watch('tagged_user') ?? ''
+  const taggedUsers = watch('tagged_users') ?? []
   const taggableContacts = useMemo(
     () => contacts.filter(contact => contact.username),
     [contacts]
   )
   const filteredTaggableContacts = useMemo(() => {
-    const normalizedQuery = taggedUserValue.trim().toLowerCase()
+    const normalizedQuery = tagSearch.trim().toLowerCase()
     if (!normalizedQuery) return taggableContacts
     return taggableContacts.filter(contact => {
       const nameMatch = contact.name.toLowerCase().includes(normalizedQuery)
@@ -101,17 +109,27 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
       const labelMatch = formatContactLabel(contact).toLowerCase().includes(normalizedQuery)
       return nameMatch || usernameMatch || labelMatch
     })
-  }, [taggedUserValue, taggableContacts])
-
-  const taggedUserField = register('tagged_user')
+  }, [tagSearch, taggableContacts])
 
   const handleTaggedUserSelect = (username: string) => {
-    setValue('tagged_user', username, { shouldDirty: true, shouldTouch: true })
+    if (taggedUsers.includes(username)) return
+    setValue('tagged_users', [...taggedUsers, username], {
+      shouldDirty: true,
+      shouldTouch: true,
+    })
+    setTagSearch('')
     setIsTagMenuOpen(false)
   }
 
+  const handleTaggedUserRemove = (username: string) => {
+    setValue(
+      'tagged_users',
+      taggedUsers.filter(user => user !== username),
+      { shouldDirty: true, shouldTouch: true }
+    )
+  }
+
   const handleTaggedUserBlur = (event: FocusEvent<HTMLInputElement>) => {
-    taggedUserField.onBlur(event)
     const enteredValue = event.target.value.trim()
     if (enteredValue) {
       const matchedContact = taggableContacts.find(contact => {
@@ -121,12 +139,14 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
           formatContactLabel(contact).toLowerCase() === enteredValue.toLowerCase()
         return nameMatch || usernameMatch || labelMatch
       })
-      if (matchedContact?.username && matchedContact.username !== enteredValue) {
-        setValue('tagged_user', matchedContact.username, {
+      const username = matchedContact?.username ?? enteredValue
+      if (username && !taggedUsers.includes(username)) {
+        setValue('tagged_users', [...taggedUsers, username], {
           shouldDirty: true,
           shouldTouch: true,
         })
       }
+      setTagSearch('')
     }
     setTimeout(() => setIsTagMenuOpen(false), 100)
   }
@@ -190,19 +210,36 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
       )}
 
       <div className="space-y-2 relative">
+        <div className="flex flex-wrap gap-2">
+          {taggedUsers.map(username => (
+            <span
+              key={username}
+              className="inline-flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-100"
+            >
+              @{username}
+              <button
+                type="button"
+                onClick={() => handleTaggedUserRemove(username)}
+                className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-200"
+                aria-label={t('tasks.form.taggedRemove')}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
         <Input
           label={t('tasks.form.taggedUser')}
           placeholder={t('tasks.form.taggedPlaceholder')}
           autoComplete="off"
-          {...taggedUserField}
-          value={taggedUserValue}
+          value={tagSearch}
           onFocus={() => setIsTagMenuOpen(true)}
           onChange={event => {
-            taggedUserField.onChange(event)
+            setTagSearch(event.target.value)
             setIsTagMenuOpen(true)
           }}
           onBlur={handleTaggedUserBlur}
-          error={errors.tagged_user?.message}
+          error={errors.tagged_users?.message as string | undefined}
         />
         {isTagMenuOpen && filteredTaggableContacts.length > 0 && (
           <div className="absolute z-20 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900">
@@ -215,9 +252,9 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
                     onMouseDown={event => {
                       event.preventDefault()
                       if (contact.username) {
-                        handleTaggedUserSelect(contact.username)
-                      }
-                    }}
+                          handleTaggedUserSelect(contact.username)
+                        }
+                      }}
                   >
                     <span className="font-medium">{contact.name}</span>
                     {contact.username && (

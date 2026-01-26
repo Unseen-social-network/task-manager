@@ -74,9 +74,12 @@ export interface Task {
   project_id?: number | null
   project_name?: string
   tagged_user?: string
+  tagged_users?: string[]
   time_spent_seconds?: number
   tracking_completed?: boolean
   pomodoro_sessions?: number
+  has_question?: boolean
+  completion_requested?: boolean
   created_at: string
   updated_at: string
 }
@@ -91,9 +94,12 @@ export interface CreateTaskInput {
   contact_freeform?: string
   project_id?: number | null
   tagged_user?: string
+  tagged_users?: string[]
   time_spent_seconds?: number
   tracking_completed?: boolean
   pomodoro_sessions?: number
+  has_question?: boolean
+  completion_requested?: boolean
 }
 
 export type UpdateTaskInput = Partial<CreateTaskInput>
@@ -101,9 +107,12 @@ export type UpdateTaskInput = Partial<CreateTaskInput>
 export interface TaskMeta {
   project_id?: number | null
   tagged_user?: string
+  tagged_users?: string[]
   time_spent_seconds?: number
   tracking_completed?: boolean
   pomodoro_sessions?: number
+  has_question?: boolean
+  completion_requested?: boolean
 }
 
 export interface TaskComment {
