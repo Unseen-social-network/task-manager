@@ -97,10 +97,11 @@ export const ContactsPage = () => {
     let isActive = true
     const loadSharedContact = async () => {
       try {
-        const contact = await contactsService.getSharedContact(shareToken)
+        const contact = await contactsService.acceptSharedContact(shareToken)
         if (!isActive) return
         setSelectedContact(contact)
         setIsDetailsModalOpen(true)
+        await loadContacts()
       } catch {
         if (!isActive) return
         toast.error(t('contacts.openFail'))
@@ -110,7 +111,7 @@ export const ContactsPage = () => {
     return () => {
       isActive = false
     }
-  }, [shareToken, t])
+  }, [loadContacts, shareToken, t])
 
   useEffect(() => {
     if (!copyToken) return
@@ -245,7 +246,7 @@ export const ContactsPage = () => {
           isOpen={isDetailsModalOpen}
           onClose={handleContactClose}
           onUpdate={handleContactUpdate}
-          isReadOnly={Boolean(shareToken)}
+          isReadOnly={Boolean(shareToken) || selectedContact.is_owner === false}
         />
       )}
     </Layout>

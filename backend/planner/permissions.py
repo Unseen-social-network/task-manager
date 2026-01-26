@@ -5,7 +5,7 @@ Custom permissions for Planner application.
 from django.db.models import Q
 from rest_framework import permissions
 
-from .models import ProjectShareAccess
+from .models import ContactShareAccess, ProjectShareAccess
 
 
 class IsOwner(permissions.BasePermission):
@@ -103,4 +103,19 @@ class ProjectAccessPermission(permissions.BasePermission):
                     project=obj, user=request.user
                 ).exists()
             )
+        return obj.owner == request.user
+
+
+class ContactAccessPermission(permissions.BasePermission):
+    """
+    Allow contact owners full access; shared users can only read.
+    """
+
+    message = 'Contact not found or access denied.'
+
+    def has_object_permission(self, request, view, obj):
+        if request.method in permissions.SAFE_METHODS:
+            return obj.owner == request.user or ContactShareAccess.objects.filter(
+                contact=obj, user=request.user
+            ).exists()
         return obj.owner == request.user

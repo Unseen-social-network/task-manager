@@ -12,6 +12,7 @@ from rest_framework_simplejwt.views import (
 from .views import (
     AttachmentViewSet,
     ContactShareCopyView,
+    ContactShareAcceptView,
     ContactShareView,
     ContactViewSet,
     InviteAcceptView,
@@ -47,6 +48,11 @@ urlpatterns = [
         'share/contacts/<uuid:token>/copy/',
         ContactShareCopyView.as_view(),
         name='contact-share-copy',
+    ),
+    path(
+        'share/contacts/<uuid:token>/accept/',
+        ContactShareAcceptView.as_view(),
+        name='contact-share-accept',
     ),
     path(
         'share/projects/<uuid:token>/', ProjectShareView.as_view(), name='project-share'
