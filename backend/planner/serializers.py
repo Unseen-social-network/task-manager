@@ -100,7 +100,7 @@ class AttachmentSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'file_url', 'size', 'created_at']
 
-    def get_file_url(self, obj):
+    def get_file_url(self, obj) -> str | None:
         """Return full URL for file access."""
         request = self.context.get('request')
         if obj.file and request:

@@ -25,6 +25,14 @@ class TelegramQuickTaskSerializer(serializers.Serializer):
     description = serializers.CharField(required=False, allow_blank=True)
 
 
+class TelegramQuickTaskResponseSerializer(serializers.Serializer):
+    """Serializer for quick task creation responses."""
+
+    id = serializers.IntegerField()
+    title = serializers.CharField(max_length=500)
+    description = serializers.CharField(required=False, allow_blank=True)
+
+
 class TelegramFullTaskSerializer(serializers.Serializer):
     """Serializer for full task creation via Telegram bot."""
 
@@ -61,10 +69,34 @@ class TelegramTaskListSerializer(serializers.Serializer):
     )
 
 
+class TelegramTaskListItemSerializer(serializers.Serializer):
+    """Serializer for a task list item in Telegram responses."""
+
+    id = serializers.IntegerField()
+    title = serializers.CharField(max_length=500)
+    status = serializers.CharField()
+
+
+class TelegramTaskListResponseSerializer(serializers.Serializer):
+    """Serializer for task list responses via Telegram bot."""
+
+    results = TelegramTaskListItemSerializer(many=True)
+    count = serializers.IntegerField()
+    limit = serializers.IntegerField()
+    task_url_template = serializers.CharField()
+
+
 class TelegramHelpSerializer(serializers.Serializer):
     """Serializer for Telegram help command."""
 
     chat_id = serializers.IntegerField(min_value=1)
+
+
+class TelegramHelpResponseSerializer(serializers.Serializer):
+    """Serializer for Telegram help responses."""
+
+    help = serializers.CharField()
+    task_url_template = serializers.CharField()
 
 
 class TelegramPasswordResetSerializer(serializers.Serializer):
@@ -82,3 +114,7 @@ class TelegramLoginSerializer(serializers.Serializer):
     """Serializer for Telegram login via bot."""
 
     chat_id = serializers.IntegerField(min_value=1)
+
+
+class TelegramWebhookSerializer(serializers.Serializer):
+    """Serializer for Telegram webhook payloads."""
