@@ -28,6 +28,26 @@ import type {
   TaskStatus,
 } from '@/types'
 
+const MANAGER_VIEW_COOKIE = 'tasks_manager_view'
+
+const getCookieValue = (name: string) => {
+  if (typeof document === 'undefined') return null
+  return (
+    document.cookie
+      .split('; ')
+      .find(item => item.startsWith(`${name}=`))
+      ?.split('=')
+      .slice(1)
+      .join('=') ?? null
+  )
+}
+
+const setCookieValue = (name: string, value: string, days = 365) => {
+  if (typeof document === 'undefined') return
+  const expires = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toUTCString()
+  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; samesite=lax`
+}
+
 export const TasksPage = () => {
   const [tasks, setTasks] = useState<Task[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -40,7 +60,10 @@ export const TasksPage = () => {
   const [searchEverywhere, setSearchEverywhere] = useState(false)
   const [assigneeFilter, setAssigneeFilter] = useState('')
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('all')
-  const [isManagerView, setIsManagerView] = useState(false)
+  const [isManagerView, setIsManagerView] = useState(() => {
+    const stored = getCookieValue(MANAGER_VIEW_COOKIE)
+    return stored === 'manager'
+  })
   const [searchParams, setSearchParams] = useSearchParams()
   const { t } = useLocale()
   const sharedTaskId = useMemo(() => {
@@ -106,6 +129,10 @@ export const TasksPage = () => {
       }))
     }
   }, [filters.project, projects])
+
+  useEffect(() => {
+    setCookieValue(MANAGER_VIEW_COOKIE, isManagerView ? 'manager' : 'simple')
+  }, [isManagerView])
 
   useEffect(() => {
     if (!sharedTaskId) return
