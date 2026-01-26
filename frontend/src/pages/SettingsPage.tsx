@@ -29,6 +29,8 @@ export const SettingsPage = () => {
   const [sendingInvite, setSendingInvite] = useState(false)
   const [connectingTelegram, setConnectingTelegram] = useState(false)
   const [disconnectingTelegram, setDisconnectingTelegram] = useState(false)
+  const [sharingContact, setSharingContact] = useState(false)
+  const [updatingInviteShare, setUpdatingInviteShare] = useState(false)
 
   const {
     register: registerProfile,
@@ -168,6 +170,37 @@ export const SettingsPage = () => {
       resetProfile(updatedProfile)
     } catch (error) {
       toast.error(getApiErrorMessage(error, t('settings.invites.revokeFail')))
+    }
+  }
+
+  const handleShareContact = async () => {
+    setSharingContact(true)
+    try {
+      const share = await profileService.shareContact()
+      await navigator.clipboard.writeText(share.share_url)
+      setProfile(prev => (prev ? { ...prev, self_contact_id: share.contact_id } : prev))
+      toast.success(t('settings.profile.shareContactSuccess'))
+    } catch {
+      toast.error(t('settings.profile.shareContactFail'))
+    } finally {
+      setSharingContact(false)
+    }
+  }
+
+  const handleInviteShareToggle = async (enabled: boolean) => {
+    if (!profile) return
+    setUpdatingInviteShare(true)
+    try {
+      const updated = await profileService.updateProfile({
+        share_invite_contact: enabled,
+      })
+      setProfile(updated)
+      resetProfile(updated)
+      toast.success(t('settings.invites.shareToggleSuccess'))
+    } catch {
+      toast.error(t('settings.invites.shareToggleFail'))
+    } finally {
+      setUpdatingInviteShare(false)
     }
   }
 
@@ -370,6 +403,35 @@ export const SettingsPage = () => {
                 {t('settings.profile.telegramTagNotifications')}
               </label>
             </div>
+            <div className="rounded-lg border border-dashed border-gray-200 dark:border-gray-700 p-4 space-y-2">
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                {t('settings.profile.shareContactTitle')}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {t('settings.profile.shareContactHint')}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleShareContact}
+                  isLoading={sharingContact}
+                >
+                  {t('settings.profile.shareContact')}
+                </Button>
+                {profile?.self_contact_id && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigate(`/contacts?contact=${profile.self_contact_id}`)}
+                  >
+                    {t('settings.profile.shareContactManage')}
+                  </Button>
+                )}
+              </div>
+            </div>
             <div className="flex justify-end">
               <Button type="submit" isLoading={savingProfile}>
                 {t('settings.profile.save')}
@@ -449,6 +511,23 @@ export const SettingsPage = () => {
               {profile?.inviter_username || 'System32'}
             </p>
           </div>
+          {profile?.inviter_username && (
+            <div className="rounded-lg border border-dashed border-gray-200 dark:border-gray-700 p-4 space-y-2">
+              <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  checked={profile?.share_invite_contact ?? false}
+                  onChange={event => handleInviteShareToggle(event.target.checked)}
+                  disabled={updatingInviteShare}
+                />
+                {t('settings.invites.shareWithInviter')}
+              </label>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {t('settings.invites.shareWithInviterHint')}
+              </p>
+            </div>
+          )}
           <form onSubmit={handleInviteSubmit(handleInviteSend)} className="space-y-4">
             <Input
               label={t('settings.invites.email')}
@@ -491,6 +570,11 @@ export const SettingsPage = () => {
                         {t('settings.invites.invitedBy')}{' '}
                         {invite.invited_by_username || 'System32'}
                       </p>
+                      {invite.invited_user_username && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {t('settings.invites.acceptedUser')} @{invite.invited_user_username}
+                        </p>
+                      )}
                       <p className="text-xs text-gray-500 dark:text-gray-400">
                         {t(`settings.invites.status.${invite.status}`)}
                       </p>

@@ -396,6 +396,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', read_only=True)
     invites_remaining = serializers.SerializerMethodField()
     inviter_username = serializers.SerializerMethodField()
+    self_contact_id = serializers.IntegerField(source='self_contact.id', read_only=True)
     telegram_link_url = serializers.SerializerMethodField()
     telegram_connected = serializers.SerializerMethodField()
 
@@ -404,18 +405,21 @@ class ProfileSerializer(serializers.ModelSerializer):
         fields = [
             'username',
             'full_name',
+            'self_contact_id',
             'telegram_chat_id',
             'telegram_username',
             'telegram_link_url',
             'telegram_connected',
             'telegram_notifications_enabled',
             'telegram_notify_on_tag',
+            'share_invite_contact',
             'invite_quota',
             'invites_remaining',
             'inviter_username',
         ]
         read_only_fields = [
             'username',
+            'self_contact_id',
             'telegram_chat_id',
             'telegram_username',
             'telegram_link_url',
@@ -438,6 +442,39 @@ class ProfileSerializer(serializers.ModelSerializer):
                 'Telegram username must be 5-32 characters and contain only letters, numbers, or underscores.'
             )
         return f'@{normalized}'
+
+    def update(self, instance, validated_data):
+        previous_share = instance.share_invite_contact
+        instance = super().update(instance, validated_data)
+        if instance.self_contact:
+            instance.ensure_self_contact()
+
+        share_invite_contact = instance.share_invite_contact
+        if previous_share != share_invite_contact:
+            invite = (
+                Invite.objects.filter(
+                    invited_user=instance.user,
+                    status=Invite.Status.ACCEPTED,
+                )
+                .select_related('invited_by')
+                .order_by('-accepted_at')
+                .first()
+            )
+            inviter = invite.invited_by if invite else None
+            if inviter:
+                if share_invite_contact:
+                    contact = instance.ensure_self_contact()
+                    ContactShareAccess.objects.get_or_create(
+                        contact=contact,
+                        user=inviter,
+                        defaults={'granted_by': instance.user},
+                    )
+                else:
+                    ContactShareAccess.objects.filter(
+                        contact=instance.self_contact,
+                        user=inviter,
+                    ).delete()
+        return instance
 
     def get_invites_remaining(self, obj):
         used_invites = Invite.objects.filter(
@@ -508,6 +545,9 @@ class InviteSerializer(serializers.ModelSerializer):
     invited_by_full_name = serializers.CharField(
         source='invited_by.profile.full_name', read_only=True
     )
+    invited_user_username = serializers.CharField(
+        source='invited_user.username', read_only=True
+    )
 
     class Meta:
         model = Invite
@@ -521,6 +561,7 @@ class InviteSerializer(serializers.ModelSerializer):
             'revoked_at',
             'invited_by_username',
             'invited_by_full_name',
+            'invited_user_username',
         ]
         read_only_fields = [
             'id',
@@ -531,6 +572,7 @@ class InviteSerializer(serializers.ModelSerializer):
             'revoked_at',
             'invited_by_username',
             'invited_by_full_name',
+            'invited_user_username',
         ]
 
 
@@ -599,6 +641,14 @@ class InviteAcceptSerializer(serializers.Serializer):
         profile = user.profile
         profile.full_name = self.validated_data['full_name']
         profile.save()
+
+        contact = profile.ensure_self_contact()
+        if profile.share_invite_contact and invite.invited_by:
+            ContactShareAccess.objects.get_or_create(
+                contact=contact,
+                user=invite.invited_by,
+                defaults={'granted_by': user},
+            )
 
         invite.status = Invite.Status.ACCEPTED
         invite.invited_user = user

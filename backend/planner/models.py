@@ -444,6 +444,14 @@ class Profile(models.Model):
         related_name='profile',
         verbose_name='User',
     )
+    self_contact = models.OneToOneField(
+        'Contact',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='profile',
+        verbose_name='Self contact',
+    )
     full_name = models.CharField(max_length=255, blank=True, verbose_name='Full name')
     telegram_username = models.CharField(
         max_length=64,
@@ -475,6 +483,10 @@ class Profile(models.Model):
         default=True,
         verbose_name='Notify on tag in Telegram',
     )
+    share_invite_contact = models.BooleanField(
+        default=True,
+        verbose_name='Share contact with inviter',
+    )
     invite_quota = models.PositiveIntegerField(
         default=3,
         verbose_name='Invite quota',
@@ -489,6 +501,34 @@ class Profile(models.Model):
 
     def __str__(self):
         return f'Profile for {self.user.username}'
+
+    def ensure_self_contact(self):
+        """Create or update a self-contact entry with core identity fields."""
+        name = self.full_name or self.user.username
+        if self.self_contact:
+            contact = self.self_contact
+            updates = {}
+            if contact.name != name:
+                updates['name'] = name
+            if contact.username != self.user.username:
+                updates['username'] = self.user.username
+            if contact.email != self.user.email:
+                updates['email'] = self.user.email
+            if updates:
+                for field, value in updates.items():
+                    setattr(contact, field, value)
+                contact.save(update_fields=list(updates.keys()))
+            return contact
+
+        contact = Contact.objects.create(
+            owner=self.user,
+            name=name,
+            username=self.user.username,
+            email=self.user.email,
+        )
+        self.self_contact = contact
+        self.save(update_fields=['self_contact'])
+        return contact
 
 
 class Invite(models.Model):
