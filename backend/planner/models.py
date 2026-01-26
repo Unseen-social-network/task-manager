@@ -80,6 +80,46 @@ class ContactShare(models.Model):
         return f'ContactShare({self.contact_id})'
 
 
+class ContactShareAccess(models.Model):
+    """Access grant for shared contacts."""
+
+    contact = models.ForeignKey(
+        Contact,
+        on_delete=models.CASCADE,
+        related_name='share_accesses',
+        verbose_name='Contact',
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='shared_contacts',
+        verbose_name='User',
+    )
+    granted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='contact_share_grants',
+        verbose_name='Granted by',
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
+
+    class Meta:
+        verbose_name = 'Contact Share Access'
+        verbose_name_plural = 'Contact Share Accesses'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['contact', 'user'], name='uniq_contact_share_access'
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['contact', 'user']),
+            models.Index(fields=['user', '-created_at']),
+        ]
+
+    def __str__(self):
+        return f'ContactShareAccess({self.contact_id}, {self.user_id})'
+
+
 class Task(models.Model):
     """
     Task/Todo item with urgency, status, and optional contact reference.

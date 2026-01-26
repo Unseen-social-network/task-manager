@@ -14,6 +14,7 @@ from .models import (
     Attachment,
     Contact,
     ContactShare,
+    ContactShareAccess,
     Invite,
     Profile,
     Project,
@@ -31,6 +32,7 @@ class ContactSerializer(serializers.ModelSerializer):
     """Serializer for Contact model."""
 
     owner = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    is_owner = serializers.SerializerMethodField()
 
     class Meta:
         model = Contact
@@ -45,10 +47,18 @@ class ContactSerializer(serializers.ModelSerializer):
             'telegram',
             'other',
             'notes',
+            'is_owner',
             'created_at',
             'updated_at',
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'is_owner']
+
+    def get_is_owner(self, obj):
+        """Return whether the current user owns this contact."""
+        request = self.context.get('request')
+        if not request:
+            return False
+        return obj.owner_id == request.user.id
 
 
 class ContactShareSerializer(serializers.ModelSerializer):
@@ -78,6 +88,19 @@ class ContactShareSerializer(serializers.ModelSerializer):
 
     def get_copy_url(self, obj):
         return self._build_frontend_url(f'/contacts?copyToken={obj.token}')
+
+
+class ContactShareAccessSerializer(serializers.ModelSerializer):
+    """Serializer for contact share viewers."""
+
+    user_id = serializers.IntegerField(source='user.id', read_only=True)
+    username = serializers.CharField(source='user.username', read_only=True)
+    email = serializers.EmailField(source='user.email', read_only=True)
+
+    class Meta:
+        model = ContactShareAccess
+        fields = ['user_id', 'username', 'email', 'created_at']
+        read_only_fields = fields
 
 
 class AttachmentSerializer(serializers.ModelSerializer):
@@ -185,7 +208,14 @@ class TaskSerializer(serializers.ModelSerializer):
     def validate_contact(self, value):
         """Ensure contact belongs to the current user."""
         request = self.context.get('request')
-        if value and request and value.owner != request.user:
+        if (
+            value
+            and request
+            and value.owner != request.user
+            and not ContactShareAccess.objects.filter(
+                contact=value, user=request.user
+            ).exists()
+        ):
             raise serializers.ValidationError("Cannot use another user's contact.")
         return value
 

@@ -248,15 +248,19 @@ export const ProjectDetailsModal = ({
               {t('projects.shareRemove')}
             </Button>
           )}
-          <Button variant="secondary" onClick={() => handleShare('link')}>
-            <Link2 className="w-4 h-4 mr-2" />
-            {t('projects.shareLink')}
-          </Button>
-          <Button variant="secondary" onClick={() => handleShare('copy')}>
-            <Copy className="w-4 h-4 mr-2" />
-            {t('projects.shareCopy')}
-          </Button>
-          {!isReadOnly && (
+          {isOwner && (
+            <Button variant="secondary" onClick={() => handleShare('link')}>
+              <Link2 className="w-4 h-4 mr-2" />
+              {t('projects.shareLink')}
+            </Button>
+          )}
+          {isOwner && (
+            <Button variant="secondary" onClick={() => handleShare('copy')}>
+              <Copy className="w-4 h-4 mr-2" />
+              {t('projects.shareCopy')}
+            </Button>
+          )}
+          {!isReadOnly && isOwner && (
             <Button onClick={() => setIsEditing(true)}>
               <Edit2 className="w-4 h-4 mr-2" />
               {t('actions.edit')}

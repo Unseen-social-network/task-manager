@@ -39,6 +39,7 @@ export interface Contact {
   telegram: string
   other?: Record<string, string> | null
   notes: string
+  is_owner?: boolean
   created_at: string
   updated_at: string
 }

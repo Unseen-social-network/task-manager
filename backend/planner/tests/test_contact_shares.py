@@ -5,7 +5,7 @@ Tests for contact share endpoints.
 import pytest
 from rest_framework import status
 
-from planner.models import Contact, ContactShare
+from planner.models import Contact, ContactShare, ContactShareAccess
 
 
 @pytest.mark.django_db
@@ -61,3 +61,19 @@ class TestContactShareAPI:
 
         shared_response = api_client.get(f'/api/v1/share/contacts/{token}/')
         assert shared_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_accept_share_adds_access(
+        self, authenticated_client, other_authenticated_client, contact
+    ):
+        share_resp = authenticated_client.post(f'/api/v1/contacts/{contact.id}/share/')
+        token = share_resp.data['token']
+
+        response = other_authenticated_client.post(
+            f'/api/v1/share/contacts/{token}/accept/'
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert ContactShareAccess.objects.filter(contact=contact).exists()
+        list_response = other_authenticated_client.get('/api/v1/contacts/')
+        assert list_response.status_code == status.HTTP_200_OK
+        assert list_response.data['count'] >= 1
