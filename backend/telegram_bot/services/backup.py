@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 import os
 import shutil
 import subprocess
@@ -36,7 +36,10 @@ class BackupStats:
             lines.append(
                 f'Load average (1/5/15m): {load_1:.2f}, {load_5:.2f}, {load_15:.2f}'
             )
-        if self.memory_total_bytes is not None and self.memory_available_bytes is not None:
+        if (
+            self.memory_total_bytes is not None
+            and self.memory_available_bytes is not None
+        ):
             memory_total_gb = self.memory_total_bytes / (1024**3)
             memory_available_gb = self.memory_available_bytes / (1024**3)
             lines.append(
@@ -63,7 +66,7 @@ def _parse_database_url() -> dict[str, str]:
 
 def _read_meminfo() -> tuple[int | None, int | None]:
     try:
-        with open('/proc/meminfo', 'r', encoding='utf-8') as handle:
+        with open('/proc/meminfo', encoding='utf-8') as handle:
             content = handle.read().splitlines()
     except OSError:
         return None, None
@@ -79,7 +82,7 @@ def _read_meminfo() -> tuple[int | None, int | None]:
 
 def _read_uptime() -> float | None:
     try:
-        with open('/proc/uptime', 'r', encoding='utf-8') as handle:
+        with open('/proc/uptime', encoding='utf-8') as handle:
             return float(handle.read().split()[0])
     except OSError:
         return None
@@ -102,7 +105,7 @@ def _collect_stats() -> BackupStats:
 
 
 def _build_caption(stats: BackupStats | None) -> str:
-    timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
+    timestamp = datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S UTC')
     lines = [f'Database backup generated at {timestamp}.']
     if stats is not None:
         lines.append('')
@@ -112,7 +115,7 @@ def _build_caption(stats: BackupStats | None) -> str:
 
 
 def _build_text_summary(stats: BackupStats | None) -> str:
-    timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
+    timestamp = datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S UTC')
     lines = [f'Database backup sent at {timestamp}.']
     if stats is not None:
         lines.append('')
@@ -123,7 +126,7 @@ def _build_text_summary(stats: BackupStats | None) -> str:
 
 def create_backup_archive(output_dir: str) -> str:
     db = _parse_database_url()
-    timestamp = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
+    timestamp = datetime.now(UTC).strftime('%Y%m%d_%H%M%S')
     dump_path = os.path.join(output_dir, f'planner_{timestamp}.sql')
     archive_path = f'{dump_path}.gz'
 
