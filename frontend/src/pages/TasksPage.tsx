@@ -40,7 +40,7 @@ export const TasksPage = () => {
   const [searchEverywhere, setSearchEverywhere] = useState(false)
   const [assigneeFilter, setAssigneeFilter] = useState('')
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('all')
-  const [isManagerView, setIsManagerView] = useState(true)
+  const [isManagerView, setIsManagerView] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
   const { t } = useLocale()
   const sharedTaskId = useMemo(() => {
