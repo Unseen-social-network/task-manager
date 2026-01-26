@@ -86,13 +86,19 @@ export const ManagerDashboard = ({
   const assigneeSummary = useMemo(() => {
     const counts = new Map<string, number>()
     activeTasks.forEach(task => {
-      const assignee = getTaskAssignee(task, unassignedLabel)
-      counts.set(assignee, (counts.get(assignee) ?? 0) + 1)
+      const assignees =
+        task.tagged_users && task.tagged_users.length > 0
+          ? task.tagged_users
+          : [getTaskAssignee(task, unassignedLabel)]
+      const splitWeight = 1 / assignees.length
+      assignees.forEach(assignee => {
+        counts.set(assignee, (counts.get(assignee) ?? 0) + splitWeight)
+      })
     })
     return Array.from(counts.entries())
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count)
-  }, [activeTasks])
+  }, [activeTasks, unassignedLabel])
 
   const overloadedThreshold = 6
   const availableThreshold = 2
@@ -285,7 +291,7 @@ export const ManagerDashboard = ({
                       />
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-                      <span className="font-semibold">{item.count}</span>
+                      <span className="font-semibold">{item.count.toFixed(2)}</span>
                       <Badge
                         className={cn(
                           item.count >= overloadedThreshold && 'bg-red-100 text-red-700',
