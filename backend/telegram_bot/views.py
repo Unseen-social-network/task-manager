@@ -1,10 +1,14 @@
 from asgiref.sync import async_to_sync
+import uuid
+
 from django.conf import settings
 from rest_framework import status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from planner.models import Profile
+from planner.serializers import ProfileSerializer
 from telegram_bot.bot.context import BotContext
 from telegram_bot.bot.router import dispatch
 from telegram_bot.serializers import (
@@ -80,6 +84,54 @@ class TelegramWebhookView(APIView):
             return Response(status=200)
 
         return Response(status=200)
+
+
+class TelegramLinkRefreshView(APIView):
+    """Generate a fresh Telegram link token for the current user."""
+
+    permission_classes = [IsAuthenticated]
+    serializer_class = ProfileSerializer
+
+    def post(self, request):
+        profile, _ = Profile.objects.get_or_create(user=request.user)
+        profile.telegram_link_token = uuid.uuid4()
+        profile.telegram_chat_id = None
+        profile.telegram_username = ''
+        profile.telegram_linked_at = None
+        profile.save(
+            update_fields=[
+                'telegram_link_token',
+                'telegram_chat_id',
+                'telegram_username',
+                'telegram_linked_at',
+            ]
+        )
+        serializer = ProfileSerializer(profile, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class TelegramLinkDisconnectView(APIView):
+    """Disconnect the Telegram bot from the current user."""
+
+    permission_classes = [IsAuthenticated]
+    serializer_class = ProfileSerializer
+
+    def post(self, request):
+        profile, _ = Profile.objects.get_or_create(user=request.user)
+        profile.telegram_chat_id = None
+        profile.telegram_username = ''
+        profile.telegram_linked_at = None
+        profile.telegram_link_token = uuid.uuid4()
+        profile.save(
+            update_fields=[
+                'telegram_chat_id',
+                'telegram_username',
+                'telegram_linked_at',
+                'telegram_link_token',
+            ]
+        )
+        serializer = ProfileSerializer(profile, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class TelegramHelpView(APIView):
