@@ -46,12 +46,18 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex-1 min-w-0 break-words">
             {task.title}
           </h3>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2 justify-end">
             <Badge className={getUrgencyColor(task.urgency)}>
               <UrgencyIcon className="w-3 h-3 mr-1" />
               {t(`urgency.${task.urgency}`)}
             </Badge>
             <Badge className={getStatusColor(task.status)}>{t(`status.${task.status}`)}</Badge>
+            {task.has_question && (
+              <Badge variant="warning">{t('tasks.flags.question')}</Badge>
+            )}
+            {task.completion_requested && (
+              <Badge variant="success">{t('tasks.flags.ready')}</Badge>
+            )}
           </div>
         </div>
 

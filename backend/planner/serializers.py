@@ -161,6 +161,8 @@ class TaskSerializer(serializers.ModelSerializer):
             'time_spent_seconds',
             'tracking_completed',
             'pomodoro_sessions',
+            'has_question',
+            'completion_requested',
             'attachments',
             'created_at',
             'updated_at',

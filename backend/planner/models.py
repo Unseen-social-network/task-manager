@@ -164,6 +164,16 @@ class Task(models.Model):
         verbose_name='Pomodoro sessions',
         help_text='Number of completed pomodoro focus sessions',
     )
+    has_question = models.BooleanField(
+        default=False,
+        verbose_name='Has question',
+        help_text='Whether the assignee flagged a question for the owner',
+    )
+    completion_requested = models.BooleanField(
+        default=False,
+        verbose_name='Completion requested',
+        help_text='Whether the assignee marked the task as ready for review',
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
 

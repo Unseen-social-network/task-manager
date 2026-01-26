@@ -77,6 +77,8 @@ export interface Task {
   time_spent_seconds?: number
   tracking_completed?: boolean
   pomodoro_sessions?: number
+  has_question?: boolean
+  completion_requested?: boolean
   created_at: string
   updated_at: string
 }
@@ -94,6 +96,8 @@ export interface CreateTaskInput {
   time_spent_seconds?: number
   tracking_completed?: boolean
   pomodoro_sessions?: number
+  has_question?: boolean
+  completion_requested?: boolean
 }
 
 export type UpdateTaskInput = Partial<CreateTaskInput>
@@ -104,6 +108,8 @@ export interface TaskMeta {
   time_spent_seconds?: number
   tracking_completed?: boolean
   pomodoro_sessions?: number
+  has_question?: boolean
+  completion_requested?: boolean
 }
 
 export interface TaskComment {

@@ -63,11 +63,15 @@ export const TaskDetailsModal = ({
   const [commentBody, setCommentBody] = useState('')
   const [commentSubmitting, setCommentSubmitting] = useState(false)
   const [replyTo, setReplyTo] = useState<TaskComment | null>(null)
+  const [isFlaggingQuestion, setIsFlaggingQuestion] = useState(false)
+  const [isMarkingReady, setIsMarkingReady] = useState(false)
   const { t } = useLocale()
   const username = useAuthStore(state => state.username)
   const projectName = projectDetails?.name ?? task.project_name
   const taggedUser = metaState.tagged_user ?? task.tagged_user
   const isTaggedViewer = !!(taggedUser && taggedUser === username)
+  const hasQuestion = task.has_question ?? false
+  const completionRequested = task.completion_requested ?? false
 
   useEffect(() => {
     setMetaState({
@@ -372,6 +376,32 @@ export const TaskDetailsModal = ({
     }
   }
 
+  const handleQuestionFlag = async () => {
+    setIsFlaggingQuestion(true)
+    try {
+      await tasksService.markTaskQuestion(task.id)
+      toast.success(t('tasks.flags.questionSuccess'))
+      onRefresh?.()
+    } catch {
+      toast.error(t('tasks.flags.questionFail'))
+    } finally {
+      setIsFlaggingQuestion(false)
+    }
+  }
+
+  const handleReadyFlag = async () => {
+    setIsMarkingReady(true)
+    try {
+      await tasksService.markTaskReady(task.id)
+      toast.success(t('tasks.flags.readySuccess'))
+      onRefresh?.()
+    } catch {
+      toast.error(t('tasks.flags.readyFail'))
+    } finally {
+      setIsMarkingReady(false)
+    }
+  }
+
   if (isEditing) {
     return (
       <Modal isOpen={isOpen} onClose={handleClose} title={t('tasks.editTitle')}>
@@ -402,6 +432,25 @@ export const TaskDetailsModal = ({
       title={t('tasks.detailsTitle')}
       footer={
         <>
+          {isTaggedViewer && (
+            <>
+              <Button
+                variant="secondary"
+                onClick={handleQuestionFlag}
+                isLoading={isFlaggingQuestion}
+                disabled={hasQuestion}
+              >
+                {t('tasks.actions.question')}
+              </Button>
+              <Button
+                onClick={handleReadyFlag}
+                isLoading={isMarkingReady}
+                disabled={completionRequested}
+              >
+                {t('tasks.actions.ready')}
+              </Button>
+            </>
+          )}
           <Button
             variant="danger"
             onClick={handleDelete}
@@ -433,6 +482,8 @@ export const TaskDetailsModal = ({
             <Badge className={getStatusColor(displayStatus)}>
               {t(`status.${displayStatus}`)}
             </Badge>
+            {hasQuestion && <Badge variant="warning">{t('tasks.flags.question')}</Badge>}
+            {completionRequested && <Badge variant="success">{t('tasks.flags.ready')}</Badge>}
           </div>
         </div>
 

@@ -217,6 +217,40 @@ class TaskViewSet(viewsets.ModelViewSet):
         serializer.save(task=task, author=request.user)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+    @action(
+        detail=True,
+        methods=['post'],
+        permission_classes=[IsAuthenticated, TaskCommentAccessPermission],
+    )
+    def question(self, request, pk=None):
+        """Flag a question for the task owner."""
+        task = get_object_or_404(
+            Task.objects.filter(Q(owner=request.user) | Q(tagged_user=request.user)),
+            pk=pk,
+        )
+        if not task.has_question:
+            task.has_question = True
+            task.save(update_fields=['has_question', 'updated_at'])
+        serializer = TaskSerializer(task, context={'request': request})
+        return Response(serializer.data)
+
+    @action(
+        detail=True,
+        methods=['post'],
+        permission_classes=[IsAuthenticated, TaskCommentAccessPermission],
+    )
+    def ready(self, request, pk=None):
+        """Mark task as ready for review by the owner."""
+        task = get_object_or_404(
+            Task.objects.filter(Q(owner=request.user) | Q(tagged_user=request.user)),
+            pk=pk,
+        )
+        if not task.completion_requested:
+            task.completion_requested = True
+            task.save(update_fields=['completion_requested', 'updated_at'])
+        serializer = TaskSerializer(task, context={'request': request})
+        return Response(serializer.data)
+
 
 class AttachmentViewSet(viewsets.ModelViewSet):
     """
