@@ -91,10 +91,14 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
             </div>
           )}
 
-          {task.tagged_user && (
+          {(task.tagged_users?.length || task.tagged_user) && (
             <div className="flex items-center gap-1 min-w-0">
               <AtSign className="w-4 h-4" />
-              <span className="break-words">@{task.tagged_user}</span>
+              <span className="break-words">
+                {task.tagged_users?.length
+                  ? `@${task.tagged_users[0]}${task.tagged_users.length > 1 ? ` +${task.tagged_users.length - 1}` : ''}`
+                  : `@${task.tagged_user}`}
+              </span>
             </div>
           )}
 

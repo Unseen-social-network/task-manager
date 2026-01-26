@@ -119,6 +119,12 @@ class Task(models.Model):
         related_name='tagged_tasks',
         verbose_name='Tagged user',
     )
+    tagged_users = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        blank=True,
+        related_name='multi_tagged_tasks',
+        verbose_name='Tagged users',
+    )
     title = models.CharField(max_length=500, verbose_name='Title')
     description = models.TextField(blank=True, verbose_name='Description')
     urgency = models.CharField(

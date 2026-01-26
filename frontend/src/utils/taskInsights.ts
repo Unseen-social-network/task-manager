@@ -38,5 +38,7 @@ export const isTaskNeedsReview = (task: Task): boolean => {
 }
 
 export const getTaskAssignee = (task: Task, fallbackLabel = 'Unassigned'): string => {
-  return task.tagged_user?.trim() || fallbackLabel
+  const primaryTagged =
+    task.tagged_users?.find(user => user.trim().length > 0) ?? task.tagged_user
+  return primaryTagged?.trim() || fallbackLabel
 }

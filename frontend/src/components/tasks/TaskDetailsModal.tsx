@@ -70,8 +70,9 @@ export const TaskDetailsModal = ({
   const { t } = useLocale()
   const username = useAuthStore(state => state.username)
   const projectName = projectDetails?.name ?? task.project_name
+  const taggedUsers = task.tagged_users ?? []
   const taggedUser = metaState.tagged_user ?? task.tagged_user
-  const isTaggedViewer = !!(taggedUser && taggedUser === username)
+  const isTaggedViewer = taggedUsers.includes(username ?? '') || !!(taggedUser && taggedUser === username)
   const isOwnerViewer = !isTaggedViewer
   const hasQuestion = task.has_question ?? false
   const completionRequested = task.completion_requested ?? false
@@ -434,7 +435,7 @@ export const TaskDetailsModal = ({
   if (isEditing) {
     return (
       <Modal isOpen={isOpen} onClose={handleClose} title={t('tasks.editTitle')}>
-        <TaskForm
+          <TaskForm
           initialData={{
             title: task.title,
             description: task.description,
@@ -445,6 +446,7 @@ export const TaskDetailsModal = ({
             contact_freeform: task.contact_freeform,
             project_id: metaState.project_id ?? undefined,
             tagged_user: metaState.tagged_user,
+            tagged_users: task.tagged_users,
           }}
           onSubmit={handleUpdate}
           onCancel={() => setIsEditing(false)}
@@ -598,13 +600,27 @@ export const TaskDetailsModal = ({
             </div>
           )}
 
-          {taggedUser && (
+          {(taggedUsers.length > 0 || taggedUser) && (
             <div>
               <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-1">
                 <AtSign className="w-4 h-4" />
                 <span className="font-medium">{t('tasks.taggedUser')}</span>
               </div>
-              <p className="text-gray-900 dark:text-gray-100">@{taggedUser}</p>
+              <div className="flex flex-wrap gap-2 text-gray-900 dark:text-gray-100">
+                {(taggedUsers.length > 0
+                  ? taggedUsers
+                  : taggedUser
+                    ? [taggedUser]
+                    : []
+                ).map(user => (
+                  <span
+                    key={user}
+                    className="rounded-full bg-gray-100 px-2 py-1 text-xs dark:bg-gray-800"
+                  >
+                    @{user}
+                  </span>
+                ))}
+              </div>
             </div>
           )}
         </div>

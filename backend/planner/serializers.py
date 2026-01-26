@@ -141,6 +141,12 @@ class TaskSerializer(serializers.ModelSerializer):
         allow_null=True,
         required=False,
     )
+    tagged_users = serializers.SlugRelatedField(
+        slug_field='username',
+        queryset=User.objects.all(),
+        many=True,
+        required=False,
+    )
 
     class Meta:
         model = Task
@@ -150,6 +156,7 @@ class TaskSerializer(serializers.ModelSerializer):
             'project',
             'project_name',
             'tagged_user',
+            'tagged_users',
             'title',
             'description',
             'urgency',
@@ -209,21 +216,27 @@ class TaskSerializer(serializers.ModelSerializer):
         """Attach tagging actor to the instance before saving."""
         request = self.context.get('request')
         actor = getattr(request, 'user', None)
+        tagged_users = validated_data.pop('tagged_users', None)
         task = Task(**validated_data)
         if actor and actor.is_authenticated:
             task._tagged_by = actor
         task.save()
+        if tagged_users is not None:
+            task.tagged_users.set(tagged_users)
         return task
 
     def update(self, instance, validated_data):
         """Attach tagging actor to the instance before saving updates."""
         request = self.context.get('request')
         actor = getattr(request, 'user', None)
+        tagged_users = validated_data.pop('tagged_users', None)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         if actor and actor.is_authenticated:
             instance._tagged_by = actor
         instance.save()
+        if tagged_users is not None:
+            instance.tagged_users.set(tagged_users)
         return instance
 
 

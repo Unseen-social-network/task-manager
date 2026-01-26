@@ -50,7 +50,11 @@ class TaskAccessPermission(permissions.BasePermission):
 
     def has_object_permission(self, request, view, obj):
         if request.method in permissions.SAFE_METHODS:
-            return obj.owner == request.user or obj.tagged_user == request.user
+            return (
+                obj.owner == request.user
+                or obj.tagged_user == request.user
+                or obj.tagged_users.filter(id=request.user.id).exists()
+            )
         return obj.owner == request.user
 
 
@@ -72,7 +76,11 @@ class TaskCommentAccessPermission(permissions.BasePermission):
             Task.objects.filter(
                 id=task_id,
             )
-            .filter(Q(owner=request.user) | Q(tagged_user=request.user))
+            .filter(
+                Q(owner=request.user)
+                | Q(tagged_user=request.user)
+                | Q(tagged_users=request.user)
+            )
             .exists()
         )
 
@@ -88,7 +96,9 @@ class ProjectAccessPermission(permissions.BasePermission):
         if request.method in permissions.SAFE_METHODS:
             return (
                 obj.owner == request.user
-                or obj.tasks.filter(tagged_user=request.user).exists()
+                or obj.tasks.filter(
+                    Q(tagged_user=request.user) | Q(tagged_users=request.user)
+                ).exists()
                 or ProjectShareAccess.objects.filter(
                     project=obj, user=request.user
                 ).exists()

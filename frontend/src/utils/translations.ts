@@ -284,7 +284,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'tasks.form.projectPlaceholder': 'Select a project',
     'tasks.form.taggedUser': 'Tag teammate',
     'tasks.form.taggedPlaceholder': 'Enter username (e.g., nikita)',
-    'tasks.form.taggedHint': 'Tagged teammate sees the task but cannot close it.',
+    'tasks.form.taggedHint':
+      'Add multiple teammates. Tagged users can see the task but cannot close it.',
+    'tasks.form.taggedRemove': 'Remove tagged user',
     'tasks.form.useBookContact': 'Use contact from book',
     'tasks.form.manualContact': 'Enter contact manually',
     'tasks.form.contact': 'Contact',
@@ -722,7 +724,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'tasks.form.projectPlaceholder': 'Выберите проект',
     'tasks.form.taggedUser': 'Отметить коллегу',
     'tasks.form.taggedPlaceholder': 'Введите логин (например, nikita)',
-    'tasks.form.taggedHint': 'Отмеченный пользователь видит задачу, но не может закрыть ее.',
+    'tasks.form.taggedHint':
+      'Можно добавить несколько коллег. Отмеченные пользователи видят задачу, но не могут закрыть ее.',
+    'tasks.form.taggedRemove': 'Удалить отмеченного пользователя',
     'tasks.form.useBookContact': 'Выбрать контакт из книги',
     'tasks.form.manualContact': 'Ввести контакт вручную',
     'tasks.form.contact': 'Контакт',
