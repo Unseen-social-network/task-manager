@@ -31,11 +31,7 @@ def link_profile_by_token(
     if profile.telegram_chat_id and profile.telegram_chat_id != chat_id:
         return None, 'token_used'
 
-    if (
-        Profile.objects.filter(telegram_chat_id=chat_id)
-        .exclude(id=profile.id)
-        .exists()
-    ):
+    if Profile.objects.filter(telegram_chat_id=chat_id).exclude(id=profile.id).exists():
         return None, 'chat_in_use'
 
     normalized_username = ''

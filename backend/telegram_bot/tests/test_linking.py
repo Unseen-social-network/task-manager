@@ -1,8 +1,8 @@
 import uuid
 
-import pytest
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+import pytest
 
 from telegram_bot.services.tasks import link_profile_by_token
 

@@ -1,6 +1,6 @@
-from asgiref.sync import async_to_sync
 import uuid
 
+from asgiref.sync import async_to_sync
 from django.conf import settings
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
