@@ -1,5 +1,8 @@
+import uuid
+
 from asgiref.sync import sync_to_async
 from django.db.models import Q
+from django.utils import timezone
 
 from planner.models import Profile, Task
 
@@ -9,6 +12,47 @@ def get_profile_by_chat_id(chat_id: int):
     return (
         Profile.objects.select_related('user').filter(telegram_chat_id=chat_id).first()
     )
+
+
+@sync_to_async
+def link_profile_by_token(
+    link_token: uuid.UUID,
+    chat_id: int,
+    telegram_username: str | None = None,
+):
+    profile = (
+        Profile.objects.select_related('user')
+        .filter(telegram_link_token=link_token)
+        .first()
+    )
+    if not profile:
+        return None, 'missing'
+
+    if profile.telegram_chat_id and profile.telegram_chat_id != chat_id:
+        return None, 'token_used'
+
+    if Profile.objects.filter(telegram_chat_id=chat_id).exclude(id=profile.id).exists():
+        return None, 'chat_in_use'
+
+    normalized_username = ''
+    if telegram_username:
+        normalized_username = telegram_username.strip().lstrip('@')
+        if normalized_username:
+            normalized_username = f'@{normalized_username}'
+
+    profile.telegram_chat_id = chat_id
+    profile.telegram_username = normalized_username
+    profile.telegram_linked_at = timezone.now()
+    profile.telegram_link_token = uuid.uuid4()
+    profile.save(
+        update_fields=[
+            'telegram_chat_id',
+            'telegram_username',
+            'telegram_linked_at',
+            'telegram_link_token',
+        ]
+    )
+    return profile, None
 
 
 @sync_to_async
