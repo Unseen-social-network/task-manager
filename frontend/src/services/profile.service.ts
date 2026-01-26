@@ -25,4 +25,9 @@ export const profileService = {
     const response = await api.post<Profile>('/api/v1/telegram/link/disconnect/')
     return response.data
   },
+
+  async shareContact(): Promise<{ share_url: string; copy_url: string; contact_id: number }> {
+    const response = await api.post('/api/v1/profile/share-contact/')
+    return response.data
+  },
 }

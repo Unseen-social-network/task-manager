@@ -590,6 +590,30 @@ class ProfileView(APIView):
         return Response(serializer.data)
 
 
+class ProfileShareContactView(APIView):
+    """Create or refresh a share link for the user's own contact card."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        profile, _ = Profile.objects.get_or_create(user=request.user)
+        contact = profile.ensure_self_contact()
+        share, _ = ContactShare.objects.get_or_create(
+            contact=contact,
+            defaults={'owner': request.user},
+        )
+        if share.owner_id != request.user.id:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        if not share.is_active:
+            share.is_active = True
+            share.revoked_at = None
+            share.save(update_fields=['is_active', 'revoked_at'])
+        serializer = ContactShareSerializer(share)
+        data = dict(serializer.data)
+        data['contact_id'] = contact.id
+        return Response(data)
+
+
 class PasswordChangeView(APIView):
     """Change the current user's password."""
 

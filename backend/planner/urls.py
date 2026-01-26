@@ -18,6 +18,7 @@ from .views import (
     InviteAcceptView,
     InviteViewSet,
     PasswordChangeView,
+    ProfileShareContactView,
     ProfileView,
     ProjectShareAcceptView,
     ProjectShareCopyView,
@@ -40,6 +41,11 @@ urlpatterns = [
     path('auth/jwt/refresh/', TokenRefreshView.as_view(), name='jwt-refresh'),
     path('site-settings/', SiteSettingView.as_view(), name='site-settings'),
     path('profile/', ProfileView.as_view(), name='profile'),
+    path(
+        'profile/share-contact/',
+        ProfileShareContactView.as_view(),
+        name='profile-share-contact',
+    ),
     path('profile/password/', PasswordChangeView.as_view(), name='password-change'),
     path(
         'share/contacts/<uuid:token>/', ContactShareView.as_view(), name='contact-share'

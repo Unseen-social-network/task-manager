@@ -156,12 +156,14 @@ export interface LoginCredentials {
 export interface Profile {
   username: string
   full_name: string
+  self_contact_id?: number | null
   telegram_chat_id?: number | null
   telegram_username: string
   telegram_link_url?: string | null
   telegram_connected?: boolean
   telegram_notifications_enabled?: boolean
   telegram_notify_on_tag?: boolean
+  share_invite_contact?: boolean
   invite_quota: number
   invites_remaining: number
   inviter_username?: string | null
@@ -184,6 +186,7 @@ export interface Invite {
   revoked_at: string | null
   invited_by_username: string
   invited_by_full_name: string
+  invited_user_username?: string | null
 }
 
 export interface InviteCreateInput {

@@ -15,6 +15,7 @@ interface ContactDetailsModalProps {
   onClose: () => void
   onUpdate: () => void
   isReadOnly?: boolean
+  onRemoveShare?: () => void
 }
 
 export const ContactDetailsModal = ({
@@ -23,6 +24,7 @@ export const ContactDetailsModal = ({
   onClose,
   onUpdate,
   isReadOnly = false,
+  onRemoveShare,
 }: ContactDetailsModalProps) => {
   const [isEditing, setIsEditing] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -136,6 +138,12 @@ export const ContactDetailsModal = ({
             <Button variant="danger" onClick={handleDelete} isLoading={isDeleting}>
               <Trash2 className="w-4 h-4 mr-2" />
               {t('actions.delete')}
+            </Button>
+          )}
+          {isReadOnly && !isOwner && onRemoveShare && (
+            <Button variant="secondary" onClick={onRemoveShare}>
+              <Trash2 className="w-4 h-4 mr-2" />
+              {t('contacts.shareRemove')}
             </Button>
           )}
           {isOwner && (
