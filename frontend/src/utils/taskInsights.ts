@@ -37,6 +37,6 @@ export const isTaskNeedsReview = (task: Task): boolean => {
   return REVIEW_KEYWORDS.some(keyword => haystack.includes(keyword))
 }
 
-export const getTaskAssignee = (task: Task): string => {
-  return task.tagged_user?.trim() || 'Unassigned'
+export const getTaskAssignee = (task: Task, fallbackLabel = 'Unassigned'): string => {
+  return task.tagged_user?.trim() || fallbackLabel
 }

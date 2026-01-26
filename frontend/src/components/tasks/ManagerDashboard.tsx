@@ -42,6 +42,7 @@ export const ManagerDashboard = ({
   onQuickFilterChange,
 }: ManagerDashboardProps) => {
   const { t, locale } = useLocale()
+  const unassignedLabel = t('tasks.dashboard.unassigned')
 
   const formatTaskCount = (count: number) => {
     if (locale === 'ru') {
@@ -85,7 +86,7 @@ export const ManagerDashboard = ({
   const assigneeSummary = useMemo(() => {
     const counts = new Map<string, number>()
     activeTasks.forEach(task => {
-      const assignee = getTaskAssignee(task)
+      const assignee = getTaskAssignee(task, unassignedLabel)
       counts.set(assignee, (counts.get(assignee) ?? 0) + 1)
     })
     return Array.from(counts.entries())
@@ -384,7 +385,7 @@ export const ManagerDashboard = ({
                   </div>
                   <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                     <span>
-                      {t('tasks.dashboard.alerts.owner')}: {getTaskAssignee(task)}
+                      {t('tasks.dashboard.alerts.owner')}: {getTaskAssignee(task, unassignedLabel)}
                     </span>
                     {task.due_date && (
                       <span>

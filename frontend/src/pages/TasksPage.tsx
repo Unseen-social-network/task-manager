@@ -196,7 +196,9 @@ export const TasksPage = () => {
           ).includes(task.status)
         )
     const assigneeFiltered = assigneeFilter
-      ? baseTasks.filter(task => getTaskAssignee(task) === assigneeFilter)
+      ? baseTasks.filter(
+          task => getTaskAssignee(task, t('tasks.dashboard.unassigned')) === assigneeFilter
+        )
       : baseTasks
     const quickFiltered = (() => {
       switch (quickFilter) {
@@ -213,7 +215,7 @@ export const TasksPage = () => {
       }
     })()
     return quickFiltered
-  }, [activeTab, assigneeFilter, quickFilter, searchEverywhere, tasks])
+  }, [activeTab, assigneeFilter, quickFilter, searchEverywhere, t, tasks])
 
   const statusOptions = useMemo<TaskStatus[]>(
     () =>
