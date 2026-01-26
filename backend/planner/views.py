@@ -22,6 +22,7 @@ from .models import (
     Attachment,
     Contact,
     ContactShare,
+    ContactShareAccess,
     Invite,
     Profile,
     Project,
@@ -31,6 +32,7 @@ from .models import (
     Task,
 )
 from .permissions import (
+    ContactAccessPermission,
     IsOwner,
     ProjectAccessPermission,
     TaskAccessPermission,
@@ -40,6 +42,7 @@ from .serializers import (
     AttachmentCreateSerializer,
     AttachmentSerializer,
     ContactSerializer,
+    ContactShareAccessSerializer,
     ContactShareSerializer,
     InviteAcceptSerializer,
     InviteCreateSerializer,
@@ -62,7 +65,7 @@ class ContactViewSet(viewsets.ModelViewSet):
     """
 
     serializer_class = ContactSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, ContactAccessPermission]
     filterset_fields = ['company']
     search_fields = ['name', 'company', 'phone', 'email', 'telegram', 'notes']
     ordering_fields = ['name', 'company', 'created_at', 'updated_at']
@@ -70,7 +73,17 @@ class ContactViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Return only contacts owned by the current user."""
-        return Contact.objects.filter(owner=self.request.user)
+        if getattr(self, 'swagger_fake_view', False):
+            return Contact.objects.none()
+        user = self.request.user
+        if not user.is_authenticated:
+            return Contact.objects.none()
+        base_queryset = Contact.objects.filter(owner=user)
+        if self.request.method in ('GET', 'HEAD', 'OPTIONS'):
+            base_queryset = base_queryset | Contact.objects.filter(
+                share_accesses__user=user
+            )
+        return base_queryset.distinct()
 
     def get_object(self):
         """
@@ -109,6 +122,34 @@ class ContactViewSet(viewsets.ModelViewSet):
         share = get_object_or_404(ContactShare, contact=contact, owner=request.user)
         serializer = ContactShareSerializer(share)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['get', 'delete'], url_path='access')
+    def access(self, request, pk=None):
+        """List or revoke shared access to this contact."""
+        contact = get_object_or_404(
+            Contact.objects.filter(
+                Q(owner=request.user) | Q(share_accesses__user=request.user)
+            ).distinct(),
+            pk=pk,
+        )
+        if request.method == 'GET':
+            if contact.owner_id != request.user.id:
+                return Response(status=status.HTTP_404_NOT_FOUND)
+            accesses = ContactShareAccess.objects.filter(
+                contact=contact
+            ).select_related('user')
+            serializer = ContactShareAccessSerializer(accesses, many=True)
+            return Response(serializer.data)
+        user_id = request.query_params.get('user_id')
+        if user_id:
+            if contact.owner_id != request.user.id:
+                return Response(status=status.HTTP_404_NOT_FOUND)
+            ContactShareAccess.objects.filter(contact=contact, user_id=user_id).delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        if contact.owner_id == request.user.id:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        ContactShareAccess.objects.filter(contact=contact, user=request.user).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class TaskViewSet(viewsets.ModelViewSet):
@@ -432,6 +473,29 @@ class ContactShareCopyView(APIView):
         )
         serializer = ContactSerializer(copied, context={'request': request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class ContactShareAcceptView(APIView):
+    """Accept a share link and add the contact to the recipient's list."""
+
+    serializer_class = ContactSerializer
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, token):
+        share = get_object_or_404(
+            ContactShare.objects.select_related('contact'),
+            token=token,
+            is_active=True,
+        )
+        contact = share.contact
+        if contact.owner_id != request.user.id:
+            ContactShareAccess.objects.get_or_create(
+                contact=contact,
+                user=request.user,
+                defaults={'granted_by': share.owner},
+            )
+        serializer = ContactSerializer(contact, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class ProjectShareView(APIView):

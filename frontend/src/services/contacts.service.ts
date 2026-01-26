@@ -47,13 +47,25 @@ export const contactsService = {
     return response.data
   },
 
-  async getSharedContact(token: string): Promise<Contact> {
-    const response = await api.get<Contact>(`/api/v1/share/contacts/${token}/`)
-    return response.data
-  },
-
   async copySharedContact(token: string): Promise<Contact> {
     const response = await api.post<Contact>(`/api/v1/share/contacts/${token}/copy/`)
     return response.data
+  },
+
+  async acceptSharedContact(token: string): Promise<Contact> {
+    const response = await api.post<Contact>(`/api/v1/share/contacts/${token}/accept/`)
+    return response.data
+  },
+
+  async getContactAccess(
+    id: number
+  ): Promise<Array<{ user_id: number; username: string; email: string; created_at: string }>> {
+    const response = await api.get(`/api/v1/contacts/${id}/access/`)
+    return response.data
+  },
+
+  async revokeContactAccess(id: number, userId?: number): Promise<void> {
+    const params = userId ? { user_id: String(userId) } : undefined
+    await api.delete(`/api/v1/contacts/${id}/access/`, { params })
   },
 }
