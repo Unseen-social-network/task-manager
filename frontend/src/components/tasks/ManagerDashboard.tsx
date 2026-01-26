@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Select } from '@/components/ui/Select'
 import type { Task } from '@/types'
+import { useLocale } from '@/contexts/localeContext'
 import { cn, formatDateOnly, getStatusColor, getUrgencyColor } from '@/utils/helpers'
 import {
   getTaskAssignee,
@@ -40,6 +41,7 @@ export const ManagerDashboard = ({
   quickFilter,
   onQuickFilterChange,
 }: ManagerDashboardProps) => {
+  const { t } = useLocale()
   const activeTasks = useMemo(
     () => tasks.filter(task => !['done', 'canceled'].includes(task.status)),
     [tasks]
@@ -70,10 +72,26 @@ export const ManagerDashboard = ({
 
   const alertTasks = useMemo(() => {
     const prioritized = [
-      ...overdueTasks.map(task => ({ task, label: 'Overdue', tone: 'danger' as const })),
-      ...blockedTasks.map(task => ({ task, label: 'Blocked', tone: 'warning' as const })),
-      ...reviewTasks.map(task => ({ task, label: 'Needs review', tone: 'primary' as const })),
-      ...atRiskTasks.map(task => ({ task, label: 'At risk', tone: 'warning' as const })),
+      ...overdueTasks.map(task => ({
+        task,
+        label: t('tasks.dashboard.alerts.overdue'),
+        tone: 'danger' as const,
+      })),
+      ...blockedTasks.map(task => ({
+        task,
+        label: t('tasks.dashboard.alerts.blocked'),
+        tone: 'warning' as const,
+      })),
+      ...reviewTasks.map(task => ({
+        task,
+        label: t('tasks.dashboard.alerts.needsReview'),
+        tone: 'primary' as const,
+      })),
+      ...atRiskTasks.map(task => ({
+        task,
+        label: t('tasks.dashboard.alerts.atRisk'),
+        tone: 'warning' as const,
+      })),
     ]
     const seen = new Set<number>()
     return prioritized.filter(({ task }) => {
@@ -84,11 +102,27 @@ export const ManagerDashboard = ({
   }, [overdueTasks, blockedTasks, reviewTasks, atRiskTasks])
 
   const quickFilters = [
-    { id: 'all' as const, label: 'All tasks', count: activeTasks.length },
-    { id: 'overdue' as const, label: 'Overdue', count: overdueTasks.length },
-    { id: 'at_risk' as const, label: 'At risk', count: atRiskTasks.length },
-    { id: 'blocked' as const, label: 'Blocked', count: blockedTasks.length },
-    { id: 'needs_review' as const, label: 'Needs review', count: reviewTasks.length },
+    { id: 'all' as const, label: t('tasks.dashboard.filter.all'), count: activeTasks.length },
+    {
+      id: 'overdue' as const,
+      label: t('tasks.dashboard.filter.overdue'),
+      count: overdueTasks.length,
+    },
+    {
+      id: 'at_risk' as const,
+      label: t('tasks.dashboard.filter.atRisk'),
+      count: atRiskTasks.length,
+    },
+    {
+      id: 'blocked' as const,
+      label: t('tasks.dashboard.filter.blocked'),
+      count: blockedTasks.length,
+    },
+    {
+      id: 'needs_review' as const,
+      label: t('tasks.dashboard.filter.needsReview'),
+      count: reviewTasks.length,
+    },
   ]
 
   return (
@@ -98,13 +132,13 @@ export const ManagerDashboard = ({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                Active tasks
+                {t('tasks.dashboard.kpi.active')}
               </p>
               <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
                 {activeTasks.length}
               </p>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                {atRiskTasks.length} at risk this week
+                {atRiskTasks.length} {t('tasks.dashboard.kpi.atRisk')}
               </p>
             </div>
             <div className="p-2 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-200">
@@ -117,13 +151,13 @@ export const ManagerDashboard = ({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                Overdue
+                {t('tasks.dashboard.kpi.overdue')}
               </p>
               <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
                 {overdueTasks.length}
               </p>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                {blockedTasks.length} blocked items
+                {blockedTasks.length} {t('tasks.dashboard.kpi.blocked')}
               </p>
             </div>
             <div className="p-2 rounded-full bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-200">
@@ -136,13 +170,13 @@ export const ManagerDashboard = ({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                Needs review
+                {t('tasks.dashboard.kpi.needsReview')}
               </p>
               <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
                 {reviewTasks.length}
               </p>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                {availableAssignees.length} with free capacity
+                {availableAssignees.length} {t('tasks.dashboard.kpi.available')}
               </p>
             </div>
             <div className="p-2 rounded-full bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-200">
@@ -155,13 +189,13 @@ export const ManagerDashboard = ({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                Overloaded
+                {t('tasks.dashboard.kpi.overloaded')}
               </p>
               <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
                 {overloadedAssignees.length}
               </p>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                {assigneeSummary.length} total assignees
+                {assigneeSummary.length} {t('tasks.dashboard.kpi.assignees')}
               </p>
             </div>
             <div className="p-2 rounded-full bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-200">
@@ -176,31 +210,31 @@ export const ManagerDashboard = ({
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                Workload balance
+                {t('tasks.dashboard.workload.title')}
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Active tasks per assignee with capacity signals
+                {t('tasks.dashboard.workload.subtitle')}
               </p>
             </div>
             <Badge className="bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200">
-              {activeTasks.length} active
+              {activeTasks.length} {t('tasks.dashboard.workload.activeCount')}
             </Badge>
           </div>
 
           <div className="space-y-3">
             {assigneeSummary.length === 0 ? (
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Assign team members to see workload distribution.
+                {t('tasks.dashboard.workload.empty')}
               </p>
             ) : (
               assigneeSummary.slice(0, 8).map(item => {
                 const ratio = (item.count / maxAssigneeCount) * 100
                 const statusLabel =
                   item.count >= overloadedThreshold
-                    ? 'Overloaded'
+                    ? t('tasks.dashboard.workload.status.overloaded')
                     : item.count <= availableThreshold
-                      ? 'Available'
-                      : 'Balanced'
+                      ? t('tasks.dashboard.workload.status.available')
+                      : t('tasks.dashboard.workload.status.balanced')
                 const tone =
                   item.count >= overloadedThreshold
                     ? 'bg-red-500'
@@ -240,17 +274,17 @@ export const ManagerDashboard = ({
         <Card className="p-4 space-y-4">
           <div>
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              Smart filters
+              {t('tasks.dashboard.filters.title')}
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Jump to risk clusters and assignees fast
+              {t('tasks.dashboard.filters.subtitle')}
             </p>
           </div>
 
           <Select
-            label="Filter by assignee"
+            label={t('tasks.dashboard.filters.assignee')}
             options={[
-              { value: '', label: 'All assignees' },
+              { value: '', label: t('tasks.dashboard.filters.assigneeAll') },
               ...assigneeSummary.map(assignee => ({
                 value: assignee.name,
                 label: `${assignee.name} (${assignee.count})`,
@@ -281,22 +315,22 @@ export const ManagerDashboard = ({
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                Alerts &amp; blockers
+                {t('tasks.dashboard.alerts.title')}
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Delayed, blocked, or waiting on review
+                {t('tasks.dashboard.alerts.subtitle')}
               </p>
             </div>
             <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
               <ShieldAlert className="w-4 h-4" />
-              {alertTasks.length} alerts
+              {alertTasks.length} {t('tasks.dashboard.alerts.count')}
             </div>
           </div>
 
           <div className="space-y-3">
             {alertTasks.length === 0 ? (
               <div className="rounded-lg border border-dashed border-gray-200 p-4 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                No delays or blockers detected. Keep an eye on upcoming due dates.
+                {t('tasks.dashboard.alerts.empty')}
               </div>
             ) : (
               alertTasks.slice(0, 6).map(({ task, label, tone }) => (
@@ -319,8 +353,14 @@ export const ManagerDashboard = ({
                     </Badge>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                    <span>Owner: {getTaskAssignee(task)}</span>
-                    {task.due_date && <span>Due: {formatDateOnly(task.due_date)}</span>}
+                    <span>
+                      {t('tasks.dashboard.alerts.owner')}: {getTaskAssignee(task)}
+                    </span>
+                    {task.due_date && (
+                      <span>
+                        {t('tasks.dashboard.alerts.due')}: {formatDateOnly(task.due_date)}
+                      </span>
+                    )}
                     <Badge className={getUrgencyColor(task.urgency)}>{task.urgency}</Badge>
                     <Badge className={getStatusColor(task.status)}>{task.status}</Badge>
                   </div>
@@ -333,10 +373,10 @@ export const ManagerDashboard = ({
         <Card className="p-4 space-y-4">
           <div>
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              Actionable insights
+              {t('tasks.dashboard.insights.title')}
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              What to tackle next
+              {t('tasks.dashboard.insights.subtitle')}
             </p>
           </div>
 
@@ -344,34 +384,32 @@ export const ManagerDashboard = ({
             <div className="flex items-start gap-3 rounded-lg bg-gray-50 p-3 text-sm text-gray-700 dark:bg-gray-800/60 dark:text-gray-200">
               <Sparkles className="w-4 h-4 text-purple-500 mt-0.5" />
               <div>
-                <p className="font-semibold">Tasks at risk of delay</p>
+                <p className="font-semibold">{t('tasks.dashboard.insights.riskTitle')}</p>
                 <p>
-                  {atRiskTasks.length} tasks due soon with high urgency. Prioritize
-                  reminders.
+                  {atRiskTasks.length} {t('tasks.dashboard.insights.riskBody')}
                 </p>
               </div>
             </div>
             <div className="flex items-start gap-3 rounded-lg bg-gray-50 p-3 text-sm text-gray-700 dark:bg-gray-800/60 dark:text-gray-200">
               <Flame className="w-4 h-4 text-orange-500 mt-0.5" />
               <div>
-                <p className="font-semibold">Top overloaded employees</p>
+                <p className="font-semibold">{t('tasks.dashboard.insights.overloadedTitle')}</p>
                 <p>
                   {overloadedAssignees.length === 0
-                    ? 'No one is overloaded today.'
-                    : overloadedAssignees
+                    ? t('tasks.dashboard.insights.overloadedEmpty')
+                    : `${t('tasks.dashboard.insights.overloadedList')}: ${overloadedAssignees
                         .slice(0, 3)
                         .map(item => item.name)
-                        .join(', ')}
+                        .join(', ')}`}
                 </p>
               </div>
             </div>
             <div className="flex items-start gap-3 rounded-lg bg-gray-50 p-3 text-sm text-gray-700 dark:bg-gray-800/60 dark:text-gray-200">
               <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5" />
               <div>
-                <p className="font-semibold">Review queue</p>
+                <p className="font-semibold">{t('tasks.dashboard.insights.reviewTitle')}</p>
                 <p>
-                  {reviewTasks.length} tasks waiting on review or approval. Assign owners
-                  and add feedback dates.
+                  {reviewTasks.length} {t('tasks.dashboard.insights.reviewBody')}
                 </p>
               </div>
             </div>
