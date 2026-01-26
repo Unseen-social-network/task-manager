@@ -7,6 +7,12 @@ from rest_framework.views import APIView
 
 from telegram_bot.bot.context import BotContext
 from telegram_bot.bot.router import dispatch
+from telegram_bot.serializers import (
+    TelegramHelpResponseSerializer,
+    TelegramQuickTaskSerializer,
+    TelegramTaskListSerializer,
+    TelegramWebhookSerializer,
+)
 from telegram_bot.services.tasks import (
     create_quick_task,
     list_tasks_for_chat,
@@ -15,6 +21,7 @@ from telegram_bot.utils.urls import is_test_env
 
 
 class TelegramWebhookView(APIView):
+    serializer_class = TelegramWebhookSerializer
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -82,6 +89,7 @@ class TelegramHelpView(APIView):
     """
 
     permission_classes = [AllowAny]
+    serializer_class = TelegramHelpResponseSerializer
 
     def get(self, request):
         base_url = settings.FRONTEND_BASE_URL.rstrip('/')
@@ -110,6 +118,7 @@ class TelegramQuickTaskCreateView(APIView):
     """
 
     permission_classes = [AllowAny]
+    serializer_class = TelegramQuickTaskSerializer
 
     def post(self, request):
         chat_id = request.data.get('chat_id')
@@ -150,6 +159,7 @@ class TelegramTaskListView(APIView):
     """
 
     permission_classes = [AllowAny]
+    serializer_class = TelegramTaskListSerializer
 
     def get(self, request):
         chat_id = request.query_params.get('chat_id')

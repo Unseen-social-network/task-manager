@@ -127,7 +127,11 @@ class TaskViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Return tasks owned by or tagged for the current user."""
+        if getattr(self, 'swagger_fake_view', False):
+            return Task.objects.none()
         user = self.request.user
+        if not user.is_authenticated:
+            return Task.objects.none()
         base_queryset = Task.objects.filter(owner=user)
         if self.request.method in ('GET', 'HEAD', 'OPTIONS'):
             base_queryset = base_queryset | Task.objects.filter(tagged_user=user)
@@ -390,6 +394,7 @@ class ProjectShareView(APIView):
 class ProjectShareCopyView(APIView):
     """Create a personal copy of a shared project."""
 
+    serializer_class = ProjectSerializer
     permission_classes = [IsAuthenticated]
 
     def post(self, request, token):
@@ -413,6 +418,7 @@ class ProjectShareCopyView(APIView):
 class ProjectShareAcceptView(APIView):
     """Accept a share link and add the project to the recipient's list."""
 
+    serializer_class = ProjectSerializer
     permission_classes = [IsAuthenticated]
 
     def post(self, request, token):
@@ -435,6 +441,7 @@ class ProjectShareAcceptView(APIView):
 class SiteSettingView(APIView):
     """Public endpoint for site-wide settings used by the frontend."""
 
+    serializer_class = SiteSettingSerializer
     permission_classes = [AllowAny]
 
     def get(self, request):
