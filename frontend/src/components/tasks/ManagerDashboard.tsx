@@ -73,9 +73,10 @@ export const ManagerDashboard = ({
     }
     return `${count} ${count === 1 ? 'employee' : 'employees'}`
   }
+  const inactiveStatuses = useMemo(() => new Set(['done', 'canceled']), [])
   const activeTasks = useMemo(
-    () => tasks.filter(task => !['done', 'canceled'].includes(task.status)),
-    [tasks]
+    () => tasks.filter(task => !inactiveStatuses.has(task.status)),
+    [inactiveStatuses, tasks]
   )
 
   const overdueTasks = useMemo(() => activeTasks.filter(isTaskOverdue), [activeTasks])
