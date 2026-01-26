@@ -166,6 +166,19 @@ export const ContactsPage = () => {
     updateContactShareParam(null)
   }
 
+  const handleRemoveShare = async () => {
+    if (!selectedContact) return
+    try {
+      await contactsService.revokeContactAccess(selectedContact.id)
+      toast.success(t('contacts.shareRemoveSuccess'))
+      setIsDetailsModalOpen(false)
+      updateContactShareParam(null)
+      loadContacts()
+    } catch {
+      toast.error(t('contacts.shareRemoveFail'))
+    }
+  }
+
   const handleSearch = (value: string) => {
     setFilters(prev => ({ ...prev, search: value || undefined }))
   }
@@ -247,6 +260,7 @@ export const ContactsPage = () => {
           onClose={handleContactClose}
           onUpdate={handleContactUpdate}
           isReadOnly={Boolean(shareToken) || selectedContact.is_owner === false}
+          onRemoveShare={selectedContact.is_owner === false ? handleRemoveShare : undefined}
         />
       )}
     </Layout>
