@@ -248,6 +248,16 @@ export const SettingsPage = () => {
   }, [newPassword, t])
 
   const canConnectTelegram = Boolean(profile?.telegram_link_url)
+  const telegramHelpLink = useMemo(() => {
+    if (!profile?.telegram_link_url) return null
+    try {
+      const url = new URL(profile.telegram_link_url)
+      url.searchParams.set('start', 'help')
+      return url.toString()
+    } catch {
+      return null
+    }
+  }, [profile?.telegram_link_url])
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
@@ -376,6 +386,18 @@ export const SettingsPage = () => {
                     }}
                   >
                     {t('settings.profile.telegramDisconnect')}
+                  </Button>
+                )}
+                {profile?.telegram_connected && telegramHelpLink && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      window.open(telegramHelpLink, '_blank', 'noopener,noreferrer')
+                    }}
+                  >
+                    {t('settings.profile.telegramFindBot')}
                   </Button>
                 )}
                 <span className="text-xs text-gray-500 dark:text-gray-400">
