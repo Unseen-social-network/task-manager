@@ -25,6 +25,8 @@ from .views import (
     ProjectShareView,
     ProjectViewSet,
     SiteSettingView,
+    TaskExportView,
+    TaskStatisticsView,
     TaskViewSet,
 )
 
@@ -47,6 +49,8 @@ urlpatterns = [
         name='profile-share-contact',
     ),
     path('profile/password/', PasswordChangeView.as_view(), name='password-change'),
+    path('tasks/statistics/', TaskStatisticsView.as_view(), name='task-statistics'),
+    path('tasks/export/', TaskExportView.as_view(), name='task-export'),
     path(
         'share/contacts/<uuid:token>/', ContactShareView.as_view(), name='contact-share'
     ),

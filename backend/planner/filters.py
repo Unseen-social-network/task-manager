@@ -22,6 +22,8 @@ class TaskFilter(filters.FilterSet):
     contact = filters.NumberFilter(field_name='contact__id')
     project = filters.NumberFilter(field_name='project__id')
     tagged_user = filters.CharFilter(field_name='tagged_user__username')
+    tagged_user_id = filters.NumberFilter(field_name='tagged_user__id')
+    tagged_users = filters.NumberFilter(field_name='tagged_users__id')
 
     class Meta:
         model = Task
@@ -35,6 +37,8 @@ class TaskFilter(filters.FilterSet):
             'contact',
             'project',
             'tagged_user',
+            'tagged_user_id',
+            'tagged_users',
         ]
 
 

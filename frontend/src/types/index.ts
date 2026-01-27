@@ -215,10 +215,48 @@ export interface TaskFilters {
   created_at_to?: string
   contact?: number
   project?: number
+  tagged_user?: string
+  tagged_user_id?: number
+  tagged_users?: number
   search?: string
   search_in_description?: boolean
   ordering?: string
   page?: number
+}
+
+export interface TaskStatsFilters {
+  status?: TaskStatus
+  urgency?: TaskUrgency
+  due_date_from?: string
+  due_date_to?: string
+  project?: number
+  tagged_user?: string
+}
+
+export interface TaskStatsMetrics {
+  total: number
+  completed: number
+  completion_rate: number
+  overdue: number
+  avg_completion_seconds: number
+}
+
+export interface TaskStatsSeries {
+  by_status: Array<{ status: TaskStatus; count: number }>
+  by_urgency: Array<{ urgency: TaskUrgency; count: number }>
+  by_assignee: Array<{
+    assignee_id: number | null
+    assignee_name: string
+    total: number
+    done: number
+    overdue: number
+  }>
+  due_date_trend: Array<{ date: string; count: number }>
+}
+
+export interface TaskStatsResponse {
+  metrics: TaskStatsMetrics
+  series: TaskStatsSeries
 }
 
 export interface ContactFilters {
