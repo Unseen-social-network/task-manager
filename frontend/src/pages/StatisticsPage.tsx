@@ -9,6 +9,7 @@ import { useLocale } from '@/contexts/localeContext'
 import { projectsService } from '@/services/projects.service'
 import { statsService } from '@/services/stats.service'
 import type { Project, TaskStatsFilters, TaskStatsResponse } from '@/types'
+import type { TaskUrgency, TaskStatus } from '@/types'
 
 const formatDuration = (seconds: number) => {
   if (!seconds) return '0h'
