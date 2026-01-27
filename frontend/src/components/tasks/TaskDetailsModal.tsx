@@ -65,6 +65,7 @@ export const TaskDetailsModal = ({
   const [replyTo, setReplyTo] = useState<TaskComment | null>(null)
   const [isFlaggingQuestion, setIsFlaggingQuestion] = useState(false)
   const [isMarkingReady, setIsMarkingReady] = useState(false)
+  const [isCompletingTask, setIsCompletingTask] = useState(false)
   const [isClearingQuestion, setIsClearingQuestion] = useState(false)
   const [isClearingReady, setIsClearingReady] = useState(false)
   const { t } = useLocale()
@@ -432,6 +433,22 @@ export const TaskDetailsModal = ({
     }
   }
 
+  const handleCompleteTask = async () => {
+    if (displayStatus === 'done') return
+    setIsCompletingTask(true)
+    try {
+      await tasksService.updateTask(task.id, { status: 'done', completion_requested: false })
+      setDisplayStatus('done')
+      toast.success(t('tasks.completeSuccess'))
+      onRefresh?.()
+      onUpdate()
+    } catch {
+      toast.error(t('tasks.completeFail'))
+    } finally {
+      setIsCompletingTask(false)
+    }
+  }
+
   if (isEditing) {
     return (
       <Modal isOpen={isOpen} onClose={handleClose} title={t('tasks.editTitle')}>
@@ -474,14 +491,24 @@ export const TaskDetailsModal = ({
               >
                 {t('tasks.actions.question')}
               </Button>
-              <Button
-                className="w-full sm:w-auto"
-                onClick={handleReadyFlag}
-                isLoading={isMarkingReady}
-                disabled={completionRequested}
-              >
-                {t('tasks.actions.ready')}
-              </Button>
+              {completionRequested ? (
+                <Button
+                  className="w-full sm:w-auto"
+                  variant="secondary"
+                  onClick={handleClearReady}
+                  isLoading={isClearingReady}
+                >
+                  {t('tasks.actions.clearReady')}
+                </Button>
+              ) : (
+                <Button
+                  className="w-full sm:w-auto"
+                  onClick={handleReadyFlag}
+                  isLoading={isMarkingReady}
+                >
+                  {t('tasks.actions.ready')}
+                </Button>
+              )}
             </>
           )}
           {isOwnerViewer && (
@@ -497,14 +524,24 @@ export const TaskDetailsModal = ({
                 </Button>
               )}
               {completionRequested && (
-                <Button
-                  className="w-full sm:w-auto"
-                  variant="secondary"
-                  onClick={handleClearReady}
-                  isLoading={isClearingReady}
-                >
-                  {t('tasks.actions.clearReady')}
-                </Button>
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                  <Button
+                    className="w-full sm:w-auto"
+                    variant="secondary"
+                    onClick={handleClearReady}
+                    isLoading={isClearingReady}
+                  >
+                    {t('tasks.actions.clearReady')}
+                  </Button>
+                  <Button
+                    className="w-full sm:w-auto"
+                    onClick={handleCompleteTask}
+                    isLoading={isCompletingTask}
+                    disabled={displayStatus === 'done'}
+                  >
+                    {t('tasks.actions.complete')}
+                  </Button>
+                </div>
               )}
             </>
           )}

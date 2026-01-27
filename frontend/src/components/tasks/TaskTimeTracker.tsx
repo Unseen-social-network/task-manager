@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Pause, Play, CheckCircle2, Timer } from 'lucide-react'
+import { Pause, Play, Timer } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { useLocale } from '@/contexts/localeContext'
 import { formatDuration } from '@/utils/helpers'
@@ -73,13 +73,6 @@ export const TaskTimeTracker = ({
     setIsRunning(false)
   }
 
-  const handleFinish = () => {
-    if (elapsedSeconds <= 0 || isLocked) return
-    setIsRunning(false)
-    setIsCompleted(true)
-    onUpdate({ tracking_completed: true })
-  }
-
   return (
     <div className="border border-gray-200 rounded-xl p-4 space-y-3 dark:border-gray-800">
       <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
@@ -111,14 +104,6 @@ export const TaskTimeTracker = ({
                 {t('tasks.tracker.start')}
               </>
             )}
-          </Button>
-          <Button
-            size="sm"
-            onClick={handleFinish}
-            disabled={isLocked || isCompleted || elapsedSeconds === 0}
-          >
-            <CheckCircle2 className="w-4 h-4 mr-2" />
-            {t('tasks.tracker.finish')}
           </Button>
         </div>
       </div>

@@ -28,30 +28,30 @@ export const formatDateOnly = (dateString: string | null): string => {
 
 export const getUrgencyColor = (urgency: TaskUrgency): string => {
   const colors = {
-    low: 'bg-gray-100 text-gray-800',
-    medium: 'bg-blue-100 text-blue-800',
-    high: 'bg-orange-100 text-orange-800',
-    critical: 'bg-red-100 text-red-800',
+    low: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100',
+    medium: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-100',
+    high: 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-100',
+    critical: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-100',
   }
   return colors[urgency] || colors.medium
 }
 
 export const getUrgencyBorder = (urgency: TaskUrgency): string => {
   const colors = {
-    low: 'border-l-gray-200',
-    medium: 'border-l-blue-400',
-    high: 'border-l-orange-400',
-    critical: 'border-l-red-500',
+    low: 'border-l-gray-200 dark:border-l-gray-700',
+    medium: 'border-l-blue-400 dark:border-l-blue-500',
+    high: 'border-l-orange-400 dark:border-l-orange-500',
+    critical: 'border-l-red-500 dark:border-l-red-600',
   }
   return colors[urgency] || colors.medium
 }
 
 export const getStatusColor = (status: TaskStatus): string => {
   const colors = {
-    todo: 'bg-gray-100 text-gray-800',
-    in_progress: 'bg-blue-100 text-blue-800',
-    done: 'bg-green-100 text-green-800',
-    canceled: 'bg-red-100 text-red-800',
+    todo: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100',
+    in_progress: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-100',
+    done: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-100',
+    canceled: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-100',
   }
   return colors[status] || colors.todo
 }
