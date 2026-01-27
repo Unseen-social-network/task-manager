@@ -139,7 +139,7 @@ export const StatisticsPage = () => {
             <Select
               label={t('stats.filters.status')}
               value={filters.status || ''}
-              onChange={event => handleFilterChange('status', event.target.value || undefined)}
+              onChange={event => handleFilterChange('status', event.target.value as TaskStatus || undefined)}
               options={[
                 { value: '', label: t('tasks.filter.statusAll') },
                 { value: 'todo', label: t('status.todo') },
@@ -151,7 +151,7 @@ export const StatisticsPage = () => {
             <Select
               label={t('stats.filters.urgency')}
               value={filters.urgency || ''}
-              onChange={event => handleFilterChange('urgency', event.target.value || undefined)}
+              onChange={event => handleFilterChange('urgency', event.target.value as TaskUrgency || undefined)}
               options={[
                 { value: '', label: t('tasks.filter.urgencyAll') },
                 { value: 'low', label: t('tasks.filter.urgency.low') },
