@@ -43,7 +43,7 @@ export const StatisticsPage = () => {
 
   useEffect(() => {
     loadStats()
-  }, [loadStats])
+  }, [loadStats, assigneeSearch])
 
   useEffect(() => {
     let isActive = true

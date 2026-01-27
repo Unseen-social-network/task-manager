@@ -372,8 +372,8 @@ class TaskStatisticsView(APIView):
             .order_by('urgency')
         ]
         by_assignee_map = {}
-        for task in (
-            filtered.select_related('tagged_user').prefetch_related('tagged_users')
+        for task in filtered.select_related('tagged_user').prefetch_related(
+            'tagged_users'
         ):
             assignees = list(task.tagged_users.all())
             if task.tagged_user and task.tagged_user not in assignees:
