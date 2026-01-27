@@ -17,6 +17,17 @@ class StartCommand(BaseCommand):
                 payload = parts[1]
 
         if payload:
+            if payload == 'help':
+                text = (
+                    '👋 Вы уже подключены к боту.\n\n'
+                    'Доступные команды:\n'
+                    '/help — справка\n'
+                    '/new — создать задачу\n'
+                    '/tasks — список задач'
+                )
+                await send_message(ctx.chat_id, text)
+                return
+
             try:
                 link_token = uuid.UUID(payload)
             except ValueError:
