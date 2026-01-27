@@ -2,10 +2,10 @@
 Views for Planner application.
 """
 
-from django.conf import settings
 from datetime import timedelta
 from io import BytesIO
 
+from django.conf import settings
 from django.core.mail import send_mail
 from django.db import transaction
 from django.db.models import Count, Q
@@ -355,7 +355,9 @@ class TaskStatisticsView(APIView):
             for task in completed_tasks
             if task.updated_at
         ]
-        avg_completion_seconds = round(sum(durations) / len(durations), 2) if durations else 0
+        avg_completion_seconds = (
+            round(sum(durations) / len(durations), 2) if durations else 0
+        )
 
         by_status = [
             {'status': status_value, 'count': count}
@@ -436,16 +438,21 @@ class TaskExportView(APIView):
         overdue = [
             task
             for task in filtered
-            if task.due_date and task.due_date < now
+            if task.due_date
+            and task.due_date < now
             and task.status in [Task.Status.TODO, Task.Status.IN_PROGRESS]
         ]
-        completion_rate = round(len(completed) / total_count * 100, 1) if total_count else 0.0
+        completion_rate = (
+            round(len(completed) / total_count * 100, 1) if total_count else 0.0
+        )
         durations = [
             (task.updated_at - task.created_at).total_seconds()
             for task in completed
             if task.updated_at
         ]
-        avg_completion_seconds = round(sum(durations) / len(durations), 2) if durations else 0
+        avg_completion_seconds = (
+            round(sum(durations) / len(durations), 2) if durations else 0
+        )
 
         workbook = Workbook()
         summary_sheet = workbook.active
@@ -500,7 +507,7 @@ class TaskExportView(APIView):
                 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             ),
         )
-        response['Content-Disposition'] = f'attachment; filename=\"{filename}\"'
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
         return response
 
 
