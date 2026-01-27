@@ -43,7 +43,7 @@ export const StatisticsPage = () => {
 
   useEffect(() => {
     loadStats()
-  }, [loadStats, assigneeSearch])
+  }, [loadStats])
 
   useEffect(() => {
     let isActive = true
@@ -127,6 +127,7 @@ export const StatisticsPage = () => {
     } else {
       setAssigneeSearch(filters.tagged_user)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters.tagged_user, taggableContacts])
 
   const handleAssigneeSelect = (username: string, label: string) => {
