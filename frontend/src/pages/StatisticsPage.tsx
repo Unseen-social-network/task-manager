@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type FocusEvent } from 'react'
 import toast from 'react-hot-toast'
 import { Layout } from '@/components/layout/Layout'
 import { Card } from '@/components/ui/Card'
@@ -6,9 +6,10 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Button } from '@/components/ui/Button'
 import { useLocale } from '@/contexts/localeContext'
+import { contactsService } from '@/services/contacts.service'
 import { projectsService } from '@/services/projects.service'
 import { statsService } from '@/services/stats.service'
-import type { Project, TaskStatsFilters, TaskStatsResponse } from '@/types'
+import type { Contact, Project, TaskStatsFilters, TaskStatsResponse } from '@/types'
 import type { TaskUrgency, TaskStatus } from '@/types'
 
 const formatDuration = (seconds: number) => {
@@ -21,9 +22,12 @@ const formatDuration = (seconds: number) => {
 export const StatisticsPage = () => {
   const { t } = useLocale()
   const [filters, setFilters] = useState<TaskStatsFilters>({})
+  const [contacts, setContacts] = useState<Contact[]>([])
   const [projects, setProjects] = useState<Project[]>([])
   const [stats, setStats] = useState<TaskStatsResponse | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [assigneeSearch, setAssigneeSearch] = useState('')
+  const [isAssigneeMenuOpen, setIsAssigneeMenuOpen] = useState(false)
 
   const loadStats = useCallback(async () => {
     setIsLoading(true)
@@ -59,6 +63,24 @@ export const StatisticsPage = () => {
     }
   }, [t])
 
+  useEffect(() => {
+    let isActive = true
+    const loadContacts = async () => {
+      try {
+        const response = await contactsService.getContacts()
+        if (!isActive) return
+        setContacts(response.results)
+      } catch {
+        if (!isActive) return
+        toast.error(t('contacts.loadFail'))
+      }
+    }
+    loadContacts()
+    return () => {
+      isActive = false
+    }
+  }, [t])
+
   const handleFilterChange = <Key extends keyof TaskStatsFilters>(
     key: Key,
     value: TaskStatsFilters[Key]
@@ -67,6 +89,74 @@ export const StatisticsPage = () => {
       ...prev,
       [key]: value || undefined,
     }))
+  }
+
+  const formatContactLabel = (contact: Contact) => {
+    if (!contact.username) return contact.name
+    return `${contact.name} (@${contact.username})`
+  }
+
+  const taggableContacts = useMemo(
+    () => contacts.filter(contact => contact.username),
+    [contacts]
+  )
+
+  const filteredTaggableContacts = useMemo(() => {
+    const normalizedQuery = assigneeSearch.trim().toLowerCase()
+    if (!normalizedQuery) return taggableContacts
+    return taggableContacts.filter(contact => {
+      const nameMatch = contact.name.toLowerCase().includes(normalizedQuery)
+      const usernameMatch = contact.username?.toLowerCase().includes(normalizedQuery)
+      const labelMatch = formatContactLabel(contact).toLowerCase().includes(normalizedQuery)
+      return nameMatch || usernameMatch || labelMatch
+    })
+  }, [assigneeSearch, taggableContacts])
+
+  useEffect(() => {
+    if (!filters.tagged_user) {
+      if (assigneeSearch) {
+        setAssigneeSearch('')
+      }
+      return
+    }
+    const matchedContact = taggableContacts.find(
+      contact => contact.username === filters.tagged_user
+    )
+    if (matchedContact) {
+      setAssigneeSearch(formatContactLabel(matchedContact))
+    } else {
+      setAssigneeSearch(filters.tagged_user)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.tagged_user, taggableContacts])
+
+  const handleAssigneeSelect = (username: string, label: string) => {
+    handleFilterChange('tagged_user', username)
+    setAssigneeSearch(label)
+    setIsAssigneeMenuOpen(false)
+  }
+
+  const handleAssigneeBlur = (event: FocusEvent<HTMLInputElement>) => {
+    const enteredValue = event.target.value.trim()
+    if (!enteredValue) {
+      handleFilterChange('tagged_user', undefined)
+      setAssigneeSearch('')
+      setTimeout(() => setIsAssigneeMenuOpen(false), 100)
+      return
+    }
+    const matchedContact = taggableContacts.find(contact => {
+      const nameMatch = contact.name.toLowerCase() === enteredValue.toLowerCase()
+      const usernameMatch = contact.username?.toLowerCase() === enteredValue.toLowerCase()
+      const labelMatch =
+        formatContactLabel(contact).toLowerCase() === enteredValue.toLowerCase()
+      return nameMatch || usernameMatch || labelMatch
+    })
+    const username = matchedContact?.username ?? enteredValue
+    handleFilterChange('tagged_user', username)
+    if (matchedContact) {
+      setAssigneeSearch(formatContactLabel(matchedContact))
+    }
+    setTimeout(() => setIsAssigneeMenuOpen(false), 100)
   }
 
   const metrics = stats?.metrics
@@ -113,7 +203,7 @@ export const StatisticsPage = () => {
               {t('stats.filters.title')}
             </h3>
           </div>
-          <div className="mt-4 grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4">
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-4">
             <Select
               label={t('stats.filters.project')}
               value={filters.project ? String(filters.project) : ''}
@@ -131,12 +221,51 @@ export const StatisticsPage = () => {
                 })),
               ]}
             />
-            <Input
-              label={t('stats.filters.assignee')}
-              placeholder="username"
-              value={filters.tagged_user || ''}
-              onChange={event => handleFilterChange('tagged_user', event.target.value)}
-            />
+            <div className="relative">
+              <Input
+                label={t('stats.filters.assignee')}
+                placeholder={t('tasks.form.taggedPlaceholder')}
+                autoComplete="off"
+                value={assigneeSearch}
+                onFocus={() => setIsAssigneeMenuOpen(true)}
+                onChange={event => {
+                  const value = event.target.value
+                  setAssigneeSearch(value)
+                  setIsAssigneeMenuOpen(true)
+                  if (!value.trim()) {
+                    handleFilterChange('tagged_user', undefined)
+                  }
+                }}
+                onBlur={handleAssigneeBlur}
+              />
+              {isAssigneeMenuOpen && filteredTaggableContacts.length > 0 && (
+                <div className="absolute z-20 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900">
+                  <ul className="max-h-48 overflow-y-auto py-1 text-sm text-gray-700 dark:text-gray-200">
+                    {filteredTaggableContacts.map(contact => {
+                      if (!contact.username) return null
+                      const label = formatContactLabel(contact)
+                      return (
+                        <li key={contact.id}>
+                          <button
+                            type="button"
+                            className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-800"
+                            onMouseDown={event => {
+                              event.preventDefault()
+                              handleAssigneeSelect(contact.username, label)
+                            }}
+                          >
+                            <span className="font-medium">{contact.name}</span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                              @{contact.username}
+                            </span>
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </div>
+              )}
+            </div>
             <Select
               label={t('stats.filters.status')}
               value={filters.status || ''}
@@ -161,7 +290,7 @@ export const StatisticsPage = () => {
                 { value: 'critical', label: t('tasks.filter.urgency.critical') },
               ]}
             />
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2 xl:col-span-2">
               <Input
                 type="date"
                 label={t('stats.filters.deadlineFrom')}
@@ -272,7 +401,9 @@ export const StatisticsPage = () => {
                   className="flex flex-wrap items-center justify-between gap-2 text-sm text-gray-600 dark:text-gray-300"
                 >
                   <div className="font-medium text-gray-800 dark:text-gray-200">
-                    {item.assignee_name}
+                    {item.assignee_id
+                      ? item.assignee_name
+                      : t('tasks.dashboard.unassigned')}
                   </div>
                   <div className="flex gap-3">
                     <span>Total: {item.total}</span>

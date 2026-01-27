@@ -371,29 +371,49 @@ class TaskStatisticsView(APIView):
             .annotate(count=Count('id'))
             .order_by('urgency')
         ]
-        by_assignee = []
-        for row in filtered.values('tagged_user__id', 'tagged_user__username').annotate(
-            total=Count('id'),
-            done=Count('id', filter=Q(status=Task.Status.DONE)),
-            overdue=Count(
-                'id',
-                filter=Q(
-                    due_date__lt=now,
-                    status__in=[Task.Status.TODO, Task.Status.IN_PROGRESS],
-                ),
-            ),
+        by_assignee_map = {}
+        for task in filtered.select_related('tagged_user').prefetch_related(
+            'tagged_users'
         ):
-            assignee_id = row['tagged_user__id']
-            assignee_name = row['tagged_user__username'] or 'Unassigned'
-            by_assignee.append(
-                {
-                    'assignee_id': assignee_id,
-                    'assignee_name': assignee_name,
-                    'total': row['total'],
-                    'done': row['done'],
-                    'overdue': row['overdue'],
-                }
+            assignees = list(task.tagged_users.all())
+            if task.tagged_user and task.tagged_user not in assignees:
+                assignees.append(task.tagged_user)
+            if not assignees:
+                assignees = [None]
+
+            is_done = task.status == Task.Status.DONE
+            is_overdue = (
+                bool(task.due_date)
+                and task.due_date < now
+                and task.status in [Task.Status.TODO, Task.Status.IN_PROGRESS]
             )
+
+            for assignee in assignees:
+                assignee_id = assignee.id if assignee else None
+                assignee_name = assignee.username if assignee else 'Unassigned'
+                entry = by_assignee_map.setdefault(
+                    assignee_id,
+                    {
+                        'assignee_id': assignee_id,
+                        'assignee_name': assignee_name,
+                        'total': 0,
+                        'done': 0,
+                        'overdue': 0,
+                    },
+                )
+                entry['total'] += 1
+                if is_done:
+                    entry['done'] += 1
+                if is_overdue:
+                    entry['overdue'] += 1
+
+        by_assignee = sorted(
+            by_assignee_map.values(),
+            key=lambda item: (
+                item['assignee_id'] is None,
+                (item['assignee_name'] or '').lower(),
+            ),
+        )
 
         trend = []
         for offset in range(6, -1, -1):
