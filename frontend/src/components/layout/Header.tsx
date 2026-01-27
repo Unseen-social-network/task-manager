@@ -46,6 +46,12 @@ export const Header = () => {
             >
               {t('nav.contacts')}
             </button>
+            <button
+              onClick={() => navigate('/statistics')}
+              className="text-gray-700 hover:text-primary-600 px-3 py-2 text-sm font-medium transition-colors dark:text-gray-200 dark:hover:text-primary-400"
+            >
+              {t('nav.statistics')}
+            </button>
           </nav>
 
           {/* User menu */}
@@ -104,6 +110,12 @@ export const Header = () => {
             className="whitespace-nowrap text-gray-700 hover:text-primary-600 px-3 py-2 text-sm font-medium transition-colors dark:text-gray-200 dark:hover:text-primary-400"
           >
             {t('nav.contacts')}
+          </button>
+          <button
+            onClick={() => navigate('/statistics')}
+            className="whitespace-nowrap text-gray-700 hover:text-primary-600 px-3 py-2 text-sm font-medium transition-colors dark:text-gray-200 dark:hover:text-primary-400"
+          >
+            {t('nav.statistics')}
           </button>
         </nav>
       </div>

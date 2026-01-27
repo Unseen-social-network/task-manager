@@ -2,13 +2,18 @@
 Views for Planner application.
 """
 
+from datetime import timedelta
+from io import BytesIO
+
 from django.conf import settings
 from django.core.mail import send_mail
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Count, Q
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
+from openpyxl import Workbook
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter
@@ -152,6 +157,22 @@ class ContactViewSet(viewsets.ModelViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+def get_task_base_queryset(request):
+    """Return task queryset for the current request user."""
+    if getattr(request, 'user', None) is None or not request.user.is_authenticated:
+        return Task.objects.none()
+    base_queryset = Task.objects.filter(owner=request.user)
+    if request.method in ('GET', 'HEAD', 'OPTIONS'):
+        base_queryset = base_queryset | Task.objects.filter(
+            Q(tagged_user=request.user) | Q(tagged_users=request.user)
+        )
+    return (
+        base_queryset.select_related('contact', 'project', 'tagged_user')
+        .prefetch_related('tagged_users')
+        .distinct()
+    )
+
+
 class TaskViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Task CRUD operations.
@@ -170,19 +191,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         """Return tasks owned by or tagged for the current user."""
         if getattr(self, 'swagger_fake_view', False):
             return Task.objects.none()
-        user = self.request.user
-        if not user.is_authenticated:
-            return Task.objects.none()
-        base_queryset = Task.objects.filter(owner=user)
-        if self.request.method in ('GET', 'HEAD', 'OPTIONS'):
-            base_queryset = base_queryset | Task.objects.filter(
-                Q(tagged_user=user) | Q(tagged_users=user)
-            )
-        return (
-            base_queryset.select_related('contact', 'project', 'tagged_user')
-            .prefetch_related('tagged_users')
-            .distinct()
-        )
+        return get_task_base_queryset(self.request)
 
     def get_object(self):
         """
@@ -315,6 +324,191 @@ class TaskViewSet(viewsets.ModelViewSet):
             task.save(update_fields=['completion_requested', 'updated_at'])
         serializer = TaskSerializer(task, context={'request': request})
         return Response(serializer.data)
+
+
+class TaskStatisticsView(APIView):
+    """Return aggregated task statistics for dashboards."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        queryset = get_task_base_queryset(request)
+        filterset = TaskFilter(request.query_params, queryset=queryset)
+        if not filterset.is_valid():
+            return Response(filterset.errors, status=status.HTTP_400_BAD_REQUEST)
+        filtered = filterset.qs
+        now = timezone.now()
+
+        total_count = filtered.count()
+        completed_count = filtered.filter(status=Task.Status.DONE).count()
+        overdue_count = filtered.filter(
+            due_date__lt=now,
+            status__in=[Task.Status.TODO, Task.Status.IN_PROGRESS],
+        ).count()
+        completion_rate = (
+            round(completed_count / total_count * 100, 1) if total_count else 0.0
+        )
+
+        completed_tasks = list(filtered.filter(status=Task.Status.DONE))
+        durations = [
+            (task.updated_at - task.created_at).total_seconds()
+            for task in completed_tasks
+            if task.updated_at
+        ]
+        avg_completion_seconds = (
+            round(sum(durations) / len(durations), 2) if durations else 0
+        )
+
+        by_status = [
+            {'status': status_value, 'count': count}
+            for status_value, count in filtered.values_list('status')
+            .annotate(count=Count('id'))
+            .order_by('status')
+        ]
+        by_urgency = [
+            {'urgency': urgency_value, 'count': count}
+            for urgency_value, count in filtered.values_list('urgency')
+            .annotate(count=Count('id'))
+            .order_by('urgency')
+        ]
+        by_assignee = []
+        for row in filtered.values('tagged_user__id', 'tagged_user__username').annotate(
+            total=Count('id'),
+            done=Count('id', filter=Q(status=Task.Status.DONE)),
+            overdue=Count(
+                'id',
+                filter=Q(
+                    due_date__lt=now,
+                    status__in=[Task.Status.TODO, Task.Status.IN_PROGRESS],
+                ),
+            ),
+        ):
+            assignee_id = row['tagged_user__id']
+            assignee_name = row['tagged_user__username'] or 'Unassigned'
+            by_assignee.append(
+                {
+                    'assignee_id': assignee_id,
+                    'assignee_name': assignee_name,
+                    'total': row['total'],
+                    'done': row['done'],
+                    'overdue': row['overdue'],
+                }
+            )
+
+        trend = []
+        for offset in range(6, -1, -1):
+            day = (now - timedelta(days=offset)).date()
+            count = filtered.filter(due_date__date=day).count()
+            trend.append({'date': day.isoformat(), 'count': count})
+
+        return Response(
+            {
+                'metrics': {
+                    'total': total_count,
+                    'completed': completed_count,
+                    'completion_rate': completion_rate,
+                    'overdue': overdue_count,
+                    'avg_completion_seconds': avg_completion_seconds,
+                },
+                'series': {
+                    'by_status': by_status,
+                    'by_urgency': by_urgency,
+                    'by_assignee': by_assignee,
+                    'due_date_trend': trend,
+                },
+            }
+        )
+
+
+class TaskExportView(APIView):
+    """Export task statistics and details to Excel."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        queryset = get_task_base_queryset(request)
+        filterset = TaskFilter(request.query_params, queryset=queryset)
+        if not filterset.is_valid():
+            return Response(filterset.errors, status=status.HTTP_400_BAD_REQUEST)
+        filtered = list(filterset.qs)
+        now = timezone.now()
+
+        total_count = len(filtered)
+        completed = [task for task in filtered if task.status == Task.Status.DONE]
+        overdue = [
+            task
+            for task in filtered
+            if task.due_date
+            and task.due_date < now
+            and task.status in [Task.Status.TODO, Task.Status.IN_PROGRESS]
+        ]
+        completion_rate = (
+            round(len(completed) / total_count * 100, 1) if total_count else 0.0
+        )
+        durations = [
+            (task.updated_at - task.created_at).total_seconds()
+            for task in completed
+            if task.updated_at
+        ]
+        avg_completion_seconds = (
+            round(sum(durations) / len(durations), 2) if durations else 0
+        )
+
+        workbook = Workbook()
+        summary_sheet = workbook.active
+        summary_sheet.title = 'Summary'
+        summary_sheet.append(['Metric', 'Value'])
+        summary_sheet.append(['Total tasks', total_count])
+        summary_sheet.append(['Completed tasks', len(completed)])
+        summary_sheet.append(['Completion rate, %', completion_rate])
+        summary_sheet.append(['Overdue tasks', len(overdue)])
+        summary_sheet.append(
+            ['Avg completion time, hours', round(avg_completion_seconds / 3600, 2)]
+        )
+
+        tasks_sheet = workbook.create_sheet(title='Tasks')
+        tasks_sheet.append(
+            [
+                'ID',
+                'Title',
+                'Status',
+                'Urgency',
+                'Due date',
+                'Project',
+                'Assignee',
+                'Created at',
+                'Updated at',
+                'Time spent, hours',
+            ]
+        )
+        for task in filtered:
+            tasks_sheet.append(
+                [
+                    task.id,
+                    task.title,
+                    task.status,
+                    task.urgency,
+                    task.due_date.isoformat() if task.due_date else '',
+                    task.project.name if task.project else '',
+                    task.tagged_user.username if task.tagged_user else '',
+                    task.created_at.isoformat(),
+                    task.updated_at.isoformat(),
+                    round((task.time_spent_seconds or 0) / 3600, 2),
+                ]
+            )
+
+        buffer = BytesIO()
+        workbook.save(buffer)
+        buffer.seek(0)
+        filename = f'tasks-report-{now.date().isoformat()}.xlsx'
+        response = HttpResponse(
+            buffer.getvalue(),
+            content_type=(
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            ),
+        )
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
 
 
 class AttachmentViewSet(viewsets.ModelViewSet):

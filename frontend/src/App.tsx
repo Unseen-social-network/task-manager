@@ -7,6 +7,7 @@ import { ContactsPage } from '@/pages/ContactsPage'
 import { ProjectsPage } from '@/pages/ProjectsPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { InviteAcceptPage } from '@/pages/InviteAcceptPage'
+import { StatisticsPage } from '@/pages/StatisticsPage'
 import { PrivateRoute } from '@/components/PrivateRoute'
 import { siteSettingsService } from '@/services/siteSettings.service'
 
@@ -174,6 +175,14 @@ function App() {
           element={
             <PrivateRoute>
               <ProjectsPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/statistics"
+          element={
+            <PrivateRoute>
+              <StatisticsPage />
             </PrivateRoute>
           }
         />
