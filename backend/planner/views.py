@@ -156,7 +156,12 @@ class ContactViewSet(viewsets.ModelViewSet):
         ContactShareAccess.objects.filter(contact=contact, user=request.user).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @action(detail=True, methods=['post'], url_path='copy', permission_classes=[IsAuthenticated])
+    @action(
+        detail=True,
+        methods=['post'],
+        url_path='copy',
+        permission_classes=[IsAuthenticated],
+    )
     def copy_contact(self, request, pk=None):
         """Create a copy of a shared contact in the current user's contact book."""
         contact = get_object_or_404(

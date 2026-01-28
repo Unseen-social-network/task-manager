@@ -334,7 +334,9 @@ class TaskSerializer(serializers.ModelSerializer):
             if not instance.contact_freeform and contact_freeform_list:
                 instance.contact_freeform = contact_freeform_list[0]
         elif contact_freeform is not None:
-            instance.contact_freeform_list = [contact_freeform] if contact_freeform else []
+            instance.contact_freeform_list = (
+                [contact_freeform] if contact_freeform else []
+            )
         if contact_freeform_list is not None or contact_freeform is not None:
             instance.save(update_fields=['contact_freeform_list', 'contact_freeform'])
         return instance
