@@ -26,6 +26,7 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
   )
   const [isTagMenuOpen, setIsTagMenuOpen] = useState(false)
   const [tagSearch, setTagSearch] = useState('')
+  const [contactSearch, setContactSearch] = useState('')
   const [manualContacts, setManualContacts] = useState<string[]>(() => {
     if (initialData?.contact_freeform_list?.length) {
       return initialData.contact_freeform_list
@@ -119,6 +120,16 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
     () => contacts.filter(contact => contact.username),
     [contacts]
   )
+  const filteredContacts = useMemo(() => {
+    const normalizedQuery = contactSearch.trim().toLowerCase()
+    if (!normalizedQuery) return contacts
+    return contacts.filter(contact => {
+      const nameMatch = contact.name.toLowerCase().includes(normalizedQuery)
+      const usernameMatch = contact.username?.toLowerCase().includes(normalizedQuery)
+      const labelMatch = formatContactLabel(contact).toLowerCase().includes(normalizedQuery)
+      return nameMatch || usernameMatch || labelMatch
+    })
+  }, [contactSearch, contacts])
   const filteredTaggableContacts = useMemo(() => {
     const normalizedQuery = tagSearch.trim().toLowerCase()
     if (!normalizedQuery) return taggableContacts
@@ -368,28 +379,88 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
       </div>
 
       {useContact ? (
-        <Select
-          label={t('tasks.form.contacts')}
-          multiple
-          value={selectedContacts.map(String)}
-          onChange={event => {
-            const values = Array.from(event.target.selectedOptions)
-              .map(option => Number(option.value))
-              .filter(value => Number.isFinite(value))
-            setValue('contacts', values, {
-              shouldDirty: true,
-              shouldTouch: true,
-            })
-            setValue('contact', values[0] ?? null, {
-              shouldDirty: true,
-              shouldTouch: true,
-            })
-          }}
-          className="min-h-[140px]"
-          options={[
-            ...contacts.map(c => ({ value: String(c.id), label: formatContactLabel(c) })),
-          ]}
-        />
+        <div className="space-y-3">
+          <Input
+            label={t('tasks.form.contacts')}
+            placeholder={t('tasks.form.contactSearchPlaceholder')}
+            value={contactSearch}
+            onChange={event => setContactSearch(event.target.value)}
+          />
+          {selectedContacts.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {selectedContacts.map(contactId => {
+                const contact = contacts.find(item => item.id === contactId)
+                if (!contact) return null
+                return (
+                  <span
+                    key={contact.id}
+                    className="inline-flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                  >
+                    {formatContactLabel(contact)}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = selectedContacts.filter(id => id !== contact.id)
+                        setValue('contacts', next, { shouldDirty: true, shouldTouch: true })
+                        setValue('contact', next[0] ?? null, {
+                          shouldDirty: true,
+                          shouldTouch: true,
+                        })
+                      }}
+                      className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-200"
+                      aria-label={t('tasks.form.contactRemove')}
+                    >
+                      ×
+                    </button>
+                  </span>
+                )
+              })}
+            </div>
+          )}
+          <div className="max-h-44 space-y-2 overflow-y-auto rounded-lg border border-gray-200 p-3 text-sm text-gray-700 dark:border-gray-700 dark:text-gray-200">
+            {filteredContacts.length === 0 ? (
+              <p className="text-gray-500 dark:text-gray-400">
+                {t('tasks.form.contactSearchEmpty')}
+              </p>
+            ) : (
+              filteredContacts.map(contact => {
+                const isSelected = selectedContacts.includes(contact.id)
+                return (
+                  <label
+                    key={contact.id}
+                    className="flex items-center justify-between gap-3 rounded-lg px-2 py-1 hover:bg-gray-50 dark:hover:bg-gray-800"
+                  >
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900 dark:text-gray-100">
+                        {contact.name}
+                      </p>
+                      {contact.username && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          @{contact.username}
+                        </p>
+                      )}
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={event => {
+                        const next = event.target.checked
+                          ? [...selectedContacts, contact.id]
+                          : selectedContacts.filter(id => id !== contact.id)
+                        setValue('contacts', next, { shouldDirty: true, shouldTouch: true })
+                        setValue('contact', next[0] ?? null, {
+                          shouldDirty: true,
+                          shouldTouch: true,
+                        })
+                      }}
+                      className="text-primary-600 focus:ring-primary-500"
+                    />
+                  </label>
+                )
+              })
+            )}
+          </div>
+        </div>
       ) : (
         <div className="space-y-3">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
