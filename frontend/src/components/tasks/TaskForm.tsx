@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FocusEvent } from 'react'
 import { useForm } from 'react-hook-form'
 import { format, isValid, parseISO } from 'date-fns'
+import toast from 'react-hot-toast'
 import type { CreateTaskInput, Contact, Project } from '@/types'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
@@ -25,6 +26,17 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
   )
   const [isTagMenuOpen, setIsTagMenuOpen] = useState(false)
   const [tagSearch, setTagSearch] = useState('')
+  const [manualContacts, setManualContacts] = useState<string[]>(() => {
+    if (initialData?.contact_freeform_list?.length) {
+      return initialData.contact_freeform_list
+    }
+    if (initialData?.contact_freeform) {
+      return [initialData.contact_freeform]
+    }
+    return []
+  })
+  const [manualContactInput, setManualContactInput] = useState('')
+  const [saveManualContacts, setSaveManualContacts] = useState(false)
   const { t, locale } = useLocale()
   const shouldShowProject = projects.length > 0
 
@@ -60,11 +72,6 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
           contacts:
             initialData.contacts ??
             (typeof initialData.contact === 'number' ? [initialData.contact] : []),
-          contact_freeform:
-            initialData.contact_freeform ??
-            (initialData.contact_freeform_list?.length
-              ? initialData.contact_freeform_list.join('\n')
-              : ''),
           tagged_users:
             initialData.tagged_users ??
             (initialData.tagged_user ? [initialData.tagged_user] : []),
@@ -163,23 +170,43 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
     setTimeout(() => setIsTagMenuOpen(false), 100)
   }
 
-  const handleFormSubmit = (data: CreateTaskInput) => {
-    const trimmed = data.contact_freeform?.trim() ?? ''
+  const handleManualContactAdd = () => {
+    const trimmed = manualContactInput.trim()
+    if (!trimmed) return
+    setManualContacts(prev => [...prev, trimmed])
+    setManualContactInput('')
+  }
+
+  const handleManualContactRemove = (value: string) => {
+    setManualContacts(prev => prev.filter(item => item !== value))
+  }
+
+  const handleFormSubmit = async (data: CreateTaskInput) => {
+    const contactFreeformList = manualContacts.map(item => item.trim()).filter(Boolean)
+    if (!useContact && saveManualContacts && contactFreeformList.length > 0) {
+      const results = await Promise.allSettled(
+        contactFreeformList.map(name => contactsService.createContact({ name }))
+      )
+      const createdContacts = results
+        .filter((result): result is PromiseFulfilledResult<Contact> => result.status === 'fulfilled')
+        .map(result => result.value)
+      if (createdContacts.length) {
+        setContacts(prev => [...prev, ...createdContacts])
+      }
+      if (results.some(result => result.status === 'rejected')) {
+        toast.error(t('tasks.form.manualContactSaveFail'))
+      }
+    }
     if (!useContact) {
-      const contactFreeformList = trimmed
-        ? trimmed
-            .split('\n')
-            .map(item => item.trim())
-            .filter(Boolean)
-        : []
       const primaryContact = contactFreeformList[0] ?? ''
-      return onSubmit({
+      await onSubmit({
         ...data,
         contact_freeform: primaryContact,
         contact_freeform_list: contactFreeformList,
       })
+      return
     }
-    return onSubmit({
+    await onSubmit({
       ...data,
       contact_freeform: '',
       contact_freeform_list: [],
@@ -316,7 +343,6 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
             checked={useContact}
             onChange={() => {
               setUseContact(true)
-              setValue('contact_freeform', '')
             }}
             className="text-primary-600 focus:ring-primary-500"
           />
@@ -365,13 +391,48 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
           ]}
         />
       ) : (
-        <Textarea
-          label={t('tasks.form.contactFreeform')}
-          placeholder={t('tasks.form.contactPlaceholder')}
-          rows={3}
-          {...register('contact_freeform')}
-          error={errors.contact_freeform?.message}
-        />
+        <div className="space-y-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+            <Input
+              label={t('tasks.form.contactFreeform')}
+              placeholder={t('tasks.form.contactPlaceholder')}
+              value={manualContactInput}
+              onChange={event => setManualContactInput(event.target.value)}
+            />
+            <Button type="button" variant="secondary" onClick={handleManualContactAdd}>
+              {t('tasks.form.manualContactAdd')}
+            </Button>
+          </div>
+          {manualContacts.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {manualContacts.map(contact => (
+                <span
+                  key={contact}
+                  className="inline-flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                >
+                  {contact}
+                  <button
+                    type="button"
+                    onClick={() => handleManualContactRemove(contact)}
+                    className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-200"
+                    aria-label={t('tasks.form.manualContactRemove')}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+            <input
+              type="checkbox"
+              checked={saveManualContacts}
+              onChange={event => setSaveManualContacts(event.target.checked)}
+              className="text-primary-600 focus:ring-primary-500"
+            />
+            {t('tasks.form.manualContactSave')}
+          </label>
+        </div>
       )}
       {useContact && (
         <p className="text-xs text-gray-500 dark:text-gray-400">
