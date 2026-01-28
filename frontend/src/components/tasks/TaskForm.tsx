@@ -60,6 +60,11 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
           contacts:
             initialData.contacts ??
             (typeof initialData.contact === 'number' ? [initialData.contact] : []),
+          contact_freeform:
+            initialData.contact_freeform ??
+            (initialData.contact_freeform_list?.length
+              ? initialData.contact_freeform_list.join('\n')
+              : ''),
           tagged_users:
             initialData.tagged_users ??
             (initialData.tagged_user ? [initialData.tagged_user] : []),
@@ -158,8 +163,31 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
     setTimeout(() => setIsTagMenuOpen(false), 100)
   }
 
+  const handleFormSubmit = (data: CreateTaskInput) => {
+    const trimmed = data.contact_freeform?.trim() ?? ''
+    if (!useContact) {
+      const contactFreeformList = trimmed
+        ? trimmed
+            .split('\n')
+            .map(item => item.trim())
+            .filter(Boolean)
+        : []
+      const primaryContact = contactFreeformList[0] ?? ''
+      return onSubmit({
+        ...data,
+        contact_freeform: primaryContact,
+        contact_freeform_list: contactFreeformList,
+      })
+    }
+    return onSubmit({
+      ...data,
+      contact_freeform: '',
+      contact_freeform_list: [],
+    })
+  }
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
       <Input
         label={t('tasks.form.title')}
         {...register('title', { required: t('tasks.form.titleRequired') })}
@@ -337,9 +365,10 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
           ]}
         />
       ) : (
-        <Input
+        <Textarea
           label={t('tasks.form.contactFreeform')}
           placeholder={t('tasks.form.contactPlaceholder')}
+          rows={3}
           {...register('contact_freeform')}
           error={errors.contact_freeform?.message}
         />
@@ -347,6 +376,11 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
       {useContact && (
         <p className="text-xs text-gray-500 dark:text-gray-400">
           {t('tasks.form.contactsHint')}
+        </p>
+      )}
+      {!useContact && (
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          {t('tasks.form.contactFreeformHint')}
         </p>
       )}
 

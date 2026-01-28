@@ -91,7 +91,11 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
                 : task.contact_name
                   ? [task.contact_name]
                   : []),
-              ...(task.contact_freeform ? [task.contact_freeform] : []),
+              ...(task.contact_freeform_list?.length
+                ? task.contact_freeform_list
+                : task.contact_freeform
+                  ? [task.contact_freeform]
+                  : []),
             ]
             if (contactLabels.length === 0) return null
             return (

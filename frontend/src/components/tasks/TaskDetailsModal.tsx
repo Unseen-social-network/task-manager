@@ -462,6 +462,7 @@ export const TaskDetailsModal = ({
             contact: task.contact,
             contacts: task.contacts ?? (task.contact ? [task.contact] : []),
             contact_freeform: task.contact_freeform,
+            contact_freeform_list: task.contact_freeform_list,
             project_id: metaState.project_id ?? undefined,
             tagged_user: metaState.tagged_user,
             tagged_users: task.tagged_users,
@@ -642,7 +643,11 @@ export const TaskDetailsModal = ({
                 : task.contact_name
                   ? [task.contact_name]
                   : []),
-              ...(task.contact_freeform ? [task.contact_freeform] : []),
+              ...(task.contact_freeform_list?.length
+                ? task.contact_freeform_list
+                : task.contact_freeform
+                  ? [task.contact_freeform]
+                  : []),
             ]
             if (contactLabels.length === 0) return null
             return (

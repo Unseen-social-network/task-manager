@@ -201,6 +201,12 @@ class Task(models.Model):
         verbose_name='Freeform contact',
         help_text='Manual contact info (if not using contact book)',
     )
+    contact_freeform_list = models.JSONField(
+        blank=True,
+        null=True,
+        verbose_name='Freeform contacts',
+        help_text='Manual contact info list (if not using contact book)',
+    )
     time_spent_seconds = models.PositiveIntegerField(
         default=0,
         verbose_name='Time spent (seconds)',

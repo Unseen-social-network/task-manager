@@ -158,6 +158,11 @@ class TaskSerializer(serializers.ModelSerializer):
     attachments = AttachmentSerializer(many=True, read_only=True)
     contact_name = serializers.CharField(source='contact.name', read_only=True)
     contact_names = serializers.SerializerMethodField()
+    contact_freeform_list = serializers.ListField(
+        child=serializers.CharField(allow_blank=True),
+        required=False,
+        allow_null=True,
+    )
     project_name = serializers.CharField(source='project.name', read_only=True)
     tagged_user = serializers.SlugRelatedField(
         slug_field='username',
@@ -196,6 +201,7 @@ class TaskSerializer(serializers.ModelSerializer):
             'contacts',
             'contact_names',
             'contact_freeform',
+            'contact_freeform_list',
             'time_spent_seconds',
             'tracking_completed',
             'pomodoro_sessions',
@@ -252,6 +258,14 @@ class TaskSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Cannot use another user's project.")
         return value
 
+    def validate_contact_freeform_list(self, value):
+        """Ensure freeform contacts are non-empty strings."""
+        if value is None:
+            return value
+        cleaned = [item.strip() for item in value if isinstance(item, str)]
+        cleaned = [item for item in cleaned if item]
+        return cleaned
+
     def validate(self, attrs):
         """
         Validate contact fields.
@@ -274,6 +288,8 @@ class TaskSerializer(serializers.ModelSerializer):
         actor = getattr(request, 'user', None)
         tagged_users = validated_data.pop('tagged_users', None)
         contacts = validated_data.pop('contacts', None)
+        contact_freeform_list = validated_data.pop('contact_freeform_list', None)
+        contact_freeform = validated_data.get('contact_freeform')
         task = Task(**validated_data)
         if actor and actor.is_authenticated:
             task._tagged_by = actor
@@ -284,6 +300,14 @@ class TaskSerializer(serializers.ModelSerializer):
             task.contacts.set(contacts)
         elif task.contact:
             task.contacts.set([task.contact])
+        if contact_freeform_list is not None:
+            task.contact_freeform_list = contact_freeform_list
+            if not task.contact_freeform and contact_freeform_list:
+                task.contact_freeform = contact_freeform_list[0]
+        elif contact_freeform:
+            task.contact_freeform_list = [contact_freeform]
+        if contact_freeform_list is not None or contact_freeform:
+            task.save(update_fields=['contact_freeform_list', 'contact_freeform'])
         return task
 
     def update(self, instance, validated_data):
@@ -292,6 +316,8 @@ class TaskSerializer(serializers.ModelSerializer):
         actor = getattr(request, 'user', None)
         tagged_users = validated_data.pop('tagged_users', None)
         contacts = validated_data.pop('contacts', None)
+        contact_freeform_list = validated_data.pop('contact_freeform_list', None)
+        contact_freeform = validated_data.get('contact_freeform')
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         if actor and actor.is_authenticated:
@@ -303,6 +329,14 @@ class TaskSerializer(serializers.ModelSerializer):
             instance.contacts.set(contacts)
         elif instance.contact and not instance.contacts.exists():
             instance.contacts.set([instance.contact])
+        if contact_freeform_list is not None:
+            instance.contact_freeform_list = contact_freeform_list
+            if not instance.contact_freeform and contact_freeform_list:
+                instance.contact_freeform = contact_freeform_list[0]
+        elif contact_freeform is not None:
+            instance.contact_freeform_list = [contact_freeform] if contact_freeform else []
+        if contact_freeform_list is not None or contact_freeform is not None:
+            instance.save(update_fields=['contact_freeform_list', 'contact_freeform'])
         return instance
 
     def get_contact_names(self, obj):

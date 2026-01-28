@@ -73,6 +73,7 @@ export interface Task {
   contacts?: number[]
   contact_names?: string[]
   contact_freeform: string
+  contact_freeform_list?: string[]
   attachments: Attachment[]
   project_id?: number | null
   project_name?: string
@@ -96,6 +97,7 @@ export interface CreateTaskInput {
   contact?: number | null
   contacts?: number[]
   contact_freeform?: string
+  contact_freeform_list?: string[]
   project_id?: number | null
   tagged_user?: string
   tagged_users?: string[]
