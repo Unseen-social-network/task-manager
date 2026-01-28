@@ -16,10 +16,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 FROM base AS system
 
 RUN apt-get update \
- && apt-get install -y --no-install-recommends \
+    && apt-get upgrade -y \
+    && apt-get install -y --no-install-recommends \
     curl \
     postgresql-client \
- && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*
 
 # =========================
 # poetry
