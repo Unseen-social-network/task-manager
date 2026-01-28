@@ -156,6 +156,39 @@ class ContactViewSet(viewsets.ModelViewSet):
         ContactShareAccess.objects.filter(contact=contact, user=request.user).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @action(
+        detail=True,
+        methods=['post'],
+        url_path='copy',
+        permission_classes=[IsAuthenticated],
+    )
+    def copy_contact(self, request, pk=None):
+        """Create a copy of a shared contact in the current user's contact book."""
+        contact = get_object_or_404(
+            Contact.objects.filter(
+                Q(owner=request.user) | Q(share_accesses__user=request.user)
+            ).distinct(),
+            pk=pk,
+        )
+        if contact.owner_id == request.user.id:
+            return Response(
+                {'detail': 'Contact already belongs to you.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        copied = Contact.objects.create(
+            owner=request.user,
+            name=contact.name,
+            username=contact.username,
+            company=contact.company,
+            phone=contact.phone,
+            email=contact.email,
+            telegram=contact.telegram,
+            other=contact.other,
+            notes=contact.notes,
+        )
+        serializer = ContactSerializer(copied, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
 
 def get_task_base_queryset(request):
     """Return task queryset for the current request user."""
@@ -168,7 +201,7 @@ def get_task_base_queryset(request):
         )
     return (
         base_queryset.select_related('contact', 'project', 'tagged_user')
-        .prefetch_related('tagged_users')
+        .prefetch_related('tagged_users', 'contacts')
         .distinct()
     )
 

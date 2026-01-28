@@ -52,6 +52,11 @@ export const contactsService = {
     return response.data
   },
 
+  async copyContactToMine(id: number): Promise<Contact> {
+    const response = await api.post<Contact>(`/api/v1/contacts/${id}/copy/`)
+    return response.data
+  },
+
   async acceptSharedContact(token: string): Promise<Contact> {
     const response = await api.post<Contact>(`/api/v1/share/contacts/${token}/accept/`)
     return response.data
