@@ -157,6 +157,7 @@ class TaskSerializer(serializers.ModelSerializer):
     owner = serializers.HiddenField(default=serializers.CurrentUserDefault())
     attachments = AttachmentSerializer(many=True, read_only=True)
     contact_name = serializers.CharField(source='contact.name', read_only=True)
+    contact_names = serializers.SerializerMethodField()
     project_name = serializers.CharField(source='project.name', read_only=True)
     tagged_user = serializers.SlugRelatedField(
         slug_field='username',
@@ -167,6 +168,11 @@ class TaskSerializer(serializers.ModelSerializer):
     tagged_users = serializers.SlugRelatedField(
         slug_field='username',
         queryset=User.objects.all(),
+        many=True,
+        required=False,
+    )
+    contacts = serializers.PrimaryKeyRelatedField(
+        queryset=Contact.objects.all(),
         many=True,
         required=False,
     )
@@ -187,6 +193,8 @@ class TaskSerializer(serializers.ModelSerializer):
             'status',
             'contact',
             'contact_name',
+            'contacts',
+            'contact_names',
             'contact_freeform',
             'time_spent_seconds',
             'tracking_completed',
@@ -202,6 +210,7 @@ class TaskSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at',
             'contact_name',
+            'contact_names',
             'project_name',
         ]
 
@@ -216,6 +225,23 @@ class TaskSerializer(serializers.ModelSerializer):
                 contact=value, user=request.user
             ).exists()
         ):
+            raise serializers.ValidationError("Cannot use another user's contact.")
+        return value
+
+    def validate_contacts(self, value):
+        """Ensure contacts belong to the current user or are shared."""
+        request = self.context.get('request')
+        if not value or not request:
+            return value
+        invalid_contacts = [
+            contact
+            for contact in value
+            if contact.owner != request.user
+            and not ContactShareAccess.objects.filter(
+                contact=contact, user=request.user
+            ).exists()
+        ]
+        if invalid_contacts:
             raise serializers.ValidationError("Cannot use another user's contact.")
         return value
 
@@ -247,12 +273,17 @@ class TaskSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         actor = getattr(request, 'user', None)
         tagged_users = validated_data.pop('tagged_users', None)
+        contacts = validated_data.pop('contacts', None)
         task = Task(**validated_data)
         if actor and actor.is_authenticated:
             task._tagged_by = actor
         task.save()
         if tagged_users is not None:
             task.tagged_users.set(tagged_users)
+        if contacts is not None:
+            task.contacts.set(contacts)
+        elif task.contact:
+            task.contacts.set([task.contact])
         return task
 
     def update(self, instance, validated_data):
@@ -260,6 +291,7 @@ class TaskSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         actor = getattr(request, 'user', None)
         tagged_users = validated_data.pop('tagged_users', None)
+        contacts = validated_data.pop('contacts', None)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         if actor and actor.is_authenticated:
@@ -267,7 +299,14 @@ class TaskSerializer(serializers.ModelSerializer):
         instance.save()
         if tagged_users is not None:
             instance.tagged_users.set(tagged_users)
+        if contacts is not None:
+            instance.contacts.set(contacts)
+        elif instance.contact and not instance.contacts.exists():
+            instance.contacts.set([instance.contact])
         return instance
+
+    def get_contact_names(self, obj):
+        return [contact.name for contact in obj.contacts.all()]
 
 
 class TaskCommentSerializer(serializers.ModelSerializer):

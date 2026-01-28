@@ -20,7 +20,9 @@ interface TaskFormProps {
 export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFormProps) => {
   const [contacts, setContacts] = useState<Contact[]>([])
   const [projects, setProjects] = useState<Project[]>([])
-  const [useContact, setUseContact] = useState(!!initialData?.contact)
+  const [useContact, setUseContact] = useState(
+    Boolean(initialData?.contacts?.length || initialData?.contact)
+  )
   const [isTagMenuOpen, setIsTagMenuOpen] = useState(false)
   const [tagSearch, setTagSearch] = useState('')
   const { t, locale } = useLocale()
@@ -55,20 +57,24 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
     defaultValues: initialData
       ? {
           ...initialData,
+          contacts:
+            initialData.contacts ??
+            (typeof initialData.contact === 'number' ? [initialData.contact] : []),
           tagged_users:
             initialData.tagged_users ??
             (initialData.tagged_user ? [initialData.tagged_user] : []),
           due_date: formatDueDateForInput(initialData.due_date),
         }
       : {
-      urgency: 'medium',
-      status: 'todo',
-      due_date: getDefaultDueDate(),
+          urgency: 'medium',
+          status: 'todo',
+          due_date: getDefaultDueDate(),
         },
   })
 
   useEffect(() => {
     register('tagged_users')
+    register('contacts')
   }, [register])
 
   useEffect(() => {
@@ -96,6 +102,7 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
   }
 
   const taggedUsers = watch('tagged_users') ?? []
+  const selectedContacts = watch('contacts') ?? []
   const taggableContacts = useMemo(
     () => contacts.filter(contact => contact.username),
     [contacts]
@@ -279,7 +286,10 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
           <input
             type="radio"
             checked={useContact}
-            onChange={() => setUseContact(true)}
+            onChange={() => {
+              setUseContact(true)
+              setValue('contact_freeform', '')
+            }}
             className="text-primary-600 focus:ring-primary-500"
           />
           <span className="text-sm text-gray-700 dark:text-gray-200">
@@ -290,7 +300,11 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
           <input
             type="radio"
             checked={!useContact}
-            onChange={() => setUseContact(false)}
+            onChange={() => {
+              setUseContact(false)
+              setValue('contacts', [])
+              setValue('contact', null)
+            }}
             className="text-primary-600 focus:ring-primary-500"
           />
           <span className="text-sm text-gray-700 dark:text-gray-200">
@@ -301,10 +315,24 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
 
       {useContact ? (
         <Select
-          label={t('tasks.form.contact')}
-          {...register('contact', { valueAsNumber: true })}
+          label={t('tasks.form.contacts')}
+          multiple
+          value={selectedContacts.map(String)}
+          onChange={event => {
+            const values = Array.from(event.target.selectedOptions)
+              .map(option => Number(option.value))
+              .filter(value => Number.isFinite(value))
+            setValue('contacts', values, {
+              shouldDirty: true,
+              shouldTouch: true,
+            })
+            setValue('contact', values[0] ?? null, {
+              shouldDirty: true,
+              shouldTouch: true,
+            })
+          }}
+          className="min-h-[140px]"
           options={[
-            { value: '', label: t('tasks.form.contactSelect') },
             ...contacts.map(c => ({ value: String(c.id), label: formatContactLabel(c) })),
           ]}
         />
@@ -315,6 +343,11 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
           {...register('contact_freeform')}
           error={errors.contact_freeform?.message}
         />
+      )}
+      {useContact && (
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          {t('tasks.form.contactsHint')}
+        </p>
       )}
 
       <div className="flex justify-end gap-3 pt-4">

@@ -28,6 +28,7 @@ export const ContactDetailsModal = ({
 }: ContactDetailsModalProps) => {
   const [isEditing, setIsEditing] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isCopying, setIsCopying] = useState(false)
   const [activeTab, setActiveTab] = useState<'details' | 'sharing'>('details')
   const [shareAccesses, setShareAccesses] = useState<
     Array<{ user_id: number; username: string; email: string; created_at: string }>
@@ -74,6 +75,19 @@ export const ContactDetailsModal = ({
       )
     } catch {
       toast.error(t('contacts.shareFail'))
+    }
+  }
+
+  const handleCopyToMine = async () => {
+    setIsCopying(true)
+    try {
+      await contactsService.copyContactToMine(contact.id)
+      toast.success(t('contacts.copyToMineSuccess'))
+      onUpdate()
+    } catch {
+      toast.error(t('contacts.copyToMineFail'))
+    } finally {
+      setIsCopying(false)
     }
   }
 
@@ -144,6 +158,12 @@ export const ContactDetailsModal = ({
             <Button variant="secondary" onClick={onRemoveShare}>
               <Trash2 className="w-4 h-4 mr-2" />
               {t('contacts.shareRemove')}
+            </Button>
+          )}
+          {isReadOnly && !isOwner && (
+            <Button onClick={handleCopyToMine} isLoading={isCopying}>
+              <Copy className="w-4 h-4 mr-2" />
+              {t('contacts.copyToMine')}
             </Button>
           )}
           {isOwner && (

@@ -77,7 +77,7 @@ class TaskAdmin(admin.ModelAdmin):
         ),
         (
             'Contact',
-            {'fields': ('contact', 'contact_freeform')},
+            {'fields': ('contact', 'contacts', 'contact_freeform')},
         ),
         (
             'Tracking',

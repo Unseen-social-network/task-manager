@@ -452,7 +452,7 @@ export const TaskDetailsModal = ({
   if (isEditing) {
     return (
       <Modal isOpen={isOpen} onClose={handleClose} title={t('tasks.editTitle')}>
-          <TaskForm
+        <TaskForm
           initialData={{
             title: task.title,
             description: task.description,
@@ -460,6 +460,7 @@ export const TaskDetailsModal = ({
             status: displayStatus,
             due_date: task.due_date,
             contact: task.contact,
+            contacts: task.contacts ?? (task.contact ? [task.contact] : []),
             contact_freeform: task.contact_freeform,
             project_id: metaState.project_id ?? undefined,
             tagged_user: metaState.tagged_user,
@@ -474,57 +475,24 @@ export const TaskDetailsModal = ({
 
   return (
     <>
-    <Modal
-      isOpen={isOpen}
-      onClose={handleClose}
-      title={t('tasks.detailsTitle')}
-      footer={
-        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
-          {isTaggedViewer && (
-            <>
-              <Button
-                className="w-full sm:w-auto"
-                variant="secondary"
-                onClick={handleQuestionFlag}
-                isLoading={isFlaggingQuestion}
-                disabled={hasQuestion}
-              >
-                {t('tasks.actions.question')}
-              </Button>
-              {completionRequested ? (
+      <Modal
+        isOpen={isOpen}
+        onClose={handleClose}
+        title={t('tasks.detailsTitle')}
+        footer={
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
+            {isTaggedViewer && (
+              <>
                 <Button
                   className="w-full sm:w-auto"
                   variant="secondary"
-                  onClick={handleClearReady}
-                  isLoading={isClearingReady}
+                  onClick={handleQuestionFlag}
+                  isLoading={isFlaggingQuestion}
+                  disabled={hasQuestion}
                 >
-                  {t('tasks.actions.clearReady')}
+                  {t('tasks.actions.question')}
                 </Button>
-              ) : (
-                <Button
-                  className="w-full sm:w-auto"
-                  onClick={handleReadyFlag}
-                  isLoading={isMarkingReady}
-                >
-                  {t('tasks.actions.ready')}
-                </Button>
-              )}
-            </>
-          )}
-          {isOwnerViewer && (
-            <>
-              {hasQuestion && (
-                <Button
-                  className="w-full sm:w-auto"
-                  variant="secondary"
-                  onClick={handleClearQuestion}
-                  isLoading={isClearingQuestion}
-                >
-                  {t('tasks.actions.clearQuestion')}
-                </Button>
-              )}
-              {completionRequested && (
-                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                {completionRequested ? (
                   <Button
                     className="w-full sm:w-auto"
                     variant="secondary"
@@ -533,47 +501,80 @@ export const TaskDetailsModal = ({
                   >
                     {t('tasks.actions.clearReady')}
                   </Button>
+                ) : (
                   <Button
                     className="w-full sm:w-auto"
-                    onClick={handleCompleteTask}
-                    isLoading={isCompletingTask}
-                    disabled={displayStatus === 'done'}
+                    onClick={handleReadyFlag}
+                    isLoading={isMarkingReady}
                   >
-                    {t('tasks.actions.complete')}
+                    {t('tasks.actions.ready')}
                   </Button>
-                </div>
-              )}
-            </>
-          )}
-          {!isTaggedViewer && (
+                )}
+              </>
+            )}
+            {isOwnerViewer && (
+              <>
+                {hasQuestion && (
+                  <Button
+                    className="w-full sm:w-auto"
+                    variant="secondary"
+                    onClick={handleClearQuestion}
+                    isLoading={isClearingQuestion}
+                  >
+                    {t('tasks.actions.clearQuestion')}
+                  </Button>
+                )}
+                {completionRequested && (
+                  <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                    <Button
+                      className="w-full sm:w-auto"
+                      variant="secondary"
+                      onClick={handleClearReady}
+                      isLoading={isClearingReady}
+                    >
+                      {t('tasks.actions.clearReady')}
+                    </Button>
+                    <Button
+                      className="w-full sm:w-auto"
+                      onClick={handleCompleteTask}
+                      isLoading={isCompletingTask}
+                      disabled={displayStatus === 'done'}
+                    >
+                      {t('tasks.actions.complete')}
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+            {!isTaggedViewer && (
+              <Button
+                className="w-full sm:w-auto"
+                variant="danger"
+                onClick={handleDelete}
+                isLoading={isDeleting}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                {t('actions.delete')}
+              </Button>
+            )}
             <Button
               className="w-full sm:w-auto"
-              variant="danger"
-              onClick={handleDelete}
-              isLoading={isDeleting}
+              variant="secondary"
+              onClick={handleShare}
             >
-              <Trash2 className="w-4 h-4 mr-2" />
-              {t('actions.delete')}
+              <Link2 className="w-4 h-4 mr-2" />
+              {t('tasks.share')}
             </Button>
-          )}
-          <Button
-            className="w-full sm:w-auto"
-            variant="secondary"
-            onClick={handleShare}
-          >
-            <Link2 className="w-4 h-4 mr-2" />
-            {t('tasks.share')}
-          </Button>
-          {!isTaggedViewer && (
-            <Button className="w-full sm:w-auto" onClick={() => setIsEditing(true)}>
-              <Edit2 className="w-4 h-4 mr-2" />
-              {t('actions.edit')}
-            </Button>
-          )}
-        </div>
-      }
-    >
-      <div className="space-y-6">
+            {!isTaggedViewer && (
+              <Button className="w-full sm:w-auto" onClick={() => setIsEditing(true)}>
+                <Edit2 className="w-4 h-4 mr-2" />
+                {t('actions.edit')}
+              </Button>
+            )}
+          </div>
+        }
+      >
+        <div className="space-y-6">
         {/* Title and Badges */}
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-3">
@@ -634,17 +635,28 @@ export const TaskDetailsModal = ({
             </div>
           )}
 
-          {(task.contact_name || task.contact_freeform) && (
-            <div>
-              <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-1">
-                <User className="w-4 h-4" />
-                <span className="font-medium">{t('tasks.contact')}</span>
+          {(() => {
+            const contactLabels = [
+              ...(task.contact_names?.length
+                ? task.contact_names
+                : task.contact_name
+                  ? [task.contact_name]
+                  : []),
+              ...(task.contact_freeform ? [task.contact_freeform] : []),
+            ]
+            if (contactLabels.length === 0) return null
+            return (
+              <div>
+                <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-1">
+                  <User className="w-4 h-4" />
+                  <span className="font-medium">{t('tasks.contact')}</span>
+                </div>
+                <p className="text-gray-900 dark:text-gray-100">
+                  {contactLabels.join(', ')}
+                </p>
               </div>
-              <p className="text-gray-900 dark:text-gray-100">
-                {task.contact_name || task.contact_freeform}
-              </p>
-            </div>
-          )}
+            )
+          })()}
 
           {(taggedUsers.length > 0 || taggedUser) && (
             <div>
@@ -836,15 +848,15 @@ export const TaskDetailsModal = ({
         </div>
       </div>
     </Modal>
-      {selectedProject && (
-        <ProjectDetailsModal
-          project={selectedProject}
-          isOpen={isProjectModalOpen}
-          onClose={handleProjectClose}
-          onUpdate={handleProjectClose}
-          isReadOnly={selectedProject.is_owner === false}
-        />
-      )}
+    {selectedProject && (
+      <ProjectDetailsModal
+        project={selectedProject}
+        isOpen={isProjectModalOpen}
+        onClose={handleProjectClose}
+        onUpdate={handleProjectClose}
+        isReadOnly={selectedProject.is_owner === false}
+      />
+    )}
     </>
   )
 }

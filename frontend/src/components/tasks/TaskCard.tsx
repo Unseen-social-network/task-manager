@@ -84,12 +84,23 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
             </div>
           )}
 
-          {(task.contact_name || task.contact_freeform) && (
-            <div className="flex items-center gap-1 min-w-0">
-              <User className="w-4 h-4" />
-              <span className="break-words">{task.contact_name || task.contact_freeform}</span>
-            </div>
-          )}
+          {(() => {
+            const contactLabels = [
+              ...(task.contact_names?.length
+                ? task.contact_names
+                : task.contact_name
+                  ? [task.contact_name]
+                  : []),
+              ...(task.contact_freeform ? [task.contact_freeform] : []),
+            ]
+            if (contactLabels.length === 0) return null
+            return (
+              <div className="flex items-center gap-1 min-w-0">
+                <User className="w-4 h-4" />
+                <span className="break-words">{contactLabels.join(', ')}</span>
+              </div>
+            )
+          })()}
 
           {(task.tagged_users?.length || task.tagged_user) && (
             <div className="flex items-center gap-1 min-w-0">
