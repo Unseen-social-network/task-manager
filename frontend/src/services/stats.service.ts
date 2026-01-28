@@ -1,5 +1,6 @@
 import { api } from './api'
 import type { TaskStatsFilters, TaskStatsResponse } from '@/types'
+import type { Locale } from '@/utils/translations'
 
 const buildParams = (filters?: TaskStatsFilters) => {
   const params = new URLSearchParams()
@@ -21,8 +22,11 @@ export const statsService = {
     return response.data
   },
 
-  async exportTaskStats(filters?: TaskStatsFilters): Promise<void> {
+  async exportTaskStats(filters?: TaskStatsFilters, locale?: Locale): Promise<void> {
     const params = buildParams(filters)
+    if (locale) {
+      params.append('lang', locale)
+    }
     const response = await api.get<Blob>('/api/v1/tasks/export/', {
       params,
       responseType: 'blob',

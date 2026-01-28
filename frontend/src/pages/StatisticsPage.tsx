@@ -19,8 +19,15 @@ const formatDuration = (seconds: number) => {
   return `${hours}h ${minutes}m`
 }
 
+const formatDateInputValue = (date: Date) => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 export const StatisticsPage = () => {
-  const { t } = useLocale()
+  const { t, locale } = useLocale()
   const [filters, setFilters] = useState<TaskStatsFilters>({})
   const [contacts, setContacts] = useState<Contact[]>([])
   const [projects, setProjects] = useState<Project[]>([])
@@ -90,6 +97,46 @@ export const StatisticsPage = () => {
       [key]: value || undefined,
     }))
   }
+
+  const applyDueDateRange = useCallback((start: Date, end: Date) => {
+    setFilters(prev => ({
+      ...prev,
+      due_date_from: formatDateInputValue(start),
+      due_date_to: formatDateInputValue(end),
+    }))
+  }, [])
+
+  const handleQuickDeadline = useCallback(
+    (preset: 'thisWeek' | 'lastTwoWeeks' | 'thisMonth' | 'thisQuarter') => {
+      const today = new Date()
+      if (preset === 'thisWeek') {
+        const dayOffset = (today.getDay() + 6) % 7
+        const start = new Date(today)
+        start.setDate(today.getDate() - dayOffset)
+        const end = new Date(start)
+        end.setDate(start.getDate() + 6)
+        applyDueDateRange(start, end)
+        return
+      }
+      if (preset === 'lastTwoWeeks') {
+        const start = new Date(today)
+        start.setDate(today.getDate() - 13)
+        applyDueDateRange(start, today)
+        return
+      }
+      if (preset === 'thisMonth') {
+        const start = new Date(today.getFullYear(), today.getMonth(), 1)
+        const end = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+        applyDueDateRange(start, end)
+        return
+      }
+      const quarterStartMonth = Math.floor(today.getMonth() / 3) * 3
+      const start = new Date(today.getFullYear(), quarterStartMonth, 1)
+      const end = new Date(today.getFullYear(), quarterStartMonth + 3, 0)
+      applyDueDateRange(start, end)
+    },
+    [applyDueDateRange]
+  )
 
   const formatContactLabel = (contact: Contact) => {
     if (!contact.username) return contact.name
@@ -176,7 +223,7 @@ export const StatisticsPage = () => {
 
   const handleExport = async () => {
     try {
-      await statsService.exportTaskStats(filters)
+      await statsService.exportTaskStats(filters, locale)
     } catch {
       toast.error(t('stats.exportFail'))
     }
@@ -303,6 +350,45 @@ export const StatisticsPage = () => {
                 value={filters.due_date_to || ''}
                 onChange={event => handleFilterChange('due_date_to', event.target.value)}
               />
+            </div>
+          </div>
+          <div className="mt-4 space-y-2">
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
+              {t('stats.filters.quickDeadline')}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={() => handleQuickDeadline('thisWeek')}
+              >
+                {t('stats.filters.quick.thisWeek')}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={() => handleQuickDeadline('lastTwoWeeks')}
+              >
+                {t('stats.filters.quick.lastTwoWeeks')}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={() => handleQuickDeadline('thisMonth')}
+              >
+                {t('stats.filters.quick.thisMonth')}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={() => handleQuickDeadline('thisQuarter')}
+              >
+                {t('stats.filters.quick.thisQuarter')}
+              </Button>
             </div>
           </div>
         </Card>
