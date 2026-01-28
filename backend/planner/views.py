@@ -450,8 +450,58 @@ class TaskExportView(APIView):
         filterset = TaskFilter(request.query_params, queryset=queryset)
         if not filterset.is_valid():
             return Response(filterset.errors, status=status.HTTP_400_BAD_REQUEST)
-        filtered = list(filterset.qs)
+        filtered = list(filterset.qs.annotate(comments_count=Count('comments')))
         now = timezone.now()
+        language = request.query_params.get('lang', 'en')
+        if language not in {'en', 'ru'}:
+            language = 'en'
+
+        labels = {
+            'en': {
+                'summary_title': 'Summary',
+                'tasks_title': 'Tasks',
+                'metric': 'Metric',
+                'value': 'Value',
+                'total_tasks': 'Total tasks',
+                'completed_tasks': 'Completed tasks',
+                'completion_rate': 'Completion rate, %',
+                'overdue_tasks': 'Overdue tasks',
+                'avg_completion_time': 'Avg completion time, hours',
+                'task_id': 'ID',
+                'task_title': 'Title',
+                'task_status': 'Status',
+                'task_urgency': 'Urgency',
+                'task_due_date': 'Due date',
+                'task_project': 'Project',
+                'task_assignee': 'Assignee',
+                'task_created_at': 'Created at',
+                'task_updated_at': 'Updated at',
+                'task_time_spent': 'Time spent, hours',
+                'task_comments': 'Comments',
+            },
+            'ru': {
+                'summary_title': 'Сводка',
+                'tasks_title': 'Задачи',
+                'metric': 'Метрика',
+                'value': 'Значение',
+                'total_tasks': 'Всего задач',
+                'completed_tasks': 'Завершено задач',
+                'completion_rate': 'Процент завершения, %',
+                'overdue_tasks': 'Просрочено задач',
+                'avg_completion_time': 'Среднее время выполнения, часы',
+                'task_id': 'ID',
+                'task_title': 'Название',
+                'task_status': 'Статус',
+                'task_urgency': 'Приоритет',
+                'task_due_date': 'Дедлайн',
+                'task_project': 'Проект',
+                'task_assignee': 'Исполнитель',
+                'task_created_at': 'Создано',
+                'task_updated_at': 'Обновлено',
+                'task_time_spent': 'Затраченное время, часы',
+                'task_comments': 'Комментарии',
+            },
+        }[language]
 
         total_count = len(filtered)
         completed = [task for task in filtered if task.status == Task.Status.DONE]
@@ -476,29 +526,33 @@ class TaskExportView(APIView):
 
         workbook = Workbook()
         summary_sheet = workbook.active
-        summary_sheet.title = 'Summary'
-        summary_sheet.append(['Metric', 'Value'])
-        summary_sheet.append(['Total tasks', total_count])
-        summary_sheet.append(['Completed tasks', len(completed)])
-        summary_sheet.append(['Completion rate, %', completion_rate])
-        summary_sheet.append(['Overdue tasks', len(overdue)])
+        summary_sheet.title = labels['summary_title']
+        summary_sheet.append([labels['metric'], labels['value']])
+        summary_sheet.append([labels['total_tasks'], total_count])
+        summary_sheet.append([labels['completed_tasks'], len(completed)])
+        summary_sheet.append([labels['completion_rate'], completion_rate])
+        summary_sheet.append([labels['overdue_tasks'], len(overdue)])
         summary_sheet.append(
-            ['Avg completion time, hours', round(avg_completion_seconds / 3600, 2)]
+            [
+                labels['avg_completion_time'],
+                round(avg_completion_seconds / 3600, 2),
+            ]
         )
 
-        tasks_sheet = workbook.create_sheet(title='Tasks')
+        tasks_sheet = workbook.create_sheet(title=labels['tasks_title'])
         tasks_sheet.append(
             [
-                'ID',
-                'Title',
-                'Status',
-                'Urgency',
-                'Due date',
-                'Project',
-                'Assignee',
-                'Created at',
-                'Updated at',
-                'Time spent, hours',
+                labels['task_id'],
+                labels['task_title'],
+                labels['task_status'],
+                labels['task_urgency'],
+                labels['task_due_date'],
+                labels['task_project'],
+                labels['task_assignee'],
+                labels['task_created_at'],
+                labels['task_updated_at'],
+                labels['task_time_spent'],
+                labels['task_comments'],
             ]
         )
         for task in filtered:
@@ -514,6 +568,7 @@ class TaskExportView(APIView):
                     task.created_at.isoformat(),
                     task.updated_at.isoformat(),
                     round((task.time_spent_seconds or 0) / 3600, 2),
+                    task.comments_count,
                 ]
             )
 
