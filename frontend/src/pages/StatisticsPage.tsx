@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FocusEvent } from 'react'
 import toast from 'react-hot-toast'
+import { format, parseISO } from 'date-fns'
+import { enUS, ru } from 'date-fns/locale'
 import { Layout } from '@/components/layout/Layout'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
@@ -35,6 +37,19 @@ export const StatisticsPage = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [assigneeSearch, setAssigneeSearch] = useState('')
   const [isAssigneeMenuOpen, setIsAssigneeMenuOpen] = useState(false)
+
+  const formatDeadlineLabel = useCallback(
+    (dateString: string) => {
+      try {
+        return format(parseISO(dateString), 'EEE | dd - MMM', {
+          locale: locale === 'ru' ? ru : enUS,
+        })
+      } catch {
+        return dateString
+      }
+    },
+    [locale]
+  )
 
   const loadStats = useCallback(async () => {
     setIsLoading(true)
@@ -508,8 +523,8 @@ export const StatisticsPage = () => {
             <div className="mt-4 space-y-2">
               {series?.due_date_trend.map(item => (
                 <div key={item.date} className="flex items-center gap-3">
-                  <div className="w-24 text-xs text-gray-500 dark:text-gray-400">
-                    {item.date}
+                  <div className="w-36 text-xs text-gray-500 dark:text-gray-400">
+                    {formatDeadlineLabel(item.date)}
                   </div>
                   <div className="flex-1 h-2 rounded-full bg-gray-100 dark:bg-gray-800">
                     <div

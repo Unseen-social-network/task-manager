@@ -5,6 +5,7 @@ import {
   Clock,
   Filter,
   Flame,
+  HelpCircle,
   ShieldAlert,
   Sparkles,
   Users,
@@ -20,11 +21,18 @@ import {
   getTaskAssignee,
   isTaskAtRisk,
   isTaskBlocked,
+  isTaskNeedsClarification,
   isTaskNeedsReview,
   isTaskOverdue,
 } from '@/utils/taskInsights'
 
-export type QuickFilter = 'all' | 'overdue' | 'blocked' | 'needs_review' | 'at_risk'
+export type QuickFilter =
+  | 'all'
+  | 'overdue'
+  | 'blocked'
+  | 'needs_review'
+  | 'at_risk'
+  | 'needs_clarification'
 
 interface ManagerDashboardProps {
   tasks: Task[]
@@ -32,6 +40,7 @@ interface ManagerDashboardProps {
   onAssigneeChange: (value: string) => void
   quickFilter: QuickFilter
   onQuickFilterChange: (value: QuickFilter) => void
+  onTaskSelect?: (task: Task) => void
 }
 
 export const ManagerDashboard = ({
@@ -40,6 +49,7 @@ export const ManagerDashboard = ({
   onAssigneeChange,
   quickFilter,
   onQuickFilterChange,
+  onTaskSelect,
 }: ManagerDashboardProps) => {
   const { t, locale } = useLocale()
   const unassignedLabel = t('tasks.dashboard.unassigned')
@@ -83,6 +93,10 @@ export const ManagerDashboard = ({
   const blockedTasks = useMemo(() => activeTasks.filter(isTaskBlocked), [activeTasks])
   const reviewTasks = useMemo(() => activeTasks.filter(isTaskNeedsReview), [activeTasks])
   const atRiskTasks = useMemo(() => activeTasks.filter(isTaskAtRisk), [activeTasks])
+  const clarificationTasks = useMemo(
+    () => activeTasks.filter(isTaskNeedsClarification),
+    [activeTasks]
+  )
 
   const assigneeSummary = useMemo(() => {
     const counts = new Map<string, number>()
@@ -125,6 +139,11 @@ export const ManagerDashboard = ({
         label: t('tasks.dashboard.alerts.needsReview'),
         tone: 'primary' as const,
       })),
+      ...clarificationTasks.map(task => ({
+        task,
+        label: t('tasks.dashboard.alerts.needsClarification'),
+        tone: 'warning' as const,
+      })),
       ...atRiskTasks.map(task => ({
         task,
         label: t('tasks.dashboard.alerts.atRisk'),
@@ -137,7 +156,7 @@ export const ManagerDashboard = ({
       seen.add(task.id)
       return true
     })
-  }, [overdueTasks, blockedTasks, reviewTasks, atRiskTasks, t])
+  }, [overdueTasks, blockedTasks, reviewTasks, clarificationTasks, atRiskTasks, t])
 
   const quickFilters = [
     { id: 'all' as const, label: t('tasks.dashboard.filter.all'), count: activeTasks.length },
@@ -160,6 +179,11 @@ export const ManagerDashboard = ({
       id: 'needs_review' as const,
       label: t('tasks.dashboard.filter.needsReview'),
       count: reviewTasks.length,
+    },
+    {
+      id: 'needs_clarification' as const,
+      label: t('tasks.dashboard.filter.needsClarification'),
+      count: clarificationTasks.length,
     },
   ]
 
@@ -374,7 +398,16 @@ export const ManagerDashboard = ({
               alertTasks.slice(0, 6).map(({ task, label, tone }) => (
                 <div
                   key={task.id}
-                  className="flex flex-col gap-2 rounded-lg border border-gray-200 p-3 dark:border-gray-800"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => onTaskSelect?.(task)}
+                  onKeyDown={event => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      onTaskSelect?.(task)
+                    }
+                  }}
+                  className="flex cursor-pointer flex-col gap-2 rounded-lg border border-gray-200 p-3 transition hover:border-primary-200 hover:bg-primary-50/40 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-gray-800 dark:hover:border-primary-700 dark:hover:bg-primary-900/20"
                 >
                   <div className="flex items-center justify-between">
                     <div className="font-medium text-gray-900 dark:text-gray-100">
@@ -419,7 +452,11 @@ export const ManagerDashboard = ({
           </div>
 
           <div className="space-y-3">
-            <div className="flex items-start gap-3 rounded-lg bg-gray-50 p-3 text-sm text-gray-700 dark:bg-gray-800/60 dark:text-gray-200">
+            <button
+              type="button"
+              onClick={() => onQuickFilterChange('at_risk')}
+              className="flex w-full items-start gap-3 rounded-lg bg-gray-50 p-3 text-left text-sm text-gray-700 transition hover:bg-gray-100 dark:bg-gray-800/60 dark:text-gray-200 dark:hover:bg-gray-800/80"
+            >
               <Sparkles className="w-4 h-4 text-purple-500 mt-0.5" />
               <div>
                 <p className="font-semibold">{t('tasks.dashboard.insights.riskTitle')}</p>
@@ -427,8 +464,17 @@ export const ManagerDashboard = ({
                   {formatTaskCount(atRiskTasks.length)} {t('tasks.dashboard.insights.riskBody')}
                 </p>
               </div>
-            </div>
-            <div className="flex items-start gap-3 rounded-lg bg-gray-50 p-3 text-sm text-gray-700 dark:bg-gray-800/60 dark:text-gray-200">
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (overloadedAssignees.length > 0) {
+                  onAssigneeChange(overloadedAssignees[0].name)
+                }
+                onQuickFilterChange('all')
+              }}
+              className="flex w-full items-start gap-3 rounded-lg bg-gray-50 p-3 text-left text-sm text-gray-700 transition hover:bg-gray-100 dark:bg-gray-800/60 dark:text-gray-200 dark:hover:bg-gray-800/80"
+            >
               <Flame className="w-4 h-4 text-orange-500 mt-0.5" />
               <div>
                 <p className="font-semibold">{t('tasks.dashboard.insights.overloadedTitle')}</p>
@@ -441,8 +487,12 @@ export const ManagerDashboard = ({
                         .join(', ')}`}
                 </p>
               </div>
-            </div>
-            <div className="flex items-start gap-3 rounded-lg bg-gray-50 p-3 text-sm text-gray-700 dark:bg-gray-800/60 dark:text-gray-200">
+            </button>
+            <button
+              type="button"
+              onClick={() => onQuickFilterChange('needs_review')}
+              className="flex w-full items-start gap-3 rounded-lg bg-gray-50 p-3 text-left text-sm text-gray-700 transition hover:bg-gray-100 dark:bg-gray-800/60 dark:text-gray-200 dark:hover:bg-gray-800/80"
+            >
               <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5" />
               <div>
                 <p className="font-semibold">{t('tasks.dashboard.insights.reviewTitle')}</p>
@@ -450,7 +500,21 @@ export const ManagerDashboard = ({
                   {formatTaskCount(reviewTasks.length)} {t('tasks.dashboard.insights.reviewBody')}
                 </p>
               </div>
-            </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => onQuickFilterChange('needs_clarification')}
+              className="flex w-full items-start gap-3 rounded-lg bg-gray-50 p-3 text-left text-sm text-gray-700 transition hover:bg-gray-100 dark:bg-gray-800/60 dark:text-gray-200 dark:hover:bg-gray-800/80"
+            >
+              <HelpCircle className="w-4 h-4 text-blue-500 mt-0.5" />
+              <div>
+                <p className="font-semibold">{t('tasks.dashboard.insights.clarifyTitle')}</p>
+                <p>
+                  {formatTaskCount(clarificationTasks.length)}{' '}
+                  {t('tasks.dashboard.insights.clarifyBody')}
+                </p>
+              </div>
+            </button>
           </div>
         </Card>
       </div>

@@ -410,7 +410,7 @@ export const TaskDetailsModal = ({
   const handleClearQuestion = async () => {
     setIsClearingQuestion(true)
     try {
-      await tasksService.updateTask(task.id, { has_question: false })
+      await tasksService.clearTaskQuestion(task.id)
       toast.success(t('tasks.flags.questionClearSuccess'))
       onRefresh?.()
     } catch {
@@ -423,7 +423,7 @@ export const TaskDetailsModal = ({
   const handleClearReady = async () => {
     setIsClearingReady(true)
     try {
-      await tasksService.updateTask(task.id, { completion_requested: false })
+      await tasksService.clearTaskReady(task.id)
       toast.success(t('tasks.flags.readyClearSuccess'))
       onRefresh?.()
     } catch {
@@ -484,15 +484,25 @@ export const TaskDetailsModal = ({
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
             {isTaggedViewer && (
               <>
-                <Button
-                  className="w-full sm:w-auto"
-                  variant="secondary"
-                  onClick={handleQuestionFlag}
-                  isLoading={isFlaggingQuestion}
-                  disabled={hasQuestion}
-                >
-                  {t('tasks.actions.question')}
-                </Button>
+                {hasQuestion ? (
+                  <Button
+                    className="w-full sm:w-auto"
+                    variant="secondary"
+                    onClick={handleClearQuestion}
+                    isLoading={isClearingQuestion}
+                  >
+                    {t('tasks.actions.clearQuestion')}
+                  </Button>
+                ) : (
+                  <Button
+                    className="w-full sm:w-auto"
+                    variant="secondary"
+                    onClick={handleQuestionFlag}
+                    isLoading={isFlaggingQuestion}
+                  >
+                    {t('tasks.actions.question')}
+                  </Button>
+                )}
                 {completionRequested ? (
                   <Button
                     className="w-full sm:w-auto"
