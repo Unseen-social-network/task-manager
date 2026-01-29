@@ -41,9 +41,14 @@ export const StatisticsPage = () => {
   const formatDeadlineLabel = useCallback(
     (dateString: string) => {
       try {
-        return format(parseISO(dateString), 'EEE | dd - MMM', {
+        const parsedDate = parseISO(dateString)
+        const weekdayLabel =
+          locale === 'ru'
+            ? ['вс.', 'пн.', 'вт.', 'ср.', 'чт.', 'пт.', 'сб.'][parsedDate.getDay()]
+            : format(parsedDate, 'EEE', { locale: enUS })
+        return `${weekdayLabel} | ${format(parsedDate, 'dd - MMM', {
           locale: locale === 'ru' ? ru : enUS,
-        })
+        })}`
       } catch {
         return dateString
       }
