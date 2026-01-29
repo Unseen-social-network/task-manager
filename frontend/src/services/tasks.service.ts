@@ -93,6 +93,16 @@ export const tasksService = {
     return mapTaskFromApi(response.data)
   },
 
+  async clearTaskQuestion(taskId: number): Promise<Task> {
+    const response = await api.post<TaskApi>(`/api/v1/tasks/${taskId}/question/clear/`)
+    return mapTaskFromApi(response.data)
+  },
+
+  async clearTaskReady(taskId: number): Promise<Task> {
+    const response = await api.post<TaskApi>(`/api/v1/tasks/${taskId}/ready/clear/`)
+    return mapTaskFromApi(response.data)
+  },
+
   async getTaskComments(taskId: number): Promise<TaskComment[]> {
     const response = await api.get<TaskComment[]>(`/api/v1/tasks/${taskId}/comments/`)
     return response.data

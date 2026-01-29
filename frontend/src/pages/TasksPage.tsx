@@ -17,6 +17,7 @@ import {
   getTaskAssignee,
   isTaskAtRisk,
   isTaskBlocked,
+  isTaskNeedsClarification,
   isTaskNeedsReview,
   isTaskOverdue,
 } from '@/utils/taskInsights'
@@ -237,6 +238,8 @@ export const TasksPage = () => {
           return assigneeFiltered.filter(isTaskNeedsReview)
         case 'at_risk':
           return assigneeFiltered.filter(isTaskAtRisk)
+        case 'needs_clarification':
+          return assigneeFiltered.filter(isTaskNeedsClarification)
         default:
           return assigneeFiltered
       }
@@ -305,6 +308,7 @@ export const TasksPage = () => {
             onAssigneeChange={setAssigneeFilter}
             quickFilter={quickFilter}
             onQuickFilterChange={setQuickFilter}
+            onTaskSelect={handleTaskClick}
           />
         )}
 

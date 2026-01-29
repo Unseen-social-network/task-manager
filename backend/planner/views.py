@@ -341,6 +341,28 @@ class TaskViewSet(viewsets.ModelViewSet):
         detail=True,
         methods=['post'],
         permission_classes=[IsAuthenticated, TaskCommentAccessPermission],
+        url_path='question/clear',
+    )
+    def clear_question(self, request, pk=None):
+        """Clear a question flag for the task."""
+        task = get_object_or_404(
+            Task.objects.filter(
+                Q(owner=request.user)
+                | Q(tagged_user=request.user)
+                | Q(tagged_users=request.user)
+            ).distinct(),
+            pk=pk,
+        )
+        if task.has_question:
+            task.has_question = False
+            task.save(update_fields=['has_question', 'updated_at'])
+        serializer = TaskSerializer(task, context={'request': request})
+        return Response(serializer.data)
+
+    @action(
+        detail=True,
+        methods=['post'],
+        permission_classes=[IsAuthenticated, TaskCommentAccessPermission],
     )
     def ready(self, request, pk=None):
         """Mark task as ready for review by the owner."""
@@ -354,6 +376,28 @@ class TaskViewSet(viewsets.ModelViewSet):
         )
         if not task.completion_requested:
             task.completion_requested = True
+            task.save(update_fields=['completion_requested', 'updated_at'])
+        serializer = TaskSerializer(task, context={'request': request})
+        return Response(serializer.data)
+
+    @action(
+        detail=True,
+        methods=['post'],
+        permission_classes=[IsAuthenticated, TaskCommentAccessPermission],
+        url_path='ready/clear',
+    )
+    def clear_ready(self, request, pk=None):
+        """Clear readiness flag for the task."""
+        task = get_object_or_404(
+            Task.objects.filter(
+                Q(owner=request.user)
+                | Q(tagged_user=request.user)
+                | Q(tagged_users=request.user)
+            ).distinct(),
+            pk=pk,
+        )
+        if task.completion_requested:
+            task.completion_requested = False
             task.save(update_fields=['completion_requested', 'updated_at'])
         serializer = TaskSerializer(task, context={'request': request})
         return Response(serializer.data)
