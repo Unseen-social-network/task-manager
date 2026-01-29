@@ -535,6 +535,34 @@ class TaskExportView(APIView):
                 'task_comments': 'Комментарии',
             },
         }[language]
+        status_labels = {
+            'en': {
+                Task.Status.TODO: 'To Do',
+                Task.Status.IN_PROGRESS: 'In Progress',
+                Task.Status.DONE: 'Done',
+                Task.Status.CANCELED: 'Canceled',
+            },
+            'ru': {
+                Task.Status.TODO: 'К выполнению',
+                Task.Status.IN_PROGRESS: 'В работе',
+                Task.Status.DONE: 'Готово',
+                Task.Status.CANCELED: 'Отменено',
+            },
+        }[language]
+        urgency_labels = {
+            'en': {
+                Task.Urgency.LOW: 'Low',
+                Task.Urgency.MEDIUM: 'Medium',
+                Task.Urgency.HIGH: 'High',
+                Task.Urgency.CRITICAL: 'Critical',
+            },
+            'ru': {
+                Task.Urgency.LOW: 'Низкая',
+                Task.Urgency.MEDIUM: 'Средняя',
+                Task.Urgency.HIGH: 'Высокая',
+                Task.Urgency.CRITICAL: 'Критическая',
+            },
+        }[language]
 
         total_count = len(filtered)
         completed = [task for task in filtered if task.status == Task.Status.DONE]
@@ -593,8 +621,8 @@ class TaskExportView(APIView):
                 [
                     task.id,
                     task.title,
-                    task.status,
-                    task.urgency,
+                    status_labels.get(task.status, task.status),
+                    urgency_labels.get(task.urgency, task.urgency),
                     task.due_date.isoformat() if task.due_date else '',
                     task.project.name if task.project else '',
                     task.tagged_user.username if task.tagged_user else '',
