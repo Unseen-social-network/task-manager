@@ -9,6 +9,7 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.db import transaction
 from django.db.models import Count, Q
+from django.db.models.functions import TruncDate
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -492,11 +493,25 @@ class TaskStatisticsView(APIView):
             ),
         )
 
+        open_tasks = filtered.filter(
+            status__in=[Task.Status.TODO, Task.Status.IN_PROGRESS],
+            due_date__isnull=False,
+        )
         trend = []
-        for offset in range(6, -1, -1):
-            day = (now - timedelta(days=offset)).date()
-            count = filtered.filter(due_date__date=day).count()
-            trend.append({'date': day.isoformat(), 'count': count})
+        due_date_rows = (
+            open_tasks.annotate(due_date=TruncDate('due_date'))
+            .values('due_date')
+            .annotate(count=Count('id'))
+            .order_by('due_date')
+        )
+        for row in due_date_rows:
+            due_date = row['due_date']
+            trend.append(
+                {
+                    'date': due_date.isoformat() if due_date else None,
+                    'count': row['count'],
+                }
+            )
 
         return Response(
             {
