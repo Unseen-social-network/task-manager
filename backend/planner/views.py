@@ -496,13 +496,22 @@ class TaskStatisticsView(APIView):
             status__in=[Task.Status.TODO, Task.Status.IN_PROGRESS],
             due_date__isnull=False,
         )
-        trend = [
-            {'date': item['due_date'], 'count': item['count']}
-            for item in open_tasks.annotate(due_date=TruncDate('due_date'))
+
+        trend = []
+        due_date_rows = (
+            open_tasks.annotate(due_date=TruncDate('due_date'))
             .values('due_date')
             .annotate(count=Count('id'))
             .order_by('due_date')
-        ]
+        )
+        for row in due_date_rows:
+            due_date = row['due_date']
+            trend.append(
+                {
+                    'date': due_date.isoformat() if due_date else None,
+                    'count': row['count'],
+                }
+            )
 
         return Response(
             {
