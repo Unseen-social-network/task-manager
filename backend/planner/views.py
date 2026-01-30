@@ -499,13 +499,13 @@ class TaskStatisticsView(APIView):
 
         trend = []
         due_date_rows = (
-            open_tasks.annotate(due_date=TruncDate('due_date'))
-            .values('due_date')
+            open_tasks.annotate(due_date_day=TruncDate('due_date'))
+            .values('due_date_day')
             .annotate(count=Count('id'))
-            .order_by('due_date')
+            .order_by('due_date_day')
         )
         for row in due_date_rows:
-            due_date = row['due_date']
+            due_date = row['due_date_day']
             trend.append(
                 {
                     'date': due_date.isoformat() if due_date else None,
