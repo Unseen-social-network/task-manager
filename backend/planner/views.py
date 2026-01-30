@@ -497,6 +497,7 @@ class TaskStatisticsView(APIView):
             status__in=[Task.Status.TODO, Task.Status.IN_PROGRESS],
             due_date__isnull=False,
         )
+
         trend = []
         due_date_rows = (
             open_tasks.annotate(due_date=TruncDate('due_date'))
@@ -512,6 +513,7 @@ class TaskStatisticsView(APIView):
                     'count': row['count'],
                 }
             )
+
 
         return Response(
             {
