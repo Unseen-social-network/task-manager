@@ -2,7 +2,6 @@
 Views for Planner application.
 """
 
-from datetime import timedelta
 from io import BytesIO
 
 from django.conf import settings
