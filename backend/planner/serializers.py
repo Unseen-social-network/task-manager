@@ -239,6 +239,9 @@ class TaskSerializer(serializers.ModelSerializer):
                 validated_data['status'] = default_status
         return super().create(validated_data)
 
+    def get_contact_names(self, obj):
+        return [contact.name for contact in obj.contacts.all()]
+
 
 class TaskStatusSerializer(serializers.ModelSerializer):
     """Serializer for task status definitions."""
@@ -368,10 +371,6 @@ class TaskStatusSerializer(serializers.ModelSerializer):
         if contact_freeform_list is not None or contact_freeform is not None:
             instance.save(update_fields=['contact_freeform_list', 'contact_freeform'])
         return instance
-
-    def get_contact_names(self, obj):
-        return [contact.name for contact in obj.contacts.all()]
-
 
 class TaskCommentSerializer(serializers.ModelSerializer):
     """Serializer for Task comments with optional replies."""
