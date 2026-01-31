@@ -32,7 +32,7 @@ class TestTaskAPI:
         assert task.id in returned_ids
 
     def test_create_task_with_contact(
-        self, authenticated_client, user, contact, project
+        self, authenticated_client, user, contact, project, task_statuses
     ):
         """Test creating a task with contact reference."""
         url = '/api/v1/tasks/'
@@ -55,7 +55,9 @@ class TestTaskAPI:
         assert created_task.project == project
         assert created_task.tagged_user == user
 
-    def test_create_task_with_freeform_contact(self, authenticated_client, user):
+    def test_create_task_with_freeform_contact(
+        self, authenticated_client, user, task_statuses
+    ):
         """Test creating a task with freeform contact."""
         url = '/api/v1/tasks/'
         data = {
@@ -71,7 +73,7 @@ class TestTaskAPI:
         assert created_task.contact_freeform == 'Call John at +1234567890'
 
     def test_create_task_with_other_user_contact_forbidden(
-        self, authenticated_client, other_contact
+        self, authenticated_client, other_contact, task_statuses
     ):
         """Test that using another user's contact is forbidden."""
         url = '/api/v1/tasks/'

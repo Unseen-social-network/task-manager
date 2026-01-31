@@ -80,5 +80,8 @@ def task_statuses(db):
             'is_default': False,
         },
     ]
+    statuses = []
     for status in defaults:
-        TaskStatus.objects.get_or_create(key=status['key'], defaults=status)
+        obj, _ = TaskStatus.objects.get_or_create(key=status['key'], defaults=status)
+        statuses.append(obj)
+    return statuses

@@ -242,15 +242,6 @@ class TaskSerializer(serializers.ModelSerializer):
     def get_contact_names(self, obj):
         return [contact.name for contact in obj.contacts.all()]
 
-
-class TaskStatusSerializer(serializers.ModelSerializer):
-    """Serializer for task status definitions."""
-
-    class Meta:
-        model = TaskStatus
-        fields = ['key', 'label', 'order', 'is_archived', 'is_done', 'is_default']
-        read_only_fields = fields
-
     def validate_contact(self, value):
         """Ensure contact belongs to the current user."""
         request = self.context.get('request')
@@ -312,6 +303,15 @@ class TaskStatusSerializer(serializers.ModelSerializer):
             pass
 
         return attrs
+
+
+class TaskStatusSerializer(serializers.ModelSerializer):
+    """Serializer for task status definitions."""
+
+    class Meta:
+        model = TaskStatus
+        fields = ['key', 'label', 'order', 'is_archived', 'is_done', 'is_default']
+        read_only_fields = fields
 
     def create(self, validated_data):
         """Attach tagging actor to the instance before saving."""
