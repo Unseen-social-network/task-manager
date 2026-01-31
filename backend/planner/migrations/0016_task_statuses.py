@@ -124,6 +124,10 @@ class Migration(migrations.Migration):
         ),
         migrations.RunPython(create_task_statuses, migrations.RunPython.noop),
         migrations.RunPython(migrate_task_statuses, migrations.RunPython.noop),
+        migrations.RunSQL(
+            sql='DROP INDEX IF EXISTS planner_tas_owner_i_6224a2_idx',
+            reverse_sql='',
+        ),
         migrations.RemoveField(
             model_name='task',
             name='status_key',
