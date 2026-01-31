@@ -23,6 +23,7 @@ import { useLocale } from '@/contexts/localeContext'
 import { useAuthStore } from '@/contexts/authStore'
 import {
   formatDate,
+  getApiErrorMessage,
   getUrgencyColor,
   getStatusColor,
   formatDuration,
@@ -209,8 +210,8 @@ export const TaskDetailsModal = ({
       setDisplayStatus(status)
       try {
         await tasksService.updateTask(task.id, { status })
-      } catch {
-        toast.error(t('tasks.updateFail'))
+      } catch (error) {
+        toast.error(getApiErrorMessage(error, t('tasks.updateFail')))
       }
     },
     [task.id, t]
@@ -459,8 +460,8 @@ export const TaskDetailsModal = ({
       toast.success(t('tasks.completeSuccess'))
       onRefresh?.()
       onUpdate()
-    } catch {
-      toast.error(t('tasks.completeFail'))
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, t('tasks.completeFail')))
     } finally {
       setIsCompletingTask(false)
     }

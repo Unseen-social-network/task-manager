@@ -66,8 +66,16 @@ class TaskAccessPermission(permissions.BasePermission):
         if not status:
             return False
         if status.is_done or status.is_archived:
+            self.message = (
+                'Нельзя переводить задачу в конечный статус. '
+                'Отправьте задачу на проверку или сообщите руководителю.'
+            )
             return False
         if obj.status.is_done or obj.status.is_archived:
+            self.message = (
+                'Нельзя менять конечный статус. '
+                'Отправьте задачу на проверку или сообщите руководителю.'
+            )
             return False
         return True
 

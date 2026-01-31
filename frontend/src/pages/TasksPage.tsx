@@ -16,6 +16,7 @@ import { projectsService } from '@/services/projects.service'
 import { taskStatusesService } from '@/services/task-statuses.service'
 import { tasksService } from '@/services/tasks.service'
 import { useLocale } from '@/contexts/localeContext'
+import { getApiErrorMessage } from '@/utils/helpers'
 import {
   getTaskAssignee,
   isTaskAtRisk,
@@ -253,8 +254,8 @@ export const TasksPage = () => {
         setSelectedTask(updatedTask)
       }
       toast.success(t('tasks.kanban.updateSuccess'))
-    } catch {
-      toast.error(t('tasks.kanban.updateFail'))
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, t('tasks.kanban.updateFail')))
     }
   }
 
