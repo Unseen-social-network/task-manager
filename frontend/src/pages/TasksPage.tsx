@@ -1,15 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Plus } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useSearchParams } from 'react-router-dom'
 import { Layout } from '@/components/layout/Layout'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
+import { KanbanBoard } from '@/components/tasks/KanbanBoard'
 import { ManagerDashboard, type QuickFilter } from '@/components/tasks/ManagerDashboard'
 import { TaskCard } from '@/components/tasks/TaskCard'
 import { TaskForm } from '@/components/tasks/TaskForm'
 import { TaskFilters } from '@/components/tasks/TaskFilters'
 import { TaskDetailsModal } from '@/components/tasks/TaskDetailsModal'
+import { profileService } from '@/services/profile.service'
 import { projectsService } from '@/services/projects.service'
 import { tasksService } from '@/services/tasks.service'
 import { useLocale } from '@/contexts/localeContext'
@@ -27,6 +29,7 @@ import type {
   CreateTaskInput,
   TaskFilters as TaskFiltersType,
   TaskStatus,
+  TaskView,
 } from '@/types'
 
 const MANAGER_VIEW_COOKIE = 'tasks_manager_view'
@@ -65,6 +68,8 @@ export const TasksPage = () => {
     const stored = getCookieValue(MANAGER_VIEW_COOKIE)
     return stored === 'manager'
   })
+  const [taskView, setTaskView] = useState<TaskView>('list')
+  const taskViewInitialized = useRef(false)
   const [searchParams, setSearchParams] = useSearchParams()
   const { t } = useLocale()
   const sharedTaskId = useMemo(() => {
@@ -74,21 +79,54 @@ export const TasksPage = () => {
     return Number.isFinite(parsed) ? parsed : null
   }, [searchParams])
 
-  const loadTasks = useCallback(async () => {
-    setIsLoading(true)
+  const loadTasks = useCallback(async (options?: { showLoading?: boolean }) => {
+    const showLoading = options?.showLoading ?? true
+    if (showLoading) {
+      setIsLoading(true)
+    }
     try {
       const response = await tasksService.getTasks(filters)
       setTasks(response.results)
     } catch {
       toast.error(t('tasks.loadFail'))
     } finally {
-      setIsLoading(false)
+      if (showLoading) {
+        setIsLoading(false)
+      }
     }
   }, [filters, t])
 
   useEffect(() => {
     loadTasks()
   }, [loadTasks])
+
+  useEffect(() => {
+    let isActive = true
+    const loadProfileDefaults = async () => {
+      try {
+        const profile = await profileService.getProfile()
+        if (!isActive || taskViewInitialized.current) return
+        taskViewInitialized.current = true
+        setTaskView(profile.default_task_view ?? 'list')
+      } catch {
+        if (!isActive || taskViewInitialized.current) return
+        taskViewInitialized.current = true
+        setTaskView('list')
+      }
+    }
+    loadProfileDefaults()
+    return () => {
+      isActive = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (taskView !== 'kanban') return
+    const interval = window.setInterval(() => {
+      loadTasks({ showLoading: false })
+    }, 15000)
+    return () => window.clearInterval(interval)
+  }, [loadTasks, taskView])
 
   useEffect(() => {
     let isActive = true
@@ -196,6 +234,21 @@ export const TasksPage = () => {
     loadTasks()
   }
 
+  const handleTaskStatusChange = async (task: Task, status: TaskStatus) => {
+    try {
+      const updatedTask = await tasksService.updateTask(task.id, { status })
+      setTasks(prev =>
+        prev.map(existing => (existing.id === updatedTask.id ? updatedTask : existing))
+      )
+      if (selectedTask?.id === updatedTask.id) {
+        setSelectedTask(updatedTask)
+      }
+      toast.success(t('tasks.kanban.updateSuccess'))
+    } catch {
+      toast.error(t('tasks.kanban.updateFail'))
+    }
+  }
+
   const handleTaskRefresh = useCallback(async () => {
     if (!selectedTask) return
     try {
@@ -269,6 +322,22 @@ export const TasksPage = () => {
             <p className="text-gray-600 dark:text-gray-300 mt-1">{t('tasks.subtitle')}</p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <Button
+                size="sm"
+                variant={taskView === 'list' ? 'primary' : 'secondary'}
+                onClick={() => setTaskView('list')}
+              >
+                {t('tasks.view.list')}
+              </Button>
+              <Button
+                size="sm"
+                variant={taskView === 'kanban' ? 'primary' : 'secondary'}
+                onClick={() => setTaskView('kanban')}
+              >
+                {t('tasks.view.kanban')}
+              </Button>
+            </div>
             <Button
               variant="secondary"
               onClick={() => setIsManagerView(prev => !prev)}
@@ -322,7 +391,7 @@ export const TasksPage = () => {
           onSearchEverywhereChange={setSearchEverywhere}
         />
 
-        {/* Tasks List */}
+        {/* Tasks */}
         {isLoading ? (
           <div className="text-center py-12">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
@@ -335,6 +404,13 @@ export const TasksPage = () => {
               {t('tasks.emptyAction')}
             </Button>
           </div>
+        ) : taskView === 'kanban' ? (
+          <KanbanBoard
+            tasks={visibleTasks}
+            statusOptions={statusOptions}
+            onTaskSelect={handleTaskClick}
+            onStatusChange={handleTaskStatusChange}
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {visibleTasks.map(task => (

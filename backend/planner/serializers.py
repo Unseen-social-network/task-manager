@@ -488,6 +488,7 @@ class ProfileSerializer(serializers.ModelSerializer):
             'telegram_notifications_enabled',
             'telegram_notify_on_tag',
             'share_invite_contact',
+            'default_task_view',
             'invite_quota',
             'invites_remaining',
             'inviter_username',

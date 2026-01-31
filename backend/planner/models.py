@@ -450,6 +450,13 @@ class Attachment(models.Model):
 class Profile(models.Model):
     """User profile with invitation quota and personal details."""
 
+    TASK_VIEW_LIST = 'list'
+    TASK_VIEW_KANBAN = 'kanban'
+    TASK_VIEW_CHOICES = [
+        (TASK_VIEW_LIST, 'List'),
+        (TASK_VIEW_KANBAN, 'Kanban'),
+    ]
+
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -498,6 +505,12 @@ class Profile(models.Model):
     share_invite_contact = models.BooleanField(
         default=True,
         verbose_name='Share contact with inviter',
+    )
+    default_task_view = models.CharField(
+        max_length=20,
+        choices=TASK_VIEW_CHOICES,
+        default=TASK_VIEW_LIST,
+        verbose_name='Default task view',
     )
     invite_quota = models.PositiveIntegerField(
         default=3,

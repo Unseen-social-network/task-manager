@@ -59,6 +59,7 @@ export type UpdateContactInput = Partial<CreateContactInput>
 
 export type TaskUrgency = 'low' | 'medium' | 'high' | 'critical'
 export type TaskStatus = 'todo' | 'in_progress' | 'done' | 'canceled'
+export type TaskView = 'list' | 'kanban'
 
 export interface Task {
   id: number
@@ -169,6 +170,7 @@ export interface Profile {
   telegram_notifications_enabled?: boolean
   telegram_notify_on_tag?: boolean
   share_invite_contact?: boolean
+  default_task_view?: TaskView
   invite_quota: number
   invites_remaining: number
   inviter_username?: string | null
