@@ -43,14 +43,44 @@ def create_task_statuses(apps, schema_editor):
 
 
 def migrate_task_statuses(apps, schema_editor):
-    Task = apps.get_model('planner', 'Task')
     TaskStatus = apps.get_model('planner', 'TaskStatus')
-    status_map = {status.key: status for status in TaskStatus.objects.all()}
-    default_status = status_map.get('todo') or next(iter(status_map.values()), None)
-    for task in Task.objects.all():
-        key = getattr(task, 'status_key', None) or 'todo'
-        task.status = status_map.get(key, default_status)
-        task.save(update_fields=['status'])
+    Task = apps.get_model('planner', 'Task')
+    status_map = {
+        status.key: status.id for status in TaskStatus.objects.all().order_by('order')
+    }
+    if not status_map:
+        return
+    default_status_id = status_map.get('todo') or next(iter(status_map.values()))
+    table = Task._meta.db_table
+    connection = schema_editor.connection
+    with connection.cursor() as cursor:
+        columns = [
+            column.name
+            for column in connection.introspection.get_table_description(cursor, table)
+        ]
+        if 'status_key' in columns:
+            for key, status_id in status_map.items():
+                cursor.execute(
+                    f'UPDATE {table} SET status_id = %s WHERE status_key = %s',
+                    [status_id, key],
+                )
+        else:
+            for key, status_id in status_map.items():
+                cursor.execute(
+                    f'UPDATE {table} SET status_id = %s WHERE status_id = %s',
+                    [status_id, key],
+                )
+        status_ids = list(status_map.values())
+        if status_ids:
+            placeholders = ', '.join(['%s'] * len(status_ids))
+            cursor.execute(
+                f'UPDATE {table} SET status_id = %s WHERE status_id NOT IN ({placeholders})',
+                [default_status_id, *status_ids],
+            )
+        cursor.execute(
+            f'UPDATE {table} SET status_id = %s WHERE status_id IS NULL',
+            [default_status_id],
+        )
 
 
 class Migration(migrations.Migration):
