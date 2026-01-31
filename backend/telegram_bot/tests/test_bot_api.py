@@ -60,7 +60,9 @@ class TestTelegramBotAPI:
         _link_profile(owner, chat_id=202)
 
         status_map = {status.key: status for status in task_statuses}
-        owned_task = Task.objects.create(owner=owner, title='Owned task', status=status_map['todo'])
+        owned_task = Task.objects.create(
+            owner=owner, title='Owned task', status=status_map['todo']
+        )
         tagged_task = Task.objects.create(
             owner=tagger,
             title='Tagged task',

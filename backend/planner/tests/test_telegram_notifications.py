@@ -16,7 +16,9 @@ class TestTelegramTagNotifications:
         self, settings, user, other_user, task_statuses
     ):
         settings.FRONTEND_BASE_URL = 'https://planner.example'
-        default_status = next(status for status in task_statuses if status.key == 'todo')
+        default_status = next(
+            status for status in task_statuses if status.key == 'todo'
+        )
         profile = user.profile
         profile.telegram_chat_id = 9001
         profile.telegram_notifications_enabled = True
@@ -47,7 +49,9 @@ class TestTelegramTagNotifications:
         self, settings, authenticated_client, user, other_user, task_statuses
     ):
         settings.FRONTEND_BASE_URL = 'https://planner.example'
-        default_status = next(status for status in task_statuses if status.key == 'todo')
+        default_status = next(
+            status for status in task_statuses if status.key == 'todo'
+        )
         profile = other_user.profile
         profile.telegram_chat_id = 1337
         profile.telegram_notifications_enabled = True
@@ -59,7 +63,9 @@ class TestTelegramTagNotifications:
                 'telegram_notify_on_tag',
             ]
         )
-        task = Task.objects.create(owner=user, title='Needs tagging', status=default_status)
+        task = Task.objects.create(
+            owner=user, title='Needs tagging', status=default_status
+        )
         url = f'/api/v1/tasks/{task.id}/'
 
         with patch('planner.signals.send_telegram_message') as mock_send:

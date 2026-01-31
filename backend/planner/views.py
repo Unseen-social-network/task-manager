@@ -60,8 +60,8 @@ from .serializers import (
     ProjectShareSerializer,
     SiteSettingSerializer,
     TaskCommentSerializer,
-    TaskStatusSerializer,
     TaskSerializer,
+    TaskStatusSerializer,
 )
 
 
@@ -227,7 +227,6 @@ class TaskViewSet(viewsets.ModelViewSet):
         if getattr(self, 'swagger_fake_view', False):
             return Task.objects.none()
         return get_task_base_queryset(self.request)
-
 
     @action(
         detail=True,
@@ -620,9 +619,7 @@ class TaskExportView(APIView):
         overdue = [
             task
             for task in filtered
-            if task.due_date
-            and task.due_date < now
-            and not task.status.is_archived
+            if task.due_date and task.due_date < now and not task.status.is_archived
         ]
         completion_rate = (
             round(len(completed) / total_count * 100, 1) if total_count else 0.0

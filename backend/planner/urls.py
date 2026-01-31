@@ -26,8 +26,8 @@ from .views import (
     ProjectViewSet,
     SiteSettingView,
     TaskExportView,
-    TaskStatusViewSet,
     TaskStatisticsView,
+    TaskStatusViewSet,
     TaskViewSet,
 )
 

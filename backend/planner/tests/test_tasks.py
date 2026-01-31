@@ -16,7 +16,9 @@ class TestTaskAPI:
         self, authenticated_client, user, other_user, task_statuses, task
     ):
         """Test that users see own tasks and tasks where they are tagged."""
-        default_status = next(status for status in task_statuses if status.key == 'todo')
+        default_status = next(
+            status for status in task_statuses if status.key == 'todo'
+        )
         Task.objects.create(
             owner=other_user,
             title='Tagged Task',
@@ -107,7 +109,9 @@ class TestTaskAPI:
         self, authenticated_client, user, other_user, task_statuses
     ):
         """Test that tagged user can retrieve the task."""
-        default_status = next(status for status in task_statuses if status.key == 'todo')
+        default_status = next(
+            status for status in task_statuses if status.key == 'todo'
+        )
         tagged_task = Task.objects.create(
             owner=other_user,
             title='Tagged Task',
@@ -158,7 +162,9 @@ class TestTaskAPI:
         self, authenticated_client, user, other_user, task_statuses
     ):
         """Test that tagged user cannot delete the task."""
-        default_status = next(status for status in task_statuses if status.key == 'todo')
+        default_status = next(
+            status for status in task_statuses if status.key == 'todo'
+        )
         tagged_task = Task.objects.create(
             owner=other_user,
             title='Tagged Task',
@@ -205,8 +211,12 @@ class TestTaskAPI:
 
     def test_filter_tasks_by_urgency(self, authenticated_client, user, task_statuses):
         """Test filtering tasks by urgency."""
-        default_status = next(status for status in task_statuses if status.key == 'todo')
-        Task.objects.create(owner=user, title='Low Task', urgency='low', status=default_status)
+        default_status = next(
+            status for status in task_statuses if status.key == 'todo'
+        )
+        Task.objects.create(
+            owner=user, title='Low Task', urgency='low', status=default_status
+        )
         Task.objects.create(
             owner=user, title='Critical Task', urgency='critical', status=default_status
         )

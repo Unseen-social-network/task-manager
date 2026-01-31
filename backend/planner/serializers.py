@@ -372,6 +372,7 @@ class TaskStatusSerializer(serializers.ModelSerializer):
             instance.save(update_fields=['contact_freeform_list', 'contact_freeform'])
         return instance
 
+
 class TaskCommentSerializer(serializers.ModelSerializer):
     """Serializer for Task comments with optional replies."""
 

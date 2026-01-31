@@ -49,10 +49,7 @@ class TaskAccessPermission(permissions.BasePermission):
     message = 'Task not found or access denied.'
 
     def _is_tagged_user(self, obj, user):
-        return (
-            obj.tagged_user == user
-            or obj.tagged_users.filter(id=user.id).exists()
-        )
+        return obj.tagged_user == user or obj.tagged_users.filter(id=user.id).exists()
 
     def _status_update_allowed(self, request, obj):
         if request.method not in ('PATCH', 'PUT'):
@@ -68,23 +65,20 @@ class TaskAccessPermission(permissions.BasePermission):
         if status.is_done or status.is_archived:
             self.message = (
                 'Нельзя переводить задачу в конечный статус. '
-                'Отправьте задачу на проверку или сообщите руководителю.'
+                'Отправьте задачу на проверку или сообщите автору.'
             )
             return False
         if obj.status.is_done or obj.status.is_archived:
             self.message = (
                 'Нельзя менять конечный статус. '
-                'Отправьте задачу на проверку или сообщите руководителю.'
+                'Отправьте задачу на проверку или сообщите автору.'
             )
             return False
         return True
 
     def has_object_permission(self, request, view, obj):
         if request.method in permissions.SAFE_METHODS:
-            return (
-                obj.owner == request.user
-                or self._is_tagged_user(obj, request.user)
-            )
+            return obj.owner == request.user or self._is_tagged_user(obj, request.user)
         if obj.owner == request.user:
             return True
         return self._is_tagged_user(obj, request.user) and self._status_update_allowed(

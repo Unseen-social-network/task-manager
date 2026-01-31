@@ -16,7 +16,9 @@ class TestProjectAPI:
         self, authenticated_client, project, other_user, user, task_statuses
     ):
         """Ensure list includes owned projects and ones where user is tagged."""
-        default_status = next(status for status in task_statuses if status.key == 'todo')
+        default_status = next(
+            status for status in task_statuses if status.key == 'todo'
+        )
         other_project = Project.objects.create(
             owner=other_user,
             name='Other Project',
@@ -48,7 +50,9 @@ class TestProjectAPI:
         self, api_client, other_user, user, task_statuses
     ):
         """Ensure tagged users can retrieve projects but not modify them."""
-        default_status = next(status for status in task_statuses if status.key == 'todo')
+        default_status = next(
+            status for status in task_statuses if status.key == 'todo'
+        )
         api_client.force_authenticate(user=user)
         project = Project.objects.create(
             owner=other_user,
