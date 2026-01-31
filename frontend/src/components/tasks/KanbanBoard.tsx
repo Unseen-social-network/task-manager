@@ -1,16 +1,16 @@
 import { useMemo, useState } from 'react'
 import { TaskCard } from '@/components/tasks/TaskCard'
-import type { Task, TaskStatus } from '@/types'
+import type { Task, TaskStatus, TaskStatusOption } from '@/types'
 import { useLocale } from '@/contexts/localeContext'
 
 interface KanbanBoardProps {
   tasks: Task[]
-  statusOptions: TaskStatus[]
+  statusOptions: TaskStatusOption[]
   onTaskSelect: (task: Task) => void
   onStatusChange: (task: Task, status: TaskStatus) => void
 }
 
-const emptyColumn = (status: TaskStatus) => ({
+const emptyColumn = (status: TaskStatusOption) => ({
   status,
   tasks: [] as Task[],
 })
@@ -25,8 +25,8 @@ export const KanbanBoard = ({
   const [draggingTaskId, setDraggingTaskId] = useState<number | null>(null)
 
   const columns = useMemo(() => {
-    const grouped = new Map<TaskStatus, Task[]>(
-      statusOptions.map(status => [status, []])
+    const grouped = new Map<string, Task[]>(
+      statusOptions.map(status => [status.key, []])
     )
     tasks.forEach(task => {
       const bucket = grouped.get(task.status)
@@ -36,23 +36,23 @@ export const KanbanBoard = ({
     })
     return statusOptions.map(status => ({
       status,
-      tasks: grouped.get(status) ?? emptyColumn(status).tasks,
-      label: t(`status.${status}`),
+      tasks: grouped.get(status.key) ?? emptyColumn(status).tasks,
+      label: status.label,
     }))
-  }, [statusOptions, tasks, t])
+  }, [statusOptions, tasks])
 
-  const handleDrop = (status: TaskStatus, taskId: number | null) => {
+  const handleDrop = (status: TaskStatusOption, taskId: number | null) => {
     if (!taskId) return
     const task = tasks.find(item => item.id === taskId)
-    if (!task || task.status === status) return
-    onStatusChange(task, status)
+    if (!task || task.status === status.key) return
+    onStatusChange(task, status.key)
   }
 
   return (
     <div className="grid gap-4 lg:grid-cols-4">
       {columns.map(column => (
         <div
-          key={column.status}
+          key={column.status.key}
           className="flex flex-col rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900"
           onDragOver={event => {
             event.preventDefault()

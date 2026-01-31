@@ -23,6 +23,7 @@ from .models import (
     SiteSetting,
     Task,
     TaskComment,
+    TaskStatus,
 )
 
 User = get_user_model()
@@ -181,6 +182,12 @@ class TaskSerializer(serializers.ModelSerializer):
         many=True,
         required=False,
     )
+    status = serializers.SlugRelatedField(
+        slug_field='key',
+        queryset=TaskStatus.objects.all(),
+        required=False,
+    )
+    status_label = serializers.CharField(source='status.label', read_only=True)
 
     class Meta:
         model = Task
@@ -196,6 +203,7 @@ class TaskSerializer(serializers.ModelSerializer):
             'urgency',
             'due_date',
             'status',
+            'status_label',
             'contact',
             'contact_name',
             'contacts',
@@ -218,7 +226,27 @@ class TaskSerializer(serializers.ModelSerializer):
             'contact_name',
             'contact_names',
             'project_name',
+            'status_label',
         ]
+
+    def create(self, validated_data):
+        if 'status' not in validated_data:
+            default_status = (
+                TaskStatus.objects.filter(is_default=True).order_by('order').first()
+                or TaskStatus.objects.order_by('order').first()
+            )
+            if default_status:
+                validated_data['status'] = default_status
+        return super().create(validated_data)
+
+
+class TaskStatusSerializer(serializers.ModelSerializer):
+    """Serializer for task status definitions."""
+
+    class Meta:
+        model = TaskStatus
+        fields = ['key', 'label', 'order', 'is_archived', 'is_done', 'is_default']
+        read_only_fields = fields
 
     def validate_contact(self, value):
         """Ensure contact belongs to the current user."""

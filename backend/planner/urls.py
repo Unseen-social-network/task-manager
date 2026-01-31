@@ -26,6 +26,7 @@ from .views import (
     ProjectViewSet,
     SiteSettingView,
     TaskExportView,
+    TaskStatusViewSet,
     TaskStatisticsView,
     TaskViewSet,
 )
@@ -34,6 +35,7 @@ router = DefaultRouter()
 router.register(r'contacts', ContactViewSet, basename='contact')
 router.register(r'projects', ProjectViewSet, basename='project')
 router.register(r'tasks', TaskViewSet, basename='task')
+router.register(r'task-statuses', TaskStatusViewSet, basename='task-status')
 router.register(r'attachments', AttachmentViewSet, basename='attachment')
 router.register(r'invites', InviteViewSet, basename='invite')
 

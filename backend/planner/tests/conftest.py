@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 import pytest
 from rest_framework.test import APIClient
 
-from planner.models import Contact, Project, Task
+from planner.models import Contact, Project, Task, TaskStatus
 
 User = get_user_model()
 
@@ -74,14 +74,59 @@ def other_contact(other_user):
 
 
 @pytest.fixture
-def task(user, contact):
+def task_statuses(db):
+    """Ensure default task statuses exist."""
+    defaults = [
+        {
+            'key': 'todo',
+            'label': 'To Do',
+            'order': 1,
+            'is_archived': False,
+            'is_done': False,
+            'is_default': True,
+        },
+        {
+            'key': 'in_progress',
+            'label': 'In Progress',
+            'order': 2,
+            'is_archived': False,
+            'is_done': False,
+            'is_default': False,
+        },
+        {
+            'key': 'done',
+            'label': 'Done',
+            'order': 3,
+            'is_archived': True,
+            'is_done': True,
+            'is_default': False,
+        },
+        {
+            'key': 'canceled',
+            'label': 'Canceled',
+            'order': 4,
+            'is_archived': True,
+            'is_done': False,
+            'is_default': False,
+        },
+    ]
+    statuses = []
+    for status in defaults:
+        obj, _ = TaskStatus.objects.get_or_create(key=status['key'], defaults=status)
+        statuses.append(obj)
+    return statuses
+
+
+@pytest.fixture
+def task(user, contact, task_statuses):
     """Create and return a test task."""
+    default_status = next(status for status in task_statuses if status.key == 'todo')
     return Task.objects.create(
         owner=user,
         title='Test Task',
         description='Test description',
         urgency=Task.Urgency.MEDIUM,
-        status=Task.Status.TODO,
+        status=default_status,
         contact=contact,
     )
 
@@ -99,11 +144,12 @@ def project(user):
 
 
 @pytest.fixture
-def other_task(other_user):
+def other_task(other_user, task_statuses):
     """Create and return a task for other user."""
+    default_status = next(status for status in task_statuses if status.key == 'todo')
     return Task.objects.create(
         owner=other_user,
         title='Other User Task',
         urgency=Task.Urgency.HIGH,
-        status=Task.Status.TODO,
+        status=default_status,
     )

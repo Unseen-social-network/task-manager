@@ -11,7 +11,14 @@ import { useLocale } from '@/contexts/localeContext'
 import { contactsService } from '@/services/contacts.service'
 import { projectsService } from '@/services/projects.service'
 import { statsService } from '@/services/stats.service'
-import type { Contact, Project, TaskStatsFilters, TaskStatsResponse } from '@/types'
+import { taskStatusesService } from '@/services/task-statuses.service'
+import type {
+  Contact,
+  Project,
+  TaskStatsFilters,
+  TaskStatsResponse,
+  TaskStatusOption,
+} from '@/types'
 import type { TaskUrgency, TaskStatus } from '@/types'
 
 const formatDuration = (seconds: number) => {
@@ -37,6 +44,7 @@ export const StatisticsPage = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [assigneeSearch, setAssigneeSearch] = useState('')
   const [isAssigneeMenuOpen, setIsAssigneeMenuOpen] = useState(false)
+  const [taskStatuses, setTaskStatuses] = useState<TaskStatusOption[]>([])
 
   const formatDeadlineLabel = useCallback(
     (dateString: string) => {
@@ -92,6 +100,24 @@ export const StatisticsPage = () => {
 
   useEffect(() => {
     let isActive = true
+    const loadStatuses = async () => {
+      try {
+        const response = await taskStatusesService.getTaskStatuses()
+        if (!isActive) return
+        setTaskStatuses(response)
+      } catch {
+        if (!isActive) return
+        setTaskStatuses([])
+      }
+    }
+    loadStatuses()
+    return () => {
+      isActive = false
+    }
+  }, [])
+
+  useEffect(() => {
+    let isActive = true
     const loadContacts = async () => {
       try {
         const response = await contactsService.getContacts()
@@ -117,6 +143,22 @@ export const StatisticsPage = () => {
       [key]: value || undefined,
     }))
   }
+
+  const statusOptions = useMemo<TaskStatusOption[]>(() => {
+    if (taskStatuses.length) {
+      return [...taskStatuses].sort((a, b) => a.order - b.order)
+    }
+    return [
+      { key: 'todo', label: t('status.todo'), order: 1, is_archived: false, is_done: false },
+      { key: 'in_progress', label: t('status.in_progress'), order: 2, is_archived: false, is_done: false },
+      { key: 'done', label: t('status.done'), order: 3, is_archived: true, is_done: true },
+      { key: 'canceled', label: t('status.canceled'), order: 4, is_archived: true, is_done: false },
+    ]
+  }, [taskStatuses, t])
+
+  const statusLabelMap = useMemo(() => {
+    return new Map(statusOptions.map(status => [status.key, status.label]))
+  }, [statusOptions])
 
   const applyDueDateRange = useCallback((start: Date, end: Date) => {
     setFilters(prev => ({
@@ -339,10 +381,10 @@ export const StatisticsPage = () => {
               onChange={event => handleFilterChange('status', event.target.value as TaskStatus || undefined)}
               options={[
                 { value: '', label: t('tasks.filter.statusAll') },
-                { value: 'todo', label: t('status.todo') },
-                { value: 'in_progress', label: t('status.in_progress') },
-                { value: 'done', label: t('status.done') },
-                { value: 'canceled', label: t('status.canceled') },
+                ...statusOptions.map(status => ({
+                  value: status.key,
+                  label: status.label,
+                })),
               ]}
             />
             <Select
@@ -454,7 +496,9 @@ export const StatisticsPage = () => {
               {series?.by_status.map(item => (
                 <div key={item.status} className="space-y-1">
                   <div className="flex justify-between text-sm text-gray-600 dark:text-gray-300">
-                    <span>{t(`status.${item.status}`)}</span>
+                    <span>
+                      {item.label ?? statusLabelMap.get(item.status) ?? t(`status.${item.status}`)}
+                    </span>
                     <span>{item.count}</span>
                   </div>
                   <div className="h-2 rounded-full bg-gray-100 dark:bg-gray-800">

@@ -1,7 +1,15 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { Edit2, Trash2, Upload, Download, X, Calendar, User, FolderKanban, AtSign, Link2 } from 'lucide-react'
 import toast from 'react-hot-toast'
-import type { Task, UpdateTaskInput, TaskMeta, Project, TaskStatus, TaskComment } from '@/types'
+import type {
+  Task,
+  UpdateTaskInput,
+  TaskMeta,
+  Project,
+  TaskStatus,
+  TaskComment,
+  TaskStatusOption,
+} from '@/types'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -26,6 +34,7 @@ interface TaskDetailsModalProps {
   onClose: () => void
   onUpdate: () => void
   onRefresh?: () => void
+  statusOptions?: TaskStatusOption[]
 }
 
 export const TaskDetailsModal = ({
@@ -34,6 +43,7 @@ export const TaskDetailsModal = ({
   onClose,
   onUpdate,
   onRefresh,
+  statusOptions,
 }: TaskDetailsModalProps) => {
   const [isEditing, setIsEditing] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -77,6 +87,13 @@ export const TaskDetailsModal = ({
   const isOwnerViewer = !isTaggedViewer
   const hasQuestion = task.has_question ?? false
   const completionRequested = task.completion_requested ?? false
+  const statusLabel = useMemo(() => {
+    if (task.status_label && displayStatus === task.status) {
+      return task.status_label
+    }
+    const matched = statusOptions?.find(status => status.key === displayStatus)
+    return matched?.label ?? t(`status.${displayStatus}`)
+  }, [displayStatus, statusOptions, t, task.status, task.status_label])
 
   useEffect(() => {
     setMetaState({
@@ -467,6 +484,7 @@ export const TaskDetailsModal = ({
             tagged_user: metaState.tagged_user,
             tagged_users: task.tagged_users,
           }}
+          statusOptions={statusOptions}
           onSubmit={handleUpdate}
           onCancel={() => setIsEditing(false)}
         />
@@ -594,7 +612,7 @@ export const TaskDetailsModal = ({
           <div className="flex gap-2">
             <Badge className={getUrgencyColor(task.urgency)}>{t(`urgency.${task.urgency}`)}</Badge>
             <Badge className={getStatusColor(displayStatus)}>
-              {t(`status.${displayStatus}`)}
+              {statusLabel}
             </Badge>
             {hasQuestion && <Badge variant="warning">{t('tasks.flags.question')}</Badge>}
             {completionRequested && <Badge variant="success">{t('tasks.flags.ready')}</Badge>}

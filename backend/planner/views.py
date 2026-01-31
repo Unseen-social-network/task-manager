@@ -35,6 +35,7 @@ from .models import (
     ProjectShareAccess,
     SiteSetting,
     Task,
+    TaskStatus,
 )
 from .permissions import (
     ContactAccessPermission,
@@ -59,6 +60,7 @@ from .serializers import (
     ProjectShareSerializer,
     SiteSettingSerializer,
     TaskCommentSerializer,
+    TaskStatusSerializer,
     TaskSerializer,
 )
 
@@ -200,7 +202,7 @@ def get_task_base_queryset(request):
             Q(tagged_user=request.user) | Q(tagged_users=request.user)
         )
     return (
-        base_queryset.select_related('contact', 'project', 'tagged_user')
+        base_queryset.select_related('contact', 'project', 'tagged_user', 'status')
         .prefetch_related('tagged_users', 'contacts')
         .distinct()
     )
@@ -217,7 +219,7 @@ class TaskViewSet(viewsets.ModelViewSet):
     filterset_class = TaskFilter
     filter_backends = [DjangoFilterBackend, TaskSearchFilter, OrderingFilter]
     search_fields = ['title', 'contact_freeform']
-    ordering_fields = ['due_date', 'created_at', 'urgency', 'status']
+    ordering_fields = ['due_date', 'created_at', 'urgency', 'status__order']
     ordering = ['-created_at']
 
     def get_queryset(self):
@@ -225,6 +227,17 @@ class TaskViewSet(viewsets.ModelViewSet):
         if getattr(self, 'swagger_fake_view', False):
             return Task.objects.none()
         return get_task_base_queryset(self.request)
+
+
+class TaskStatusViewSet(viewsets.ReadOnlyModelViewSet):
+    """Read-only viewset for task status definitions."""
+
+    serializer_class = TaskStatusSerializer
+    permission_classes = [IsAuthenticated]
+    queryset = TaskStatus.objects.all()
+    ordering_fields = ['order', 'label', 'key']
+    ordering = ['order', 'label']
+    pagination_class = None
 
     def get_object(self):
         """
@@ -417,16 +430,16 @@ class TaskStatisticsView(APIView):
         now = timezone.now()
 
         total_count = filtered.count()
-        completed_count = filtered.filter(status=Task.Status.DONE).count()
+        completed_count = filtered.filter(status__is_done=True).count()
         overdue_count = filtered.filter(
             due_date__lt=now,
-            status__in=[Task.Status.TODO, Task.Status.IN_PROGRESS],
+            status__is_archived=False,
         ).count()
         completion_rate = (
             round(completed_count / total_count * 100, 1) if total_count else 0.0
         )
 
-        completed_tasks = list(filtered.filter(status=Task.Status.DONE))
+        completed_tasks = list(filtered.filter(status__is_done=True))
         durations = [
             (task.updated_at - task.created_at).total_seconds()
             for task in completed_tasks
@@ -437,10 +450,15 @@ class TaskStatisticsView(APIView):
         )
 
         by_status = [
-            {'status': status_value, 'count': count}
-            for status_value, count in filtered.values_list('status')
+            {
+                'status': row['status__key'],
+                'label': row['status__label'],
+                'order': row['status__order'],
+                'count': row['count'],
+            }
+            for row in filtered.values('status__key', 'status__label', 'status__order')
             .annotate(count=Count('id'))
-            .order_by('status')
+            .order_by('status__order', 'status__label')
         ]
         by_urgency = [
             {'urgency': urgency_value, 'count': count}
@@ -458,11 +476,11 @@ class TaskStatisticsView(APIView):
             if not assignees:
                 assignees = [None]
 
-            is_done = task.status == Task.Status.DONE
+            is_done = task.status.is_done
             is_overdue = (
                 bool(task.due_date)
                 and task.due_date < now
-                and task.status in [Task.Status.TODO, Task.Status.IN_PROGRESS]
+                and not task.status.is_archived
             )
 
             for assignee in assignees:
@@ -492,10 +510,7 @@ class TaskStatisticsView(APIView):
             ),
         )
 
-        open_tasks = filtered.filter(
-            status__in=[Task.Status.TODO, Task.Status.IN_PROGRESS],
-            due_date__isnull=False,
-        )
+        open_tasks = filtered.filter(status__is_archived=False, due_date__isnull=False)
 
         trend = []
         due_date_rows = (
@@ -594,20 +609,6 @@ class TaskExportView(APIView):
                 'task_comments': 'Комментарии',
             },
         }[language]
-        status_labels = {
-            'en': {
-                Task.Status.TODO: 'To Do',
-                Task.Status.IN_PROGRESS: 'In Progress',
-                Task.Status.DONE: 'Done',
-                Task.Status.CANCELED: 'Canceled',
-            },
-            'ru': {
-                Task.Status.TODO: 'К выполнению',
-                Task.Status.IN_PROGRESS: 'В работе',
-                Task.Status.DONE: 'Готово',
-                Task.Status.CANCELED: 'Отменено',
-            },
-        }[language]
         urgency_labels = {
             'en': {
                 Task.Urgency.LOW: 'Low',
@@ -624,13 +625,13 @@ class TaskExportView(APIView):
         }[language]
 
         total_count = len(filtered)
-        completed = [task for task in filtered if task.status == Task.Status.DONE]
+        completed = [task for task in filtered if task.status.is_done]
         overdue = [
             task
             for task in filtered
             if task.due_date
             and task.due_date < now
-            and task.status in [Task.Status.TODO, Task.Status.IN_PROGRESS]
+            and not task.status.is_archived
         ]
         completion_rate = (
             round(len(completed) / total_count * 100, 1) if total_count else 0.0
@@ -680,7 +681,7 @@ class TaskExportView(APIView):
                 [
                     task.id,
                     task.title,
-                    status_labels.get(task.status, task.status),
+                    task.status.label,
                     urgency_labels.get(task.urgency, task.urgency),
                     task.due_date.isoformat() if task.due_date else '',
                     task.project.name if task.project else '',

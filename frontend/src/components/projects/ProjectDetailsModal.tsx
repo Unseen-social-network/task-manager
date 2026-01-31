@@ -11,11 +11,12 @@ import {
   parseISO,
   startOfDay,
 } from 'date-fns'
-import type { Project, CreateProjectInput, Task } from '@/types'
+import type { Project, CreateProjectInput, Task, TaskStatusOption } from '@/types'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { ProjectForm } from './ProjectForm'
 import { projectsService } from '@/services/projects.service'
+import { taskStatusesService } from '@/services/task-statuses.service'
 import { tasksService } from '@/services/tasks.service'
 import { useLocale } from '@/contexts/localeContext'
 import { formatDate, formatDateOnly, getUrgencyColor } from '@/utils/helpers'
@@ -43,6 +44,7 @@ export const ProjectDetailsModal = ({
   const [tasks, setTasks] = useState<Task[]>([])
   const [tasksLoading, setTasksLoading] = useState(false)
   const [tasksError, setTasksError] = useState<string | null>(null)
+  const [taskStatuses, setTaskStatuses] = useState<TaskStatusOption[]>([])
   const [shareAccesses, setShareAccesses] = useState<
     Array<{ user_id: number; username: string; email: string; created_at: string }>
   >([])
@@ -119,6 +121,37 @@ export const ProjectDetailsModal = ({
   }, [activeTab, isOpen, project.id, t])
 
   useEffect(() => {
+    if (!isOpen) return
+    let isActive = true
+    const loadStatuses = async () => {
+      try {
+        const response = await taskStatusesService.getTaskStatuses()
+        if (!isActive) return
+        setTaskStatuses(response)
+      } catch {
+        if (!isActive) return
+        setTaskStatuses([])
+      }
+    }
+    loadStatuses()
+    return () => {
+      isActive = false
+    }
+  }, [isOpen])
+
+  const statusOptions = useMemo<TaskStatusOption[]>(() => {
+    if (taskStatuses.length) {
+      return [...taskStatuses].sort((a, b) => a.order - b.order)
+    }
+    return [
+      { key: 'todo', label: t('status.todo'), order: 1, is_archived: false, is_done: false },
+      { key: 'in_progress', label: t('status.in_progress'), order: 2, is_archived: false, is_done: false },
+      { key: 'done', label: t('status.done'), order: 3, is_archived: true, is_done: true },
+      { key: 'canceled', label: t('status.canceled'), order: 4, is_archived: true, is_done: false },
+    ]
+  }, [taskStatuses, t])
+
+  useEffect(() => {
     if (!isOpen || activeTab !== 'sharing' || !isOwner) return
     let isActive = true
     const fetchAccesses = async () => {
@@ -141,6 +174,10 @@ export const ProjectDetailsModal = ({
     }
   }, [activeTab, isOpen, isOwner, project.id, t])
 
+  const statusMetaMap = useMemo(() => {
+    return new Map(statusOptions.map(status => [status.key, status]))
+  }, [statusOptions])
+
   const ganttData = useMemo(() => {
     if (tasks.length === 0) return null
 
@@ -148,6 +185,8 @@ export const ProjectDetailsModal = ({
     const upcomingEnd = addDays(today, 7)
 
     const entries = tasks.map(task => {
+      const statusMeta = statusMetaMap.get(task.status)
+      const isArchived = statusMeta?.is_archived ?? false
       const startRaw = task.created_at
       const endRaw = task.due_date ?? task.created_at
       const startDate = parseISO(startRaw)
@@ -155,9 +194,9 @@ export const ProjectDetailsModal = ({
       const rangeStart = startDate <= endDate ? startDate : endDate
       const rangeEnd = startDate <= endDate ? endDate : startDate
       const dueDate = task.due_date ? parseISO(task.due_date) : null
-      const isOverdue = !!dueDate && isBefore(dueDate, today) && task.status !== 'done'
+      const isOverdue = !!dueDate && isBefore(dueDate, today) && !isArchived
       const isDueSoon =
-        !!dueDate && !isOverdue && !isBefore(upcomingEnd, dueDate) && task.status !== 'done'
+        !!dueDate && !isOverdue && !isBefore(upcomingEnd, dueDate) && !isArchived
 
       return {
         task,
@@ -173,14 +212,14 @@ export const ProjectDetailsModal = ({
     const overallEnd = max(entries.map(entry => entry.rangeEnd))
     const totalDays = Math.max(1, differenceInCalendarDays(overallEnd, overallStart) + 1)
 
-    const summary = entries.reduce(
-      (acc, entry) => {
+      const summary = entries.reduce(
+        (acc, entry) => {
         acc.total += 1
         if (!entry.task.due_date) acc.noDueDate += 1
         if (entry.isOverdue) acc.overdue += 1
         if (entry.isDueSoon) acc.dueSoon += 1
         acc.byUrgency[entry.task.urgency] += 1
-        acc.byStatus[entry.task.status] += 1
+        acc.byStatus[entry.task.status] = (acc.byStatus[entry.task.status] ?? 0) + 1
         return acc
       },
       {
@@ -194,12 +233,10 @@ export const ProjectDetailsModal = ({
           high: 0,
           critical: 0,
         },
-        byStatus: {
-          todo: 0,
-          in_progress: 0,
-          done: 0,
-          canceled: 0,
-        },
+        byStatus: statusOptions.reduce<Record<string, number>>((acc, status) => {
+          acc[status.key] = 0
+          return acc
+        }, {}),
       }
     )
 
@@ -210,7 +247,7 @@ export const ProjectDetailsModal = ({
       totalDays,
       summary,
     }
-  }, [tasks])
+  }, [statusMetaMap, statusOptions, tasks])
 
   if (isEditing && !isReadOnly) {
     return (
@@ -456,30 +493,14 @@ export const ProjectDetailsModal = ({
                       {t('projects.gantt.summary.status')}
                     </p>
                     <div className="mt-2 space-y-1 text-xs text-gray-600 dark:text-gray-300">
-                      <div className="flex justify-between">
-                        <span>{t('status.todo')}</span>
-                        <span className="font-medium text-gray-900 dark:text-gray-100">
-                          {ganttData.summary.byStatus.todo}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>{t('status.in_progress')}</span>
-                        <span className="font-medium text-gray-900 dark:text-gray-100">
-                          {ganttData.summary.byStatus.in_progress}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>{t('status.done')}</span>
-                        <span className="font-medium text-gray-900 dark:text-gray-100">
-                          {ganttData.summary.byStatus.done}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>{t('status.canceled')}</span>
-                        <span className="font-medium text-gray-900 dark:text-gray-100">
-                          {ganttData.summary.byStatus.canceled}
-                        </span>
-                      </div>
+                      {statusOptions.map(status => (
+                        <div key={status.key} className="flex justify-between">
+                          <span>{status.label}</span>
+                          <span className="font-medium text-gray-900 dark:text-gray-100">
+                            {ganttData.summary.byStatus[status.key] ?? 0}
+                          </span>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>

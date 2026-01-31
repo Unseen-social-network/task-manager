@@ -13,6 +13,7 @@ import { TaskFilters } from '@/components/tasks/TaskFilters'
 import { TaskDetailsModal } from '@/components/tasks/TaskDetailsModal'
 import { profileService } from '@/services/profile.service'
 import { projectsService } from '@/services/projects.service'
+import { taskStatusesService } from '@/services/task-statuses.service'
 import { tasksService } from '@/services/tasks.service'
 import { useLocale } from '@/contexts/localeContext'
 import {
@@ -29,6 +30,7 @@ import type {
   CreateTaskInput,
   TaskFilters as TaskFiltersType,
   TaskStatus,
+  TaskStatusOption,
   TaskView,
 } from '@/types'
 
@@ -69,6 +71,7 @@ export const TasksPage = () => {
     return stored === 'manager'
   })
   const [taskView, setTaskView] = useState<TaskView>('list')
+  const [taskStatuses, setTaskStatuses] = useState<TaskStatusOption[]>([])
   const taskViewInitialized = useRef(false)
   const [searchParams, setSearchParams] = useSearchParams()
   const { t } = useLocale()
@@ -99,6 +102,24 @@ export const TasksPage = () => {
   useEffect(() => {
     loadTasks()
   }, [loadTasks])
+
+  useEffect(() => {
+    let isActive = true
+    const loadStatuses = async () => {
+      try {
+        const data = await taskStatusesService.getTaskStatuses()
+        if (!isActive) return
+        setTaskStatuses(data)
+      } catch {
+        if (!isActive) return
+        setTaskStatuses([])
+      }
+    }
+    loadStatuses()
+    return () => {
+      isActive = false
+    }
+  }, [])
 
   useEffect(() => {
     let isActive = true
@@ -148,15 +169,20 @@ export const TasksPage = () => {
 
   useEffect(() => {
     if (searchEverywhere) return
-    const allowedStatuses: TaskStatus[] =
-      activeTab === 'archive' ? ['done', 'canceled'] : ['todo', 'in_progress']
+    const allowedStatuses: TaskStatus[] = (taskStatuses.length
+      ? taskStatuses
+          .filter(status => status.is_archived === (activeTab === 'archive'))
+          .map(status => status.key)
+      : activeTab === 'archive'
+        ? ['done', 'canceled']
+        : ['todo', 'in_progress']) as TaskStatus[]
     if (filters.status && !allowedStatuses.includes(filters.status)) {
       setFilters(prev => ({
         ...prev,
         status: undefined,
       }))
     }
-  }, [activeTab, filters.status, searchEverywhere])
+  }, [activeTab, filters.status, searchEverywhere, taskStatuses])
 
   useEffect(() => {
     if (!filters.project) return
@@ -268,14 +294,12 @@ export const TasksPage = () => {
   }
 
   const visibleTasks = useMemo(() => {
+    const allowedStatuses = new Set(
+      searchEverywhere ? [] : statusOptions.map(status => status.key)
+    )
     const baseTasks = searchEverywhere
       ? tasks
-      : tasks.filter(task =>
-          (activeTab === 'archive'
-            ? ['done', 'canceled']
-            : ['todo', 'in_progress']
-          ).includes(task.status)
-        )
+      : tasks.filter(task => allowedStatuses.has(task.status))
     const assigneeFiltered = assigneeFilter
       ? baseTasks.filter(
           task => getTaskAssignee(task, t('tasks.dashboard.unassigned')) === assigneeFilter
@@ -298,17 +322,25 @@ export const TasksPage = () => {
       }
     })()
     return quickFiltered
-  }, [activeTab, assigneeFilter, quickFilter, searchEverywhere, t, tasks])
+  }, [assigneeFilter, quickFilter, searchEverywhere, statusOptions, t, tasks])
 
-  const statusOptions = useMemo<TaskStatus[]>(
-    () =>
-      searchEverywhere
-        ? ['todo', 'in_progress', 'done', 'canceled']
-        : activeTab === 'archive'
-          ? ['done', 'canceled']
-          : ['todo', 'in_progress'],
-    [activeTab, searchEverywhere]
-  )
+  const statusOptions = useMemo<TaskStatusOption[]>(() => {
+    if (!taskStatuses.length) {
+      const fallback: TaskStatusOption[] = [
+        { key: 'todo', label: t('status.todo'), order: 1, is_archived: false, is_done: false },
+        { key: 'in_progress', label: t('status.in_progress'), order: 2, is_archived: false, is_done: false },
+        { key: 'done', label: t('status.done'), order: 3, is_archived: true, is_done: true },
+        { key: 'canceled', label: t('status.canceled'), order: 4, is_archived: true, is_done: false },
+      ]
+      return searchEverywhere
+        ? fallback
+        : fallback.filter(status => status.is_archived === (activeTab === 'archive'))
+    }
+    const sorted = [...taskStatuses].sort((a, b) => a.order - b.order)
+    return searchEverywhere
+      ? sorted
+      : sorted.filter(status => status.is_archived === (activeTab === 'archive'))
+  }, [activeTab, searchEverywhere, taskStatuses, t])
 
   return (
     <Layout>
@@ -427,6 +459,7 @@ export const TasksPage = () => {
         title={t('tasks.createTitle')}
       >
         <TaskForm
+          statusOptions={statusOptions}
           onSubmit={handleCreateTask}
           onCancel={() => setIsCreateModalOpen(false)}
         />
@@ -440,6 +473,7 @@ export const TasksPage = () => {
           onClose={handleTaskClose}
           onUpdate={handleTaskUpdate}
           onRefresh={handleTaskRefresh}
+          statusOptions={statusOptions}
         />
       )}
     </Layout>

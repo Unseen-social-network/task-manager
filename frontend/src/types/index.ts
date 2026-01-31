@@ -58,8 +58,17 @@ export interface CreateContactInput {
 export type UpdateContactInput = Partial<CreateContactInput>
 
 export type TaskUrgency = 'low' | 'medium' | 'high' | 'critical'
-export type TaskStatus = 'todo' | 'in_progress' | 'done' | 'canceled'
+export type TaskStatus = string
 export type TaskView = 'list' | 'kanban'
+
+export interface TaskStatusOption {
+  key: string
+  label: string
+  order: number
+  is_archived: boolean
+  is_done: boolean
+  is_default?: boolean
+}
 
 export interface Task {
   id: number
@@ -69,6 +78,7 @@ export interface Task {
   urgency: TaskUrgency
   due_date: string | null
   status: TaskStatus
+  status_label?: string
   contact: number | null
   contact_name?: string
   contacts?: number[]
@@ -249,7 +259,7 @@ export interface TaskStatsMetrics {
 }
 
 export interface TaskStatsSeries {
-  by_status: Array<{ status: TaskStatus; count: number }>
+  by_status: Array<{ status: TaskStatus; label?: string; order?: number; count: number }>
   by_urgency: Array<{ urgency: TaskUrgency; count: number }>
   by_assignee: Array<{
     assignee_id: number | null
