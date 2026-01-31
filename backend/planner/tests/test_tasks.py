@@ -118,21 +118,39 @@ class TestTaskAPI:
         assert response.status_code == status.HTTP_200_OK
         assert response.data['id'] == tagged_task.id
 
-    def test_tagged_user_cannot_update_task(
+    def test_tagged_user_can_update_non_final_status(
         self, authenticated_client, user, other_user, task_statuses
     ):
-        """Test that tagged user cannot update the task."""
-        default_status = next(status for status in task_statuses if status.key == 'todo')
+        """Test that tagged user can update task status among non-final statuses."""
+        status_map = {status.key: status for status in task_statuses}
         tagged_task = Task.objects.create(
             owner=other_user,
             title='Tagged Task',
-            status=default_status,
+            status=status_map['todo'],
+            tagged_user=user,
+        )
+        url = f'/api/v1/tasks/{tagged_task.id}/'
+        response = authenticated_client.patch(url, {'status': 'in_progress'})
+
+        assert response.status_code == status.HTTP_200_OK
+        tagged_task.refresh_from_db()
+        assert tagged_task.status.key == 'in_progress'
+
+    def test_tagged_user_cannot_update_final_status(
+        self, authenticated_client, user, other_user, task_statuses
+    ):
+        """Test that tagged user cannot update task status to a final status."""
+        status_map = {status.key: status for status in task_statuses}
+        tagged_task = Task.objects.create(
+            owner=other_user,
+            title='Tagged Task',
+            status=status_map['todo'],
             tagged_user=user,
         )
         url = f'/api/v1/tasks/{tagged_task.id}/'
         response = authenticated_client.patch(url, {'status': 'done'})
 
-        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_tagged_user_cannot_delete_task(
         self, authenticated_client, user, other_user, task_statuses

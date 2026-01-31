@@ -197,7 +197,7 @@ def get_task_base_queryset(request):
     if getattr(request, 'user', None) is None or not request.user.is_authenticated:
         return Task.objects.none()
     base_queryset = Task.objects.filter(owner=request.user)
-    if request.method in ('GET', 'HEAD', 'OPTIONS'):
+    if request.method in ('GET', 'HEAD', 'OPTIONS', 'PATCH', 'PUT'):
         base_queryset = base_queryset | Task.objects.filter(
             Q(tagged_user=request.user) | Q(tagged_users=request.user)
         )

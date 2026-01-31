@@ -5,7 +5,7 @@ Custom permissions for Planner application.
 from django.db.models import Q
 from rest_framework import permissions
 
-from .models import ContactShareAccess, ProjectShareAccess
+from .models import ContactShareAccess, ProjectShareAccess, TaskStatus
 
 
 class IsOwner(permissions.BasePermission):
@@ -48,14 +48,40 @@ class TaskAccessPermission(permissions.BasePermission):
 
     message = 'Task not found or access denied.'
 
+    def _is_tagged_user(self, obj, user):
+        return (
+            obj.tagged_user == user
+            or obj.tagged_users.filter(id=user.id).exists()
+        )
+
+    def _status_update_allowed(self, request, obj):
+        if request.method not in ('PATCH', 'PUT'):
+            return False
+        if set(request.data.keys()) != {'status'}:
+            return False
+        status_key = request.data.get('status')
+        if not status_key:
+            return False
+        status = TaskStatus.objects.filter(key=status_key).first()
+        if not status:
+            return False
+        if status.is_done or status.is_archived:
+            return False
+        if obj.status.is_done or obj.status.is_archived:
+            return False
+        return True
+
     def has_object_permission(self, request, view, obj):
         if request.method in permissions.SAFE_METHODS:
             return (
                 obj.owner == request.user
-                or obj.tagged_user == request.user
-                or obj.tagged_users.filter(id=request.user.id).exists()
+                or self._is_tagged_user(obj, request.user)
             )
-        return obj.owner == request.user
+        if obj.owner == request.user:
+            return True
+        return self._is_tagged_user(obj, request.user) and self._status_update_allowed(
+            request, obj
+        )
 
 
 class TaskCommentAccessPermission(permissions.BasePermission):
