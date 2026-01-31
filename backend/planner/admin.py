@@ -17,6 +17,7 @@ from .models import (
     SiteSetting,
     Task,
     TaskComment,
+    TaskStatus,
 )
 
 
@@ -91,6 +92,18 @@ class TaskAdmin(admin.ModelAdmin):
             {'fields': ('time_spent_seconds', 'tracking_completed')},
         ),
         ('Timestamps', {'fields': ('created_at', 'updated_at')}),
+    )
+
+
+@admin.register(TaskStatus)
+class TaskStatusAdmin(admin.ModelAdmin):
+    list_display = ['label', 'key', 'order', 'is_archived', 'is_done', 'is_default']
+    list_filter = ['is_archived', 'is_done', 'is_default']
+    search_fields = ['label', 'key']
+    ordering = ['order', 'label']
+    fieldsets = (
+        (None, {'fields': ('label', 'key')}),
+        ('Behavior', {'fields': ('order', 'is_archived', 'is_done', 'is_default')}),
     )
 
 

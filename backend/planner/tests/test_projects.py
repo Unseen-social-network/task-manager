@@ -13,9 +13,12 @@ class TestProjectAPI:
     """Tests for Project CRUD operations and permissions."""
 
     def test_list_projects_includes_tagged(
-        self, authenticated_client, project, other_user, user
+        self, authenticated_client, project, other_user, user, task_statuses
     ):
         """Ensure list includes owned projects and ones where user is tagged."""
+        default_status = next(
+            status for status in task_statuses if status.key == 'todo'
+        )
         other_project = Project.objects.create(
             owner=other_user,
             name='Other Project',
@@ -29,7 +32,7 @@ class TestProjectAPI:
         other_project.tasks.create(
             owner=other_user,
             title='Tagged Task',
-            status=Task.Status.TODO,
+            status=default_status,
             urgency=Task.Urgency.MEDIUM,
             tagged_user=user,
         )
@@ -43,8 +46,13 @@ class TestProjectAPI:
         assert other_project.id in project_ids
         assert len(project_ids) == 2
 
-    def test_retrieve_project_for_tagged_user(self, api_client, other_user, user):
+    def test_retrieve_project_for_tagged_user(
+        self, api_client, other_user, user, task_statuses
+    ):
         """Ensure tagged users can retrieve projects but not modify them."""
+        default_status = next(
+            status for status in task_statuses if status.key == 'todo'
+        )
         api_client.force_authenticate(user=user)
         project = Project.objects.create(
             owner=other_user,
@@ -54,7 +62,7 @@ class TestProjectAPI:
         project.tasks.create(
             owner=other_user,
             title='Shared Task',
-            status=Task.Status.TODO,
+            status=default_status,
             urgency=Task.Urgency.MEDIUM,
             tagged_user=user,
         )

@@ -1,5 +1,7 @@
 import pytest
 
+from planner.models import TaskStatus
+
 
 @pytest.fixture(autouse=True)
 def mock_aiohttp_post(monkeypatch):
@@ -40,3 +42,46 @@ def mock_aiohttp_post(monkeypatch):
         'aiohttp.ClientSession',
         MockSession,
     )
+
+
+@pytest.fixture(autouse=True)
+def task_statuses(db):
+    defaults = [
+        {
+            'key': 'todo',
+            'label': 'To Do',
+            'order': 1,
+            'is_archived': False,
+            'is_done': False,
+            'is_default': True,
+        },
+        {
+            'key': 'in_progress',
+            'label': 'In Progress',
+            'order': 2,
+            'is_archived': False,
+            'is_done': False,
+            'is_default': False,
+        },
+        {
+            'key': 'done',
+            'label': 'Done',
+            'order': 3,
+            'is_archived': True,
+            'is_done': True,
+            'is_default': False,
+        },
+        {
+            'key': 'canceled',
+            'label': 'Canceled',
+            'order': 4,
+            'is_archived': True,
+            'is_done': False,
+            'is_default': False,
+        },
+    ]
+    statuses = []
+    for status in defaults:
+        obj, _ = TaskStatus.objects.get_or_create(key=status['key'], defaults=status)
+        statuses.append(obj)
+    return statuses

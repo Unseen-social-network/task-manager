@@ -23,6 +23,7 @@ from .models import (
     SiteSetting,
     Task,
     TaskComment,
+    TaskStatus,
 )
 
 User = get_user_model()
@@ -181,6 +182,12 @@ class TaskSerializer(serializers.ModelSerializer):
         many=True,
         required=False,
     )
+    status = serializers.SlugRelatedField(
+        slug_field='key',
+        queryset=TaskStatus.objects.all(),
+        required=False,
+    )
+    status_label = serializers.CharField(source='status.label', read_only=True)
 
     class Meta:
         model = Task
@@ -196,6 +203,7 @@ class TaskSerializer(serializers.ModelSerializer):
             'urgency',
             'due_date',
             'status',
+            'status_label',
             'contact',
             'contact_name',
             'contacts',
@@ -218,7 +226,21 @@ class TaskSerializer(serializers.ModelSerializer):
             'contact_name',
             'contact_names',
             'project_name',
+            'status_label',
         ]
+
+    def create(self, validated_data):
+        if 'status' not in validated_data:
+            default_status = (
+                TaskStatus.objects.filter(is_default=True).order_by('order').first()
+                or TaskStatus.objects.order_by('order').first()
+            )
+            if default_status:
+                validated_data['status'] = default_status
+        return super().create(validated_data)
+
+    def get_contact_names(self, obj):
+        return [contact.name for contact in obj.contacts.all()]
 
     def validate_contact(self, value):
         """Ensure contact belongs to the current user."""
@@ -282,6 +304,15 @@ class TaskSerializer(serializers.ModelSerializer):
 
         return attrs
 
+
+class TaskStatusSerializer(serializers.ModelSerializer):
+    """Serializer for task status definitions."""
+
+    class Meta:
+        model = TaskStatus
+        fields = ['key', 'label', 'order', 'is_archived', 'is_done', 'is_default']
+        read_only_fields = fields
+
     def create(self, validated_data):
         """Attach tagging actor to the instance before saving."""
         request = self.context.get('request')
@@ -340,9 +371,6 @@ class TaskSerializer(serializers.ModelSerializer):
         if contact_freeform_list is not None or contact_freeform is not None:
             instance.save(update_fields=['contact_freeform_list', 'contact_freeform'])
         return instance
-
-    def get_contact_names(self, obj):
-        return [contact.name for contact in obj.contacts.all()]
 
 
 class TaskCommentSerializer(serializers.ModelSerializer):
@@ -488,6 +516,7 @@ class ProfileSerializer(serializers.ModelSerializer):
             'telegram_notifications_enabled',
             'telegram_notify_on_tag',
             'share_invite_contact',
+            'default_task_view',
             'invite_quota',
             'invites_remaining',
             'inviter_username',

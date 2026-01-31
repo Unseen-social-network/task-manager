@@ -13,7 +13,7 @@ class TaskFilter(filters.FilterSet):
     FilterSet for Task model with advanced filtering options.
     """
 
-    status = filters.ChoiceFilter(choices=Task.Status.choices)
+    status = filters.CharFilter(field_name='status__key')
     urgency = filters.ChoiceFilter(choices=Task.Urgency.choices)
     due_date_from = filters.DateTimeFilter(field_name='due_date', lookup_expr='gte')
     due_date_to = filters.DateTimeFilter(field_name='due_date', lookup_expr='lte')

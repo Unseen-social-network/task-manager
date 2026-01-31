@@ -1,18 +1,22 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Plus } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useSearchParams } from 'react-router-dom'
 import { Layout } from '@/components/layout/Layout'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
+import { KanbanBoard } from '@/components/tasks/KanbanBoard'
 import { ManagerDashboard, type QuickFilter } from '@/components/tasks/ManagerDashboard'
 import { TaskCard } from '@/components/tasks/TaskCard'
 import { TaskForm } from '@/components/tasks/TaskForm'
 import { TaskFilters } from '@/components/tasks/TaskFilters'
 import { TaskDetailsModal } from '@/components/tasks/TaskDetailsModal'
+import { profileService } from '@/services/profile.service'
 import { projectsService } from '@/services/projects.service'
+import { taskStatusesService } from '@/services/task-statuses.service'
 import { tasksService } from '@/services/tasks.service'
 import { useLocale } from '@/contexts/localeContext'
+import { getApiErrorMessage } from '@/utils/helpers'
 import {
   getTaskAssignee,
   isTaskAtRisk,
@@ -27,6 +31,8 @@ import type {
   CreateTaskInput,
   TaskFilters as TaskFiltersType,
   TaskStatus,
+  TaskStatusOption,
+  TaskView,
 } from '@/types'
 
 const MANAGER_VIEW_COOKIE = 'tasks_manager_view'
@@ -65,6 +71,9 @@ export const TasksPage = () => {
     const stored = getCookieValue(MANAGER_VIEW_COOKIE)
     return stored === 'manager'
   })
+  const [taskView, setTaskView] = useState<TaskView>('list')
+  const [taskStatuses, setTaskStatuses] = useState<TaskStatusOption[]>([])
+  const taskViewInitialized = useRef(false)
   const [searchParams, setSearchParams] = useSearchParams()
   const { t } = useLocale()
   const sharedTaskId = useMemo(() => {
@@ -74,21 +83,72 @@ export const TasksPage = () => {
     return Number.isFinite(parsed) ? parsed : null
   }, [searchParams])
 
-  const loadTasks = useCallback(async () => {
-    setIsLoading(true)
+  const loadTasks = useCallback(async (options?: { showLoading?: boolean }) => {
+    const showLoading = options?.showLoading ?? true
+    if (showLoading) {
+      setIsLoading(true)
+    }
     try {
       const response = await tasksService.getTasks(filters)
       setTasks(response.results)
     } catch {
       toast.error(t('tasks.loadFail'))
     } finally {
-      setIsLoading(false)
+      if (showLoading) {
+        setIsLoading(false)
+      }
     }
   }, [filters, t])
 
   useEffect(() => {
     loadTasks()
   }, [loadTasks])
+
+  useEffect(() => {
+    let isActive = true
+    const loadStatuses = async () => {
+      try {
+        const data = await taskStatusesService.getTaskStatuses()
+        if (!isActive) return
+        setTaskStatuses(data)
+      } catch {
+        if (!isActive) return
+        setTaskStatuses([])
+      }
+    }
+    loadStatuses()
+    return () => {
+      isActive = false
+    }
+  }, [])
+
+  useEffect(() => {
+    let isActive = true
+    const loadProfileDefaults = async () => {
+      try {
+        const profile = await profileService.getProfile()
+        if (!isActive || taskViewInitialized.current) return
+        taskViewInitialized.current = true
+        setTaskView(profile.default_task_view ?? 'list')
+      } catch {
+        if (!isActive || taskViewInitialized.current) return
+        taskViewInitialized.current = true
+        setTaskView('list')
+      }
+    }
+    loadProfileDefaults()
+    return () => {
+      isActive = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (taskView !== 'kanban') return
+    const interval = window.setInterval(() => {
+      loadTasks({ showLoading: false })
+    }, 15000)
+    return () => window.clearInterval(interval)
+  }, [loadTasks, taskView])
 
   useEffect(() => {
     let isActive = true
@@ -107,18 +167,6 @@ export const TasksPage = () => {
       isActive = false
     }
   }, [t])
-
-  useEffect(() => {
-    if (searchEverywhere) return
-    const allowedStatuses: TaskStatus[] =
-      activeTab === 'archive' ? ['done', 'canceled'] : ['todo', 'in_progress']
-    if (filters.status && !allowedStatuses.includes(filters.status)) {
-      setFilters(prev => ({
-        ...prev,
-        status: undefined,
-      }))
-    }
-  }, [activeTab, filters.status, searchEverywhere])
 
   useEffect(() => {
     if (!filters.project) return
@@ -196,6 +244,21 @@ export const TasksPage = () => {
     loadTasks()
   }
 
+  const handleTaskStatusChange = async (task: Task, status: TaskStatus) => {
+    try {
+      const updatedTask = await tasksService.updateTask(task.id, { status })
+      setTasks(prev =>
+        prev.map(existing => (existing.id === updatedTask.id ? updatedTask : existing))
+      )
+      if (selectedTask?.id === updatedTask.id) {
+        setSelectedTask(updatedTask)
+      }
+      toast.success(t('tasks.kanban.updateSuccess'))
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, t('tasks.kanban.updateFail')))
+    }
+  }
+
   const handleTaskRefresh = useCallback(async () => {
     if (!selectedTask) return
     try {
@@ -214,15 +277,45 @@ export const TasksPage = () => {
     updateTaskShareParam(null)
   }
 
+  const statusOptions = useMemo<TaskStatusOption[]>(() => {
+    if (!taskStatuses.length) {
+      const fallback: TaskStatusOption[] = [
+        { key: 'todo', label: t('status.todo'), order: 1, is_archived: false, is_done: false },
+        { key: 'in_progress', label: t('status.in_progress'), order: 2, is_archived: false, is_done: false },
+        { key: 'done', label: t('status.done'), order: 3, is_archived: true, is_done: true },
+        { key: 'canceled', label: t('status.canceled'), order: 4, is_archived: true, is_done: false },
+      ]
+      return fallback
+    }
+    const sorted = [...taskStatuses].sort((a, b) => a.order - b.order)
+    return sorted
+  }, [taskStatuses, t])
+
+  const tabStatusOptions = useMemo<TaskStatusOption[]>(() => {
+    if (searchEverywhere || taskView === 'kanban') {
+      return statusOptions
+    }
+    return statusOptions.filter(status => status.is_archived === (activeTab === 'archive'))
+  }, [activeTab, searchEverywhere, statusOptions, taskView])
+
+  useEffect(() => {
+    if (searchEverywhere) return
+    const allowedStatuses = tabStatusOptions.map(status => status.key) as TaskStatus[]
+    if (filters.status && !allowedStatuses.includes(filters.status)) {
+      setFilters(prev => ({
+        ...prev,
+        status: undefined,
+      }))
+    }
+  }, [filters.status, searchEverywhere, tabStatusOptions])
+
   const visibleTasks = useMemo(() => {
+    const allowedStatuses = new Set(
+      searchEverywhere ? [] : tabStatusOptions.map(status => status.key)
+    )
     const baseTasks = searchEverywhere
       ? tasks
-      : tasks.filter(task =>
-          (activeTab === 'archive'
-            ? ['done', 'canceled']
-            : ['todo', 'in_progress']
-          ).includes(task.status)
-        )
+      : tasks.filter(task => allowedStatuses.has(task.status))
     const assigneeFiltered = assigneeFilter
       ? baseTasks.filter(
           task => getTaskAssignee(task, t('tasks.dashboard.unassigned')) === assigneeFilter
@@ -245,17 +338,7 @@ export const TasksPage = () => {
       }
     })()
     return quickFiltered
-  }, [activeTab, assigneeFilter, quickFilter, searchEverywhere, t, tasks])
-
-  const statusOptions = useMemo<TaskStatus[]>(
-    () =>
-      searchEverywhere
-        ? ['todo', 'in_progress', 'done', 'canceled']
-        : activeTab === 'archive'
-          ? ['done', 'canceled']
-          : ['todo', 'in_progress'],
-    [activeTab, searchEverywhere]
-  )
+  }, [assigneeFilter, quickFilter, searchEverywhere, tabStatusOptions, t, tasks])
 
   return (
     <Layout>
@@ -269,6 +352,22 @@ export const TasksPage = () => {
             <p className="text-gray-600 dark:text-gray-300 mt-1">{t('tasks.subtitle')}</p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <Button
+                size="sm"
+                variant={taskView === 'list' ? 'primary' : 'secondary'}
+                onClick={() => setTaskView('list')}
+              >
+                {t('tasks.view.list')}
+              </Button>
+              <Button
+                size="sm"
+                variant={taskView === 'kanban' ? 'primary' : 'secondary'}
+                onClick={() => setTaskView('kanban')}
+              >
+                {t('tasks.view.kanban')}
+              </Button>
+            </div>
             <Button
               variant="secondary"
               onClick={() => setIsManagerView(prev => !prev)}
@@ -284,22 +383,24 @@ export const TasksPage = () => {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <Button
-            size="sm"
-            variant={activeTab === 'active' ? 'primary' : 'secondary'}
-            onClick={() => setActiveTab('active')}
-          >
-            {t('tasks.tabs.active')}
-          </Button>
-          <Button
-            size="sm"
-            variant={activeTab === 'archive' ? 'primary' : 'secondary'}
-            onClick={() => setActiveTab('archive')}
-          >
-            {t('tasks.tabs.archive')}
-          </Button>
-        </div>
+        {taskView !== 'kanban' && (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant={activeTab === 'active' ? 'primary' : 'secondary'}
+              onClick={() => setActiveTab('active')}
+            >
+              {t('tasks.tabs.active')}
+            </Button>
+            <Button
+              size="sm"
+              variant={activeTab === 'archive' ? 'primary' : 'secondary'}
+              onClick={() => setActiveTab('archive')}
+            >
+              {t('tasks.tabs.archive')}
+            </Button>
+          </div>
+        )}
 
         {isManagerView && (
           <ManagerDashboard
@@ -316,13 +417,13 @@ export const TasksPage = () => {
         <TaskFilters
           filters={filters}
           onChange={setFilters}
-          statusOptions={statusOptions}
+          statusOptions={tabStatusOptions}
           projects={projects}
           searchEverywhere={searchEverywhere}
           onSearchEverywhereChange={setSearchEverywhere}
         />
 
-        {/* Tasks List */}
+        {/* Tasks */}
         {isLoading ? (
           <div className="text-center py-12">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
@@ -335,6 +436,13 @@ export const TasksPage = () => {
               {t('tasks.emptyAction')}
             </Button>
           </div>
+        ) : taskView === 'kanban' ? (
+          <KanbanBoard
+            tasks={visibleTasks}
+            statusOptions={statusOptions}
+            onTaskSelect={handleTaskClick}
+            onStatusChange={handleTaskStatusChange}
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {visibleTasks.map(task => (
@@ -351,6 +459,7 @@ export const TasksPage = () => {
         title={t('tasks.createTitle')}
       >
         <TaskForm
+          statusOptions={statusOptions}
           onSubmit={handleCreateTask}
           onCancel={() => setIsCreateModalOpen(false)}
         />
@@ -364,6 +473,7 @@ export const TasksPage = () => {
           onClose={handleTaskClose}
           onUpdate={handleTaskUpdate}
           onRefresh={handleTaskRefresh}
+          statusOptions={statusOptions}
         />
       )}
     </Layout>

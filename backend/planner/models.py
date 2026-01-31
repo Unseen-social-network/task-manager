@@ -120,6 +120,25 @@ class ContactShareAccess(models.Model):
         return f'ContactShareAccess({self.contact_id}, {self.user_id})'
 
 
+class TaskStatus(models.Model):
+    """Status definition for tasks."""
+
+    key = models.CharField(max_length=64, unique=True, verbose_name='Key')
+    label = models.CharField(max_length=255, verbose_name='Label')
+    order = models.PositiveIntegerField(default=0, verbose_name='Order')
+    is_archived = models.BooleanField(default=False, verbose_name='Is archived')
+    is_done = models.BooleanField(default=False, verbose_name='Is done')
+    is_default = models.BooleanField(default=False, verbose_name='Is default')
+
+    class Meta:
+        verbose_name = 'Task status'
+        verbose_name_plural = 'Task statuses'
+        ordering = ['order', 'label']
+
+    def __str__(self):
+        return self.label
+
+
 class Task(models.Model):
     """
     Task/Todo item with urgency, status, and optional contact reference.
@@ -130,12 +149,6 @@ class Task(models.Model):
         MEDIUM = 'medium', 'Medium'
         HIGH = 'high', 'High'
         CRITICAL = 'critical', 'Critical'
-
-    class Status(models.TextChoices):
-        TODO = 'todo', 'To Do'
-        IN_PROGRESS = 'in_progress', 'In Progress'
-        DONE = 'done', 'Done'
-        CANCELED = 'canceled', 'Canceled'
 
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -180,10 +193,10 @@ class Task(models.Model):
         verbose_name='Urgency',
     )
     due_date = models.DateTimeField(blank=True, null=True, verbose_name='Due date')
-    status = models.CharField(
-        max_length=20,
-        choices=Status.choices,
-        default=Status.TODO,
+    status = models.ForeignKey(
+        TaskStatus,
+        on_delete=models.PROTECT,
+        related_name='tasks',
         verbose_name='Status',
     )
     contact = models.ForeignKey(
@@ -450,6 +463,13 @@ class Attachment(models.Model):
 class Profile(models.Model):
     """User profile with invitation quota and personal details."""
 
+    TASK_VIEW_LIST = 'list'
+    TASK_VIEW_KANBAN = 'kanban'
+    TASK_VIEW_CHOICES = [
+        (TASK_VIEW_LIST, 'List'),
+        (TASK_VIEW_KANBAN, 'Kanban'),
+    ]
+
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -498,6 +518,12 @@ class Profile(models.Model):
     share_invite_contact = models.BooleanField(
         default=True,
         verbose_name='Share contact with inviter',
+    )
+    default_task_view = models.CharField(
+        max_length=20,
+        choices=TASK_VIEW_CHOICES,
+        default=TASK_VIEW_LIST,
+        verbose_name='Default task view',
     )
     invite_quota = models.PositiveIntegerField(
         default=3,

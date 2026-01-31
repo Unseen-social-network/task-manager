@@ -18,7 +18,7 @@ repos:
   # Базовые "гигиенические" хуки
   # ------------------------------------------------------------
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: check-merge-conflict
       - id: detect-private-key
@@ -34,7 +34,7 @@ repos:
   # Ruff = линтер + форматтер + сортировка импортов
   # ------------------------------------------------------------
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.0
+    rev: v0.14.14
     hooks:
       # Линт + автофиксы (включая импорты)
       - id: ruff
@@ -51,7 +51,7 @@ repos:
   # Django-upgrade
   # ------------------------------------------------------------
   - repo: https://github.com/adamchainz/django-upgrade
-    rev: 1.21.0
+    rev: 1.29.1
     hooks:
       - id: django-upgrade
         args: [--target-version, "4.2"]

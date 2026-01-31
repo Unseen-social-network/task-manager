@@ -41,15 +41,12 @@ build-no-cache:
 	DOCKER_BUILDKIT=1 docker compose -f infra/compose/docker-compose.yml build --no-cache
 
 up:
-	DOCKER_BUILDKIT=1 docker compose -f infra/compose/docker-compose.yml up -d
+	docker compose -f infra/compose/docker-compose.yml up -d
 	@echo "Waiting for database..."
 	@sleep 5
-	docker compose -f infra/compose/docker-compose.yml exec backend python manage.py migrate
+	@echo "Skipping migrate (DB restored from dump)"
 	docker compose -f infra/compose/docker-compose.yml exec backend python manage.py collectstatic --noinput
 	@echo "\nDevelopment environment is ready!"
-	@echo "Backend: http://localhost:8000"
-	@echo "Admin: http://localhost:8000/admin"
-	@echo "API Docs: http://localhost:8000/api/schema/swagger-ui/"
 
 down:
 	docker compose -f infra/compose/docker-compose.yml down
@@ -69,6 +66,13 @@ bash:
 migrate:
 	docker compose -f infra/compose/docker-compose.yml exec backend python manage.py migrate
 
+migrate-to:
+	@if [ -z "$(VERSION)" ]; then \
+		echo "❌ Usage: make migrate-to VERSION=0014"; \
+		exit 1; \
+	fi
+	docker compose -f infra/compose/docker-compose.yml exec backend python manage.py migrate $(APP) $(VERSION)
+
 makemigrations:
 	docker compose -f infra/compose/docker-compose.yml exec backend python manage.py makemigrations
 
@@ -77,6 +81,31 @@ createsuperuser:
 
 send-backup:
 	docker compose -f infra/compose/docker-compose.yml exec backend python manage.py send_backup_dump
+
+load-backup:
+	@if [ -z "$(DUMP)" ]; then \
+		echo "❌ Usage: make prod-load-backup DUMP=planner_YYYYMMDD_HHMMSS.sql.gz"; \
+		exit 1; \
+	fi
+	docker compose -f infra/compose/docker-compose.yml exec backend \
+		bash -c "gunzip -c $(DUMP) | python manage.py dbshell"
+
+db-copy-dump:
+	@if [ -z "$(DUMP)" ]; then \
+		echo "❌ Usage: make db-copy-dump DUMP=planner_YYYYMMDD_HHMMSS.sql.gz"; \
+		exit 1; \
+	fi
+	docker compose -f infra/compose/docker-compose.yml cp \
+		$(DUMP) db:/tmp/$(DUMP)
+
+db-restore:
+	@if [ -z "$(DUMP)" ]; then \
+		echo "❌ Usage: make db-restore DUMP=planner_YYYYMMDD_HHMMSS.sql.gz"; \
+		exit 1; \
+	fi
+	docker compose -f infra/compose/docker-compose.yml exec db \
+		bash -c "gunzip -c /tmp/$(DUMP) | psql -U planner_user -d planner_db"
+
 
 # Testing and linting
 test:
@@ -129,6 +158,23 @@ prod-superuser:
 
 prod-send-backup:
 	docker compose -f docker-compose.production.yml exec backend python manage.py send_backup_dump
+
+prod-load-backup:
+	@if [ -z "$(DUMP)" ]; then \
+		echo "❌ Usage: make prod-load-backup DUMP=planner_YYYYMMDD_HHMMSS.sql.gz"; \
+		exit 1; \
+	fi
+	docker compose -f docker-compose.production.yml exec backend \
+		bash -c "gunzip -c /backups/$(DUMP) | python manage.py dbshell"
+
+prod-db-restore:
+	@if [ -z "$(DUMP)" ]; then \
+		echo "❌ Usage: make prod-db-restore DUMP=planner_YYYYMMDD_HHMMSS.sql.gz"; \
+		exit 1; \
+	fi
+	docker compose -f docker-compose.production.yml exec db \
+		bash -c "gunzip -c /backups/$(DUMP) | psql -U $$POSTGRES_USER $$POSTGRES_DB"
+
 
 # Cleanup
 clean:

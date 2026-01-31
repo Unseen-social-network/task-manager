@@ -1,5 +1,5 @@
 import { Search } from 'lucide-react'
-import type { Project, TaskFilters as TaskFiltersType, TaskStatus } from '@/types'
+import type { Project, TaskFilters as TaskFiltersType, TaskStatusOption } from '@/types'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
@@ -8,7 +8,7 @@ import { useLocale } from '@/contexts/localeContext'
 interface TaskFiltersProps {
   filters: TaskFiltersType
   onChange: (filters: TaskFiltersType) => void
-  statusOptions?: TaskStatus[]
+  statusOptions?: TaskStatusOption[]
   projects?: Project[]
   searchEverywhere: boolean
   onSearchEverywhereChange: (value: boolean) => void
@@ -23,12 +23,13 @@ export const TaskFilters = ({
   onSearchEverywhereChange,
 }: TaskFiltersProps) => {
   const { t } = useLocale()
-  const availableStatuses: TaskStatus[] = statusOptions ?? [
-    'todo',
-    'in_progress',
-    'done',
-    'canceled',
-  ]
+  const availableStatuses: TaskStatusOption[] =
+    statusOptions ?? [
+      { key: 'todo', label: t('status.todo'), order: 1, is_archived: false, is_done: false },
+      { key: 'in_progress', label: t('status.in_progress'), order: 2, is_archived: false, is_done: false },
+      { key: 'done', label: t('status.done'), order: 3, is_archived: true, is_done: true },
+      { key: 'canceled', label: t('status.canceled'), order: 4, is_archived: true, is_done: false },
+    ]
 
   const handleFilterChange = (key: keyof TaskFiltersType, value: string) => {
     const nextValue = (() => {
@@ -90,8 +91,8 @@ export const TaskFilters = ({
           options={[
             { value: '', label: t('tasks.filter.statusAll') },
             ...availableStatuses.map(status => ({
-              value: status,
-              label: t(`tasks.filter.status.${status}`),
+              value: status.key,
+              label: status.label,
             })),
           ]}
           value={filters.status || ''}

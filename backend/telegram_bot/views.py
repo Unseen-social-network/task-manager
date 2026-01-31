@@ -242,7 +242,7 @@ class TelegramTaskListView(APIView):
                     {
                         'id': t.id,
                         'title': t.title,
-                        'status': t.status,
+                        'status': t.status.key,
                     }
                     for t in tasks
                 ],

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { Select } from '@/components/ui/Select'
 import { useLocale } from '@/contexts/localeContext'
 import { invitesService } from '@/services/invites.service'
 import { getApiErrorMessage } from '@/utils/helpers'
@@ -104,6 +105,7 @@ export const SettingsPage = () => {
         full_name: data.full_name,
         telegram_notifications_enabled: data.telegram_notifications_enabled,
         telegram_notify_on_tag: data.telegram_notify_on_tag,
+        default_task_view: data.default_task_view,
       })
       setProfile(updated)
       resetProfile(updated)
@@ -309,6 +311,19 @@ export const SettingsPage = () => {
               error={profileErrors.full_name?.message}
               placeholder={t('settings.profile.fullNamePlaceholder')}
             />
+            <div className="space-y-1">
+              <Select
+                label={t('settings.profile.taskViewLabel')}
+                {...registerProfile('default_task_view')}
+                options={[
+                  { value: 'list', label: t('settings.profile.taskView.list') },
+                  { value: 'kanban', label: t('settings.profile.taskView.kanban') },
+                ]}
+              />
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {t('settings.profile.taskViewHint')}
+              </p>
+            </div>
             <Input
               label={t('settings.profile.telegramId')}
               value={profile?.telegram_chat_id ? String(profile.telegram_chat_id) : ''}

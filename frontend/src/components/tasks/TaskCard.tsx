@@ -42,16 +42,18 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
     <Card className={`p-4 border-l-4 ${getUrgencyBorder(task.urgency)}`} onClick={onClick}>
       <div className="space-y-3">
         {/* Title and Badges */}
-        <div className="flex items-start justify-between gap-3">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex-1 min-w-0 break-words">
+        <div className="space-y-2">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 break-words">
             {task.title}
           </h3>
-          <div className="flex flex-wrap gap-2 justify-end">
+          <div className="flex flex-wrap gap-2">
             <Badge className={getUrgencyColor(task.urgency)}>
               <UrgencyIcon className="w-3 h-3 mr-1" />
               {t(`urgency.${task.urgency}`)}
             </Badge>
-            <Badge className={getStatusColor(task.status)}>{t(`status.${task.status}`)}</Badge>
+            <Badge className={getStatusColor(task.status)}>
+              {task.status_label ?? t(`status.${task.status}`)}
+            </Badge>
             {task.has_question && (
               <Badge variant="warning">{t('tasks.flags.question')}</Badge>
             )}

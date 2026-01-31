@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type FocusEvent } from 'react'
 import { useForm } from 'react-hook-form'
 import { format, isValid, parseISO } from 'date-fns'
 import toast from 'react-hot-toast'
-import type { CreateTaskInput, Contact, Project } from '@/types'
+import type { CreateTaskInput, Contact, Project, TaskStatusOption } from '@/types'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { Select } from '@/components/ui/Select'
@@ -16,9 +16,16 @@ interface TaskFormProps {
   onSubmit: (data: CreateTaskInput) => Promise<void>
   onCancel: () => void
   isLoading?: boolean
+  statusOptions?: TaskStatusOption[]
 }
 
-export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFormProps) => {
+export const TaskForm = ({
+  initialData,
+  onSubmit,
+  onCancel,
+  isLoading,
+  statusOptions,
+}: TaskFormProps) => {
   const [contacts, setContacts] = useState<Contact[]>([])
   const [projects, setProjects] = useState<Project[]>([])
   const [useContact, setUseContact] = useState(
@@ -254,12 +261,15 @@ export const TaskForm = ({ initialData, onSubmit, onCancel, isLoading }: TaskFor
         <Select
           label={t('tasks.form.status')}
           {...register('status')}
-          options={[
-            { value: 'todo', label: t('status.todo') },
-            { value: 'in_progress', label: t('status.in_progress') },
-            { value: 'done', label: t('status.done') },
-            { value: 'canceled', label: t('status.canceled') },
-          ]}
+          options={(statusOptions?.length
+            ? statusOptions
+            : [
+                { key: 'todo', label: t('status.todo') },
+                { key: 'in_progress', label: t('status.in_progress') },
+                { key: 'done', label: t('status.done') },
+                { key: 'canceled', label: t('status.canceled') },
+              ]
+          ).map(status => ({ value: status.key, label: status.label }))}
         />
       </div>
 
