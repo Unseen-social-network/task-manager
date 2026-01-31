@@ -229,26 +229,6 @@ class TaskViewSet(viewsets.ModelViewSet):
         return get_task_base_queryset(self.request)
 
 
-class TaskStatusViewSet(viewsets.ReadOnlyModelViewSet):
-    """Read-only viewset for task status definitions."""
-
-    serializer_class = TaskStatusSerializer
-    permission_classes = [IsAuthenticated]
-    queryset = TaskStatus.objects.all()
-    ordering_fields = ['order', 'label', 'key']
-    ordering = ['order', 'label']
-    pagination_class = None
-
-    def get_object(self):
-        """
-        Get object and return 404 if not found or not owned by user.
-        This prevents revealing existence of other users' tasks.
-        """
-        queryset = self.get_queryset()
-        obj = get_object_or_404(queryset, pk=self.kwargs.get('pk'))
-        self.check_object_permissions(self.request, obj)
-        return obj
-
     @action(
         detail=True,
         methods=['get', 'post'],
@@ -414,6 +394,17 @@ class TaskStatusViewSet(viewsets.ReadOnlyModelViewSet):
             task.save(update_fields=['completion_requested', 'updated_at'])
         serializer = TaskSerializer(task, context={'request': request})
         return Response(serializer.data)
+
+
+class TaskStatusViewSet(viewsets.ReadOnlyModelViewSet):
+    """Read-only viewset for task status definitions."""
+
+    serializer_class = TaskStatusSerializer
+    permission_classes = [IsAuthenticated]
+    queryset = TaskStatus.objects.all()
+    ordering_fields = ['order', 'label', 'key']
+    ordering = ['order', 'label']
+    pagination_class = None
 
 
 class TaskStatisticsView(APIView):

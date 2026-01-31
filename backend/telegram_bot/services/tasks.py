@@ -4,7 +4,7 @@ from asgiref.sync import sync_to_async
 from django.db.models import Q
 from django.utils import timezone
 
-from planner.models import Profile, Task
+from planner.models import Profile, Task, TaskStatus
 
 
 @sync_to_async
@@ -64,10 +64,15 @@ def create_quick_task(chat_id: int, title: str, description: str) -> Task:
     if not profile:
         raise ValueError('Telegram-аккаунт не привязан.')
 
+    default_status = (
+        TaskStatus.objects.filter(is_default=True).order_by('order').first()
+        or TaskStatus.objects.order_by('order').first()
+    )
     return Task.objects.create(
         owner=profile.user,
         title=title,
         description=description,
+        status=default_status,
     )
 
 
@@ -91,9 +96,9 @@ def list_tasks_for_chat(
 
     if status:
         if status == 'active':
-            qs = qs.filter(status__in=['todo', 'in_progress'])
+            qs = qs.filter(status__is_archived=False)
         else:
-            qs = qs.filter(status=status)
+            qs = qs.filter(status__key=status)
 
     return list(qs[offset : offset + limit])
 
@@ -115,8 +120,13 @@ def get_task_for_chat(chat_id: int, task_id: int):
 @sync_to_async
 def create_full_task(chat_id: int, title: str, description: str):
     profile = Profile.objects.select_related('user').get(telegram_chat_id=chat_id)
+    default_status = (
+        TaskStatus.objects.filter(is_default=True).order_by('order').first()
+        or TaskStatus.objects.order_by('order').first()
+    )
     return Task.objects.create(
         owner=profile.user,
         title=title,
         description=description,
+        status=default_status,
     )

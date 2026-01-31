@@ -35,7 +35,7 @@ class TestTelegramBotAPI:
     def setup_method(self):
         self.client = APIClient()
 
-    def test_quick_task_create_success(self, settings):
+    def test_quick_task_create_success(self, settings, task_statuses):
         settings.TELEGRAM_BOT_TOKEN = BOT_TOKEN
         user = User.objects.create_user(username='owner', password='pass123456')
         _link_profile(user, chat_id=101)
@@ -52,24 +52,26 @@ class TestTelegramBotAPI:
         assert created.owner == user
         assert created.title == 'Быстрая задача'
 
-    def test_task_list_includes_owned_and_tagged(self, settings):
+    def test_task_list_includes_owned_and_tagged(self, settings, task_statuses):
         settings.TELEGRAM_BOT_TOKEN = BOT_TOKEN
         settings.FRONTEND_BASE_URL = 'https://planner.example'
         owner = User.objects.create_user(username='owner', password='pass123456')
         tagger = User.objects.create_user(username='tagger', password='pass123456')
         _link_profile(owner, chat_id=202)
 
-        owned_task = Task.objects.create(owner=owner, title='Owned task')
+        status_map = {status.key: status for status in task_statuses}
+        owned_task = Task.objects.create(owner=owner, title='Owned task', status=status_map['todo'])
         tagged_task = Task.objects.create(
             owner=tagger,
             title='Tagged task',
             tagged_user=owner,
+            status=status_map['todo'],
         )
-        Task.objects.create(owner=owner, title='Done task', status=Task.Status.DONE)
+        Task.objects.create(owner=owner, title='Done task', status=status_map['done'])
 
         response = self.client.get(
             '/api/v1/telegram/tasks/',
-            {'chat_id': 202, 'status': Task.Status.TODO, 'limit': 5},
+            {'chat_id': 202, 'status': 'todo', 'limit': 5},
             format='json',
             **BOT_HEADERS,
         )
@@ -81,7 +83,7 @@ class TestTelegramBotAPI:
         assert response.data['task_url_template'].endswith('/tasks?task={id}')
         assert response.data['limit'] == 5
 
-    def test_help_endpoint_returns_instructions(self, settings):
+    def test_help_endpoint_returns_instructions(self, settings, task_statuses):
         settings.TELEGRAM_BOT_TOKEN = BOT_TOKEN
         settings.FRONTEND_BASE_URL = 'https://planner.example'
         user = User.objects.create_user(username='owner', password='pass123456')
