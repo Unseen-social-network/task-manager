@@ -291,11 +291,11 @@ export const TasksPage = () => {
   }, [taskStatuses, t])
 
   const tabStatusOptions = useMemo<TaskStatusOption[]>(() => {
-    if (searchEverywhere) {
+    if (searchEverywhere || taskView === 'kanban') {
       return statusOptions
     }
     return statusOptions.filter(status => status.is_archived === (activeTab === 'archive'))
-  }, [activeTab, searchEverywhere, statusOptions])
+  }, [activeTab, searchEverywhere, statusOptions, taskView])
 
   useEffect(() => {
     if (searchEverywhere) return
@@ -382,22 +382,24 @@ export const TasksPage = () => {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <Button
-            size="sm"
-            variant={activeTab === 'active' ? 'primary' : 'secondary'}
-            onClick={() => setActiveTab('active')}
-          >
-            {t('tasks.tabs.active')}
-          </Button>
-          <Button
-            size="sm"
-            variant={activeTab === 'archive' ? 'primary' : 'secondary'}
-            onClick={() => setActiveTab('archive')}
-          >
-            {t('tasks.tabs.archive')}
-          </Button>
-        </div>
+        {taskView !== 'kanban' && (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant={activeTab === 'active' ? 'primary' : 'secondary'}
+              onClick={() => setActiveTab('active')}
+            >
+              {t('tasks.tabs.active')}
+            </Button>
+            <Button
+              size="sm"
+              variant={activeTab === 'archive' ? 'primary' : 'secondary'}
+              onClick={() => setActiveTab('archive')}
+            >
+              {t('tasks.tabs.archive')}
+            </Button>
+          </div>
+        )}
 
         {isManagerView && (
           <ManagerDashboard
