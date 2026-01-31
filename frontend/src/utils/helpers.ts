@@ -47,7 +47,7 @@ export const getUrgencyBorder = (urgency: TaskUrgency): string => {
 }
 
 export const getStatusColor = (status: TaskStatus): string => {
-  const colors = {
+  const colors: Record<string, string> = {
     todo: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100',
     in_progress: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-100',
     done: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-100',
@@ -67,7 +67,7 @@ export const getUrgencyLabel = (urgency: TaskUrgency): string => {
 }
 
 export const getStatusLabel = (status: TaskStatus): string => {
-  const labels = {
+  const labels: Record<string, string> = {
     todo: 'To Do',
     in_progress: 'In Progress',
     done: 'Done',

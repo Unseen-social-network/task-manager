@@ -293,6 +293,24 @@ export const TasksPage = () => {
     updateTaskShareParam(null)
   }
 
+  const statusOptions = useMemo<TaskStatusOption[]>(() => {
+    if (!taskStatuses.length) {
+      const fallback: TaskStatusOption[] = [
+        { key: 'todo', label: t('status.todo'), order: 1, is_archived: false, is_done: false },
+        { key: 'in_progress', label: t('status.in_progress'), order: 2, is_archived: false, is_done: false },
+        { key: 'done', label: t('status.done'), order: 3, is_archived: true, is_done: true },
+        { key: 'canceled', label: t('status.canceled'), order: 4, is_archived: true, is_done: false },
+      ]
+      return searchEverywhere
+        ? fallback
+        : fallback.filter(status => status.is_archived === (activeTab === 'archive'))
+    }
+    const sorted = [...taskStatuses].sort((a, b) => a.order - b.order)
+    return searchEverywhere
+      ? sorted
+      : sorted.filter(status => status.is_archived === (activeTab === 'archive'))
+  }, [activeTab, searchEverywhere, taskStatuses, t])
+
   const visibleTasks = useMemo(() => {
     const allowedStatuses = new Set(
       searchEverywhere ? [] : statusOptions.map(status => status.key)
@@ -323,24 +341,6 @@ export const TasksPage = () => {
     })()
     return quickFiltered
   }, [assigneeFilter, quickFilter, searchEverywhere, statusOptions, t, tasks])
-
-  const statusOptions = useMemo<TaskStatusOption[]>(() => {
-    if (!taskStatuses.length) {
-      const fallback: TaskStatusOption[] = [
-        { key: 'todo', label: t('status.todo'), order: 1, is_archived: false, is_done: false },
-        { key: 'in_progress', label: t('status.in_progress'), order: 2, is_archived: false, is_done: false },
-        { key: 'done', label: t('status.done'), order: 3, is_archived: true, is_done: true },
-        { key: 'canceled', label: t('status.canceled'), order: 4, is_archived: true, is_done: false },
-      ]
-      return searchEverywhere
-        ? fallback
-        : fallback.filter(status => status.is_archived === (activeTab === 'archive'))
-    }
-    const sorted = [...taskStatuses].sort((a, b) => a.order - b.order)
-    return searchEverywhere
-      ? sorted
-      : sorted.filter(status => status.is_archived === (activeTab === 'archive'))
-  }, [activeTab, searchEverywhere, taskStatuses, t])
 
   return (
     <Layout>
