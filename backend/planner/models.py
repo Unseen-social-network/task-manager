@@ -155,6 +155,7 @@ class Task(models.Model):
         on_delete=models.CASCADE,
         related_name='tasks',
         verbose_name='Owner',
+        db_index=False,  # 👈 ВАЖНО
     )
     project = models.ForeignKey(
         'Project',
@@ -184,21 +185,26 @@ class Task(models.Model):
         related_name='tasks_multi',
         verbose_name='Contacts',
     )
+
     title = models.CharField(max_length=500, verbose_name='Title')
     description = models.TextField(blank=True, verbose_name='Description')
+
     urgency = models.CharField(
         max_length=20,
         choices=Urgency.choices,
         default=Urgency.MEDIUM,
         verbose_name='Urgency',
     )
+
     due_date = models.DateTimeField(blank=True, null=True, verbose_name='Due date')
+
     status = models.ForeignKey(
         TaskStatus,
         on_delete=models.PROTECT,
         related_name='tasks',
         verbose_name='Status',
     )
+
     contact = models.ForeignKey(
         Contact,
         on_delete=models.SET_NULL,
@@ -208,43 +214,47 @@ class Task(models.Model):
         verbose_name='Contact',
         help_text='Reference to contact from your contact book',
     )
+
     contact_freeform = models.CharField(
         max_length=500,
         blank=True,
         verbose_name='Freeform contact',
         help_text='Manual contact info (if not using contact book)',
     )
+
     contact_freeform_list = models.JSONField(
         blank=True,
         null=True,
         verbose_name='Freeform contacts',
         help_text='Manual contact info list (if not using contact book)',
     )
+
     time_spent_seconds = models.PositiveIntegerField(
         default=0,
         verbose_name='Time spent (seconds)',
         help_text='Total tracked time for the task in seconds',
     )
+
     tracking_completed = models.BooleanField(
         default=False,
         verbose_name='Tracking completed',
-        help_text='Whether the time tracking session is завершен',
     )
+
     pomodoro_sessions = models.PositiveIntegerField(
         default=0,
         verbose_name='Pomodoro sessions',
-        help_text='Number of completed pomodoro focus sessions',
     )
+
     has_question = models.BooleanField(
         default=False,
         verbose_name='Has question',
-        help_text='Whether the assignee flagged a question for the owner',
     )
+
     completion_requested = models.BooleanField(
         default=False,
         verbose_name='Completion requested',
-        help_text='Whether the assignee marked the task as ready for review',
     )
+
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
 
@@ -253,9 +263,18 @@ class Task(models.Model):
         verbose_name_plural = 'Tasks'
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['owner', 'status', '-created_at']),
-            models.Index(fields=['owner', 'urgency']),
-            models.Index(fields=['owner', 'due_date']),
+            models.Index(
+                fields=['owner', 'status', '-created_at'],
+                name='task_owner_status_created_idx',
+            ),
+            models.Index(
+                fields=['owner', 'urgency'],
+                name='task_owner_urgency_idx',
+            ),
+            models.Index(
+                fields=['owner', 'due_date'],
+                name='task_owner_due_date_idx',
+            ),
         ]
 
     def __str__(self):
