@@ -169,20 +169,14 @@ export const TasksPage = () => {
 
   useEffect(() => {
     if (searchEverywhere) return
-    const allowedStatuses: TaskStatus[] = (taskStatuses.length
-      ? taskStatuses
-          .filter(status => status.is_archived === (activeTab === 'archive'))
-          .map(status => status.key)
-      : activeTab === 'archive'
-        ? ['done', 'canceled']
-        : ['todo', 'in_progress']) as TaskStatus[]
+    const allowedStatuses = tabStatusOptions.map(status => status.key) as TaskStatus[]
     if (filters.status && !allowedStatuses.includes(filters.status)) {
       setFilters(prev => ({
         ...prev,
         status: undefined,
       }))
     }
-  }, [activeTab, filters.status, searchEverywhere, taskStatuses])
+  }, [filters.status, searchEverywhere, tabStatusOptions])
 
   useEffect(() => {
     if (!filters.project) return
@@ -301,19 +295,22 @@ export const TasksPage = () => {
         { key: 'done', label: t('status.done'), order: 3, is_archived: true, is_done: true },
         { key: 'canceled', label: t('status.canceled'), order: 4, is_archived: true, is_done: false },
       ]
-      return searchEverywhere
-        ? fallback
-        : fallback.filter(status => status.is_archived === (activeTab === 'archive'))
+      return fallback
     }
     const sorted = [...taskStatuses].sort((a, b) => a.order - b.order)
-    return searchEverywhere
-      ? sorted
-      : sorted.filter(status => status.is_archived === (activeTab === 'archive'))
-  }, [activeTab, searchEverywhere, taskStatuses, t])
+    return sorted
+  }, [taskStatuses, t])
+
+  const tabStatusOptions = useMemo<TaskStatusOption[]>(() => {
+    if (searchEverywhere) {
+      return statusOptions
+    }
+    return statusOptions.filter(status => status.is_archived === (activeTab === 'archive'))
+  }, [activeTab, searchEverywhere, statusOptions])
 
   const visibleTasks = useMemo(() => {
     const allowedStatuses = new Set(
-      searchEverywhere ? [] : statusOptions.map(status => status.key)
+      searchEverywhere ? [] : tabStatusOptions.map(status => status.key)
     )
     const baseTasks = searchEverywhere
       ? tasks
@@ -340,7 +337,7 @@ export const TasksPage = () => {
       }
     })()
     return quickFiltered
-  }, [assigneeFilter, quickFilter, searchEverywhere, statusOptions, t, tasks])
+  }, [assigneeFilter, quickFilter, searchEverywhere, tabStatusOptions, t, tasks])
 
   return (
     <Layout>
@@ -417,7 +414,7 @@ export const TasksPage = () => {
         <TaskFilters
           filters={filters}
           onChange={setFilters}
-          statusOptions={statusOptions}
+          statusOptions={tabStatusOptions}
           projects={projects}
           searchEverywhere={searchEverywhere}
           onSearchEverywhereChange={setSearchEverywhere}
