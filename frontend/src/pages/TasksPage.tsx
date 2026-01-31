@@ -168,17 +168,6 @@ export const TasksPage = () => {
   }, [t])
 
   useEffect(() => {
-    if (searchEverywhere) return
-    const allowedStatuses = tabStatusOptions.map(status => status.key) as TaskStatus[]
-    if (filters.status && !allowedStatuses.includes(filters.status)) {
-      setFilters(prev => ({
-        ...prev,
-        status: undefined,
-      }))
-    }
-  }, [filters.status, searchEverywhere, tabStatusOptions])
-
-  useEffect(() => {
     if (!filters.project) return
     const hasProject = projects.some(project => project.id === filters.project)
     if (!hasProject) {
@@ -307,6 +296,17 @@ export const TasksPage = () => {
     }
     return statusOptions.filter(status => status.is_archived === (activeTab === 'archive'))
   }, [activeTab, searchEverywhere, statusOptions])
+
+  useEffect(() => {
+    if (searchEverywhere) return
+    const allowedStatuses = tabStatusOptions.map(status => status.key) as TaskStatus[]
+    if (filters.status && !allowedStatuses.includes(filters.status)) {
+      setFilters(prev => ({
+        ...prev,
+        status: undefined,
+      }))
+    }
+  }, [filters.status, searchEverywhere, tabStatusOptions])
 
   const visibleTasks = useMemo(() => {
     const allowedStatuses = new Set(
