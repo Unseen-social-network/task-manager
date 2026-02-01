@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
+import logging
 import os
 import shutil
 import subprocess
@@ -180,4 +181,10 @@ async def send_backup() -> None:
         )
 
     if stats is not None:
-        await send_message(settings.TELEGRAM_BACKUP_USER_ID, _build_text_summary(stats))
+        try:
+            await send_message(
+                settings.TELEGRAM_BACKUP_USER_ID,
+                _build_text_summary(stats),
+            )
+        except Exception:
+            logging.exception('Failed to send backup stats message to Telegram.')

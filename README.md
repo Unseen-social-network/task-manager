@@ -140,6 +140,7 @@ make all-pre-CI
 * `TELEGRAM_BACKUP_ENABLED` — включить/выключить отправку дампов (`1`/`0`).
 * `TELEGRAM_BACKUP_WITH_STATS` — отправлять статистику по ВМ (`1`/`0`).
 * `TELEGRAM_BACKUP_CRON` — cron-расписание (пример: `0 10 * * *`).
+* `TELEGRAM_BACKUP_TIMEOUT` — таймаут запросов к Telegram API в секундах (по умолчанию 20).
 
 ### Запуск по расписанию
 

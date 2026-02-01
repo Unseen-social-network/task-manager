@@ -4,7 +4,7 @@ from django.conf import settings
 
 BOT_TOKEN = settings.TELEGRAM_BACKUP_BOT_TOKEN
 BASE_URL = f'https://api.telegram.org/bot{BOT_TOKEN}'
-TIMEOUT = aiohttp.ClientTimeout(total=20)
+TIMEOUT = aiohttp.ClientTimeout(total=settings.TELEGRAM_BACKUP_TIMEOUT)
 
 
 async def _post(method: str, payload: dict) -> None:
