@@ -6,6 +6,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+from zoneinfo import ZoneInfo
 
 from django.conf import settings
 
@@ -105,7 +106,8 @@ def _collect_stats() -> BackupStats:
 
 
 def _build_caption(stats: BackupStats | None) -> str:
-    timestamp = datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S UTC')
+    timezone = ZoneInfo(settings.TIME_ZONE)
+    timestamp = datetime.now(timezone).strftime('%Y-%m-%d %H:%M:%S %Z')
     lines = [f'Database backup generated at {timestamp}.']
     if stats is not None:
         lines.append('')
@@ -115,7 +117,8 @@ def _build_caption(stats: BackupStats | None) -> str:
 
 
 def _build_text_summary(stats: BackupStats | None) -> str:
-    timestamp = datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S UTC')
+    timezone = ZoneInfo(settings.TIME_ZONE)
+    timestamp = datetime.now(timezone).strftime('%Y-%m-%d %H:%M:%S %Z')
     lines = [f'Database backup sent at {timestamp}.']
     if stats is not None:
         lines.append('')
@@ -126,9 +129,9 @@ def _build_text_summary(stats: BackupStats | None) -> str:
 
 def create_backup_archive(output_dir: str) -> str:
     db = _parse_database_url()
-    timestamp = datetime.now(UTC).strftime('%Y%m%d_%H%M%S')
-    dump_path = os.path.join(output_dir, f'planner_{timestamp}.sql')
-    archive_path = f'{dump_path}.gz'
+    timezone = ZoneInfo(settings.TIME_ZONE)
+    timestamp = datetime.now(timezone).strftime('%Y%m%d_%H%M%S')
+    dump_path = os.path.join(output_dir, f'planner_{timestamp}.dump')
 
     env = os.environ.copy()
     if db['password']:
@@ -138,9 +141,10 @@ def create_backup_archive(output_dir: str) -> str:
         process = subprocess.run(
             [
                 'pg_dump',
-                '--format=plain',
+                '--format=custom',
+                '--compress=9',
                 '--no-owner',
-                '--no-acl',
+                '--no-privileges',
                 f'--host={db["host"]}',
                 f'--port={db["port"]}',
                 f'--username={db["user"]}',
@@ -153,10 +157,7 @@ def create_backup_archive(output_dir: str) -> str:
     if process.returncode != 0:
         raise RuntimeError('pg_dump failed')
 
-    with open(dump_path, 'rb') as source, open(archive_path, 'wb') as target:
-        subprocess.run(['gzip', '-c'], stdin=source, stdout=target, check=True)
-    os.remove(dump_path)
-    return archive_path
+    return dump_path
 
 
 async def send_backup() -> None:
