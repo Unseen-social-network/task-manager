@@ -1,5 +1,6 @@
-import aiohttp
 import mimetypes
+
+import aiohttp
 from django.conf import settings
 
 BOT_TOKEN = settings.TELEGRAM_BACKUP_BOT_TOKEN

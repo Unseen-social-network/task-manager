@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 import logging
-from typing import Callable
 from zoneinfo import ZoneInfo
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -38,5 +38,7 @@ def start_backup_scheduler() -> BackgroundScheduler | None:
     scheduler = BackgroundScheduler(timezone=ZoneInfo(settings.TIME_ZONE))
     _schedule_job(scheduler, _run_backup_job)
     scheduler.start()
-    logging.info('Backup scheduler started with cron: %s', settings.TELEGRAM_BACKUP_CRON)
+    logging.info(
+        'Backup scheduler started with cron: %s', settings.TELEGRAM_BACKUP_CRON
+    )
     return scheduler

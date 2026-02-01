@@ -12,7 +12,9 @@ class Command(BaseCommand):
         scheduler = start_backup_scheduler()
         if scheduler is None:
             self.stdout.write(
-                self.style.WARNING('Backup scheduler disabled via TELEGRAM_BACKUP_ENABLED.')
+                self.style.WARNING(
+                    'Backup scheduler disabled via TELEGRAM_BACKUP_ENABLED.'
+                )
             )
             return
 

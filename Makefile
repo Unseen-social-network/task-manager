@@ -114,7 +114,7 @@ db-restore:
 
 # Testing and linting
 test:
-	poetry run pytest
+	USE_SQLITE_FOR_TESTS=1 poetry run pytest
 
 test-cov:
 	docker compose -f infra/compose/docker-compose.yml exec backend pytest --cov=planner --cov-report=html
