@@ -36,6 +36,8 @@ env = environ.Env(
     TELEGRAM_BACKUP_ENABLED=(bool, False),
     TELEGRAM_BACKUP_WITH_STATS=(bool, True),
     TELEGRAM_BACKUP_CRON=(str, '0 10 * * *'),
+    TELEGRAM_BACKUP_TIMEOUT=(int, 20),
+    TELEGRAM_BACKUP_SEND_STATS_MESSAGE=(bool, False),
 )
 
 # Read .env file if exists
@@ -126,7 +128,14 @@ if use_sqlite_for_tests:
     }
 else:
     DATABASES = {
-        'default': env.db('DATABASE_URL', default='sqlite:///db.sqlite3'),
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('POSTGRES_DB'),
+            'USER': os.getenv('POSTGRES_USER'),
+            'PASSWORD': os.getenv('POSTGRES_PASSWORD'),
+            'HOST': os.getenv('DB_HOST', 'db'),
+            'PORT': os.getenv('DB_PORT', '5432'),
+        }
     }
 
 
@@ -150,8 +159,8 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # Internationalization
-LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
+LANGUAGE_CODE = 'ru-ru'
+TIME_ZONE = 'Europe/Moscow'
 USE_I18N = True
 USE_TZ = True
 
@@ -227,6 +236,8 @@ TELEGRAM_BACKUP_USER_ID = env('TELEGRAM_BACKUP_USER_ID')
 TELEGRAM_BACKUP_ENABLED = env('TELEGRAM_BACKUP_ENABLED')
 TELEGRAM_BACKUP_WITH_STATS = env('TELEGRAM_BACKUP_WITH_STATS')
 TELEGRAM_BACKUP_CRON = env('TELEGRAM_BACKUP_CRON')
+TELEGRAM_BACKUP_TIMEOUT = env('TELEGRAM_BACKUP_TIMEOUT')
+TELEGRAM_BACKUP_SEND_STATS_MESSAGE = env('TELEGRAM_BACKUP_SEND_STATS_MESSAGE')
 FRONTEND_BASE_URL = env('FRONTEND_BASE_URL')
 
 # Logging
