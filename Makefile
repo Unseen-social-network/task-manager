@@ -1,4 +1,4 @@
-.PHONY: help build up down restart logs shell migrate makemigrations createsuperuser send-backup test lint format clean prod-superuser prod-send-backup frontend-install frontend-lint frontend-build frontend-check all-pre-CI
+.PHONY: help build up down restart logs shell migrate makemigrations createsuperuser send-backup load-backup db-copy-dump db-restore test lint format clean prod-build prod-up prod-down prod-restart prod-logs prod-superuser prod-send-backup prod-load-backup prod-db-copy-dump prod-db-restore frontend-install frontend-lint frontend-build frontend-check all-pre-CI
 
 # Default target
 help:
@@ -14,6 +14,7 @@ help:
 	@echo "  make makemigrations  - Create new migrations"
 	@echo "  make createsuperuser - Create superuser"
 	@echo "  make send-backup     - Send database dump via Telegram bot"
+	@echo "  make load-backup     - Restore database from local .dump file"
 	@echo "  make test            - Run tests"
 	@echo "  make lint            - Run linters"
 	@echo "  make format          - Format code"
@@ -32,6 +33,8 @@ help:
 	@echo "  make prod-logs       - View production logs"
 	@echo "  make prod-superuser  - Create superuser"
 	@echo "  make prod-send-backup - Send production database dump via Telegram bot"
+	@echo "  make prod-load-backup - Restore production database from local .dump file"
+	@echo "  make prod-db-copy-dump - Copy local .dump file into production DB container"
 
 # Development commands
 build:
@@ -84,27 +87,29 @@ send-backup:
 
 load-backup:
 	@if [ -z "$(DUMP)" ]; then \
-		echo "❌ Usage: make prod-load-backup DUMP=planner_YYYYMMDD_HHMMSS.sql.gz"; \
-		exit 1; \
-	fi
-	docker compose -f infra/compose/docker-compose.yml exec backend \
-		bash -c "gunzip -c $(DUMP) | python manage.py dbshell"
-
-db-copy-dump:
-	@if [ -z "$(DUMP)" ]; then \
-		echo "❌ Usage: make db-copy-dump DUMP=planner_YYYYMMDD_HHMMSS.sql.gz"; \
+		echo "❌ Usage: make load-backup DUMP=planner_YYYYMMDD_HHMMSS.dump"; \
 		exit 1; \
 	fi
 	docker compose -f infra/compose/docker-compose.yml cp \
-		$(DUMP) db:/tmp/$(DUMP)
+		$(DUMP) db:/tmp/$(notdir $(DUMP))
+	docker compose -f infra/compose/docker-compose.yml exec db \
+		bash -c "pg_restore --clean --if-exists -U planner_user -d planner_db /tmp/$(notdir $(DUMP))"
+
+db-copy-dump:
+	@if [ -z "$(DUMP)" ]; then \
+		echo "❌ Usage: make db-copy-dump DUMP=planner_YYYYMMDD_HHMMSS.dump"; \
+		exit 1; \
+	fi
+	docker compose -f infra/compose/docker-compose.yml cp \
+		$(DUMP) db:/tmp/$(notdir $(DUMP))
 
 db-restore:
 	@if [ -z "$(DUMP)" ]; then \
-		echo "❌ Usage: make db-restore DUMP=planner_YYYYMMDD_HHMMSS.sql.gz"; \
+		echo "❌ Usage: make db-restore DUMP=planner_YYYYMMDD_HHMMSS.dump"; \
 		exit 1; \
 	fi
 	docker compose -f infra/compose/docker-compose.yml exec db \
-		bash -c "gunzip -c /tmp/$(DUMP) | psql -U planner_user -d planner_db"
+		bash -c "pg_restore --clean --if-exists -U planner_user -d planner_db /tmp/$(notdir $(DUMP))"
 
 
 # Testing and linting
@@ -161,19 +166,29 @@ prod-send-backup:
 
 prod-load-backup:
 	@if [ -z "$(DUMP)" ]; then \
-		echo "❌ Usage: make prod-load-backup DUMP=planner_YYYYMMDD_HHMMSS.sql.gz"; \
+		echo "❌ Usage: make prod-load-backup DUMP=planner_YYYYMMDD_HHMMSS.dump"; \
 		exit 1; \
 	fi
-	docker compose -f docker-compose.production.yml exec backend \
-		bash -c "gunzip -c /backups/$(DUMP) | python manage.py dbshell"
+	docker compose -f docker-compose.production.yml cp \
+		$(DUMP) db:/tmp/$(notdir $(DUMP))
+	docker compose -f docker-compose.production.yml exec db \
+		bash -c "pg_restore --clean --if-exists -U $$POSTGRES_USER -d $$POSTGRES_DB /tmp/$(notdir $(DUMP))"
+
+prod-db-copy-dump:
+	@if [ -z "$(DUMP)" ]; then \
+		echo "❌ Usage: make prod-db-copy-dump DUMP=planner_YYYYMMDD_HHMMSS.dump"; \
+		exit 1; \
+	fi
+	docker compose -f docker-compose.production.yml cp \
+		$(DUMP) db:/tmp/$(notdir $(DUMP))
 
 prod-db-restore:
 	@if [ -z "$(DUMP)" ]; then \
-		echo "❌ Usage: make prod-db-restore DUMP=planner_YYYYMMDD_HHMMSS.sql.gz"; \
+		echo "❌ Usage: make prod-db-restore DUMP=planner_YYYYMMDD_HHMMSS.dump"; \
 		exit 1; \
 	fi
 	docker compose -f docker-compose.production.yml exec db \
-		bash -c "gunzip -c /backups/$(DUMP) | psql -U $$POSTGRES_USER $$POSTGRES_DB"
+		bash -c "pg_restore --clean --if-exists -U $$POSTGRES_USER -d $$POSTGRES_DB /tmp/$(notdir $(DUMP))"
 
 
 # Cleanup
