@@ -180,7 +180,7 @@ async def send_backup() -> None:
             caption=caption,
         )
 
-    if stats is not None:
+    if stats is not None and settings.TELEGRAM_BACKUP_SEND_STATS_MESSAGE:
         try:
             await send_message(
                 settings.TELEGRAM_BACKUP_USER_ID,
