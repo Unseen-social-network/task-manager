@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { TaskCard } from '@/components/tasks/TaskCard'
 import type { Task, TaskStatus, TaskStatusOption } from '@/types'
 import { useLocale } from '@/contexts/localeContext'
@@ -23,6 +23,7 @@ export const KanbanBoard = ({
 }: KanbanBoardProps) => {
   const { t } = useLocale()
   const [draggingTaskId, setDraggingTaskId] = useState<number | null>(null)
+  const hasTouchMoved = useRef(false)
 
   const columns = useMemo(() => {
     const grouped = new Map<string, Task[]>(
@@ -64,6 +65,14 @@ export const KanbanBoard = ({
             handleDrop(column.status, data ? Number(data) : null)
             setDraggingTaskId(null)
           }}
+          onTouchEnd={event => {
+            if (draggingTaskId === null) return
+            if (!hasTouchMoved.current) return
+            event.preventDefault()
+            handleDrop(column.status, draggingTaskId)
+            setDraggingTaskId(null)
+            hasTouchMoved.current = false
+          }}
         >
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
             <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">
@@ -89,6 +98,23 @@ export const KanbanBoard = ({
                     setDraggingTaskId(task.id)
                   }}
                   onDragEnd={() => setDraggingTaskId(null)}
+                  onTouchStart={() => {
+                    hasTouchMoved.current = false
+                    setDraggingTaskId(task.id)
+                  }}
+                  onTouchMove={() => {
+                    hasTouchMoved.current = true
+                  }}
+                  onTouchEnd={() => {
+                    if (!hasTouchMoved.current) {
+                      setDraggingTaskId(null)
+                    }
+                    hasTouchMoved.current = false
+                  }}
+                  onTouchCancel={() => {
+                    hasTouchMoved.current = false
+                    setDraggingTaskId(null)
+                  }}
                   className={
                     draggingTaskId === task.id
                       ? 'opacity-60'
