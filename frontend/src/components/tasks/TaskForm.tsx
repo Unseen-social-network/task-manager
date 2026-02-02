@@ -5,6 +5,7 @@ import {
   useState,
   type ClipboardEvent,
   type ChangeEvent,
+  type DragEvent,
   type FocusEvent,
 } from 'react'
 import { useForm } from 'react-hook-form'
@@ -55,6 +56,7 @@ export const TaskForm = ({
   const [manualContactInput, setManualContactInput] = useState('')
   const [saveManualContacts, setSaveManualContacts] = useState(false)
   const [attachments, setAttachments] = useState<File[]>([])
+  const [isDragActive, setIsDragActive] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { t, locale } = useLocale()
   const isCreateMode = !initialData
@@ -289,12 +291,40 @@ export const TaskForm = ({
   const handlePaste = (event: ClipboardEvent<HTMLFormElement>) => {
     if (!isCreateMode) return
     const items = Array.from(event.clipboardData?.items ?? [])
-    const imageFiles = items
-      .filter(item => item.kind === 'file' && item.type.startsWith('image/'))
+    const clipboardFiles = items
+      .filter(item => item.kind === 'file')
       .map(item => item.getAsFile())
       .filter((file): file is File => Boolean(file))
-    if (!imageFiles.length) return
-    setAttachments(prev => [...prev, ...imageFiles])
+    if (!clipboardFiles.length) return
+    setAttachments(prev => [...prev, ...clipboardFiles])
+  }
+
+  const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
+    if (!isCreateMode) return
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'copy'
+  }
+
+  const handleDragEnter = () => {
+    if (!isCreateMode) return
+    setIsDragActive(true)
+  }
+
+  const handleDragLeave = () => {
+    if (!isCreateMode) return
+    setIsDragActive(false)
+  }
+
+  const handleDrop = (event: DragEvent<HTMLDivElement>) => {
+    if (!isCreateMode) return
+    event.preventDefault()
+    const files = Array.from(event.dataTransfer.files ?? [])
+    if (!files.length) {
+      setIsDragActive(false)
+      return
+    }
+    setAttachments(prev => [...prev, ...files])
+    setIsDragActive(false)
   }
 
   return (
@@ -313,7 +343,17 @@ export const TaskForm = ({
       />
 
       {isCreateMode && (
-        <div className="space-y-2">
+        <div
+          className={`space-y-2 rounded-lg border border-dashed p-3 transition ${
+            isDragActive
+              ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-950/40'
+              : 'border-gray-200 dark:border-gray-700'
+          }`}
+          onDragOver={handleDragOver}
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
               {t('tasks.form.attachments')}
@@ -338,7 +378,7 @@ export const TaskForm = ({
             {t('tasks.form.attachmentsHint')}
           </p>
           {attachments.length > 0 && (
-            <ul className="space-y-2 rounded-lg border border-gray-200 p-3 text-sm text-gray-700 dark:border-gray-700 dark:text-gray-200">
+            <ul className="space-y-2 rounded-lg border border-gray-200 bg-white p-3 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">
               {attachments.map((file, index) => (
                 <li key={`${file.name}-${index}`} className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
