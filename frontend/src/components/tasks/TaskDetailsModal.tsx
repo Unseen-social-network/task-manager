@@ -74,6 +74,7 @@ export const TaskDetailsModal = ({
   const [commentsLoading, setCommentsLoading] = useState(false)
   const [commentBody, setCommentBody] = useState('')
   const [commentSubmitting, setCommentSubmitting] = useState(false)
+  const [expandedComments, setExpandedComments] = useState<Set<number>>(new Set())
   const [replyTo, setReplyTo] = useState<TaskComment | null>(null)
   const [isFlaggingQuestion, setIsFlaggingQuestion] = useState(false)
   const [isMarkingReady, setIsMarkingReady] = useState(false)
@@ -358,21 +359,51 @@ export const TaskDetailsModal = ({
     const entries = commentsByParent.get(parentId) ?? []
     return entries.map(comment => (
       <div key={comment.id} className={depth > 0 ? 'mt-3 ml-6 border-l border-gray-200 pl-4 dark:border-gray-800' : 'mt-3'}>
-        <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-          <span>
-            {comment.author_username} • {formatDate(comment.created_at)}
-          </span>
-          <button
-            type="button"
-            onClick={() => setReplyTo(comment)}
-            className="text-primary-600 hover:text-primary-700"
-          >
-            {t('tasks.comments.reply')}
-          </button>
-        </div>
-        <p className="mt-2 text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap">
-          {comment.body}
-        </p>
+        {(() => {
+          const previewLength = 280
+          const isLong = comment.body.length > previewLength
+          const isExpanded = expandedComments.has(comment.id)
+          const bodyText = isLong && !isExpanded ? `${comment.body.slice(0, previewLength)}…` : comment.body
+
+          return (
+            <>
+              <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                <span>
+                  {comment.author_username} • {formatDate(comment.created_at)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setReplyTo(comment)}
+                  className="text-primary-600 hover:text-primary-700"
+                >
+                  {t('tasks.comments.reply')}
+                </button>
+              </div>
+              <p className="mt-2 text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap">
+                {bodyText}
+              </p>
+              {isLong && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setExpandedComments(prev => {
+                      const next = new Set(prev)
+                      if (next.has(comment.id)) {
+                        next.delete(comment.id)
+                      } else {
+                        next.add(comment.id)
+                      }
+                      return next
+                    })
+                  }
+                  className="text-xs font-medium text-primary-600 hover:text-primary-700"
+                >
+                  {isExpanded ? t('tasks.comments.showLess') : t('tasks.comments.showMore')}
+                </button>
+              )}
+            </>
+          )
+        })()}
         {renderComments(comment.id, depth + 1)}
       </div>
     ))
