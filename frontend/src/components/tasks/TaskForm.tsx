@@ -59,7 +59,7 @@ export const TaskForm = ({
   const [isDragActive, setIsDragActive] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { t, locale } = useLocale()
-  const isCreateMode = !initialData
+  // const isCreateMode = !initialData
   const shouldShowProject = projects.length > 0
 
   const getDefaultDueDate = () => {
