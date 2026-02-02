@@ -116,6 +116,11 @@ export const TaskForm = ({
   }, [register])
 
   useEffect(() => {
+    setAttachments([])
+    setIsDragActive(false)
+  }, [initialData])
+
+  useEffect(() => {
     loadContacts()
     loadProjects()
   }, [])
