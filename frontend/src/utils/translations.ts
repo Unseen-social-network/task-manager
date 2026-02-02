@@ -337,7 +337,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'tasks.form.description': 'Description',
     'tasks.form.attachments': 'Attachments',
     'tasks.form.attachmentsAdd': 'Add files',
-    'tasks.form.attachmentsHint': 'Add files or paste images from clipboard (Ctrl+V).',
+    'tasks.form.attachmentsHint':
+      'Add files, drag and drop, or paste from clipboard (Ctrl+V).',
     'tasks.form.attachmentsRemove': 'Remove attachment',
     'tasks.form.attachmentsUploadFail': 'Some attachments could not be uploaded.',
     'tasks.form.urgency': 'Urgency',
@@ -865,7 +866,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'tasks.form.description': 'Описание',
     'tasks.form.attachments': 'Вложения',
     'tasks.form.attachmentsAdd': 'Добавить файлы',
-    'tasks.form.attachmentsHint': 'Добавьте файлы или вставьте изображения из буфера (Ctrl+V).',
+    'tasks.form.attachmentsHint':
+      'Добавьте файлы, перетащите их сюда или вставьте из буфера (Ctrl+V).',
     'tasks.form.attachmentsRemove': 'Удалить вложение',
     'tasks.form.attachmentsUploadFail': 'Не удалось загрузить некоторые вложения.',
     'tasks.form.urgency': 'Срочность',
