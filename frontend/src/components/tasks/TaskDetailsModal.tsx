@@ -238,7 +238,7 @@ export const TaskDetailsModal = ({
     }
   }, [displayStatus, isPomodoroRunning, isTrackerRunning, updateTaskStatus])
 
-  const handleUpdate = async (data: UpdateTaskInput) => {
+  const handleUpdate = async (data: UpdateTaskInput, attachments: File[] = []) => {
     try {
       const { project_id, tagged_user, ...payload } = data
       const normalizedProjectId =
@@ -248,6 +248,14 @@ export const TaskDetailsModal = ({
         tagged_user,
         project_id: normalizedProjectId,
       })
+      if (attachments.length > 0) {
+        const results = await Promise.allSettled(
+          attachments.map(file => tasksService.uploadAttachment(task.id, file))
+        )
+        if (results.some(result => result.status === 'rejected')) {
+          toast.error(t('tasks.form.attachmentsUploadFail'))
+        }
+      }
       setDisplayStatus(updated.status)
       setMetaState(prev => ({
         ...prev,

@@ -265,14 +265,14 @@ export const TaskForm = ({
         ...data,
         contact_freeform: primaryContact,
         contact_freeform_list: contactFreeformList,
-      }, isCreateMode ? attachments : undefined)
+      }, attachments)
       return
     }
     await onSubmit({
       ...data,
       contact_freeform: '',
       contact_freeform_list: [],
-    }, isCreateMode ? attachments : undefined)
+    }, attachments)
   }
 
   const handleAttachmentChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -289,7 +289,6 @@ export const TaskForm = ({
   }
 
   const handlePaste = (event: ClipboardEvent<HTMLFormElement>) => {
-    if (!isCreateMode) return
     const items = Array.from(event.clipboardData?.items ?? [])
     const clipboardFiles = items
       .filter(item => item.kind === 'file')
@@ -300,23 +299,19 @@ export const TaskForm = ({
   }
 
   const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
-    if (!isCreateMode) return
     event.preventDefault()
     event.dataTransfer.dropEffect = 'copy'
   }
 
   const handleDragEnter = () => {
-    if (!isCreateMode) return
     setIsDragActive(true)
   }
 
   const handleDragLeave = () => {
-    if (!isCreateMode) return
     setIsDragActive(false)
   }
 
   const handleDrop = (event: DragEvent<HTMLDivElement>) => {
-    if (!isCreateMode) return
     event.preventDefault()
     const files = Array.from(event.dataTransfer.files ?? [])
     if (!files.length) {
@@ -342,65 +337,63 @@ export const TaskForm = ({
         error={errors.description?.message}
       />
 
-      {isCreateMode && (
-        <div
-          className={`space-y-2 rounded-lg border border-dashed p-3 transition ${
-            isDragActive
-              ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-950/40'
-              : 'border-gray-200 dark:border-gray-700'
-          }`}
-          onDragOver={handleDragOver}
-          onDragEnter={handleDragEnter}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-        >
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
-              {t('tasks.form.attachments')}
-            </p>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              {t('tasks.form.attachmentsAdd')}
-            </Button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              onChange={handleAttachmentChange}
-              className="hidden"
-            />
-          </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            {t('tasks.form.attachmentsHint')}
+      <div
+        className={`space-y-2 rounded-lg border border-dashed p-3 transition ${
+          isDragActive
+            ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-950/40'
+            : 'border-gray-200 dark:border-gray-700'
+        }`}
+        onDragOver={handleDragOver}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
+            {t('tasks.form.attachments')}
           </p>
-          {attachments.length > 0 && (
-            <ul className="space-y-2 rounded-lg border border-gray-200 bg-white p-3 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">
-              {attachments.map((file, index) => (
-                <li key={`${file.name}-${index}`} className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate font-medium">{file.name}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {(file.size / 1024).toFixed(1)} KB
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleAttachmentRemove(index)}
-                    className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                    aria-label={t('tasks.form.attachmentsRemove')}
-                  >
-                    ×
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {t('tasks.form.attachmentsAdd')}
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            onChange={handleAttachmentChange}
+            className="hidden"
+          />
         </div>
-      )}
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          {t('tasks.form.attachmentsHint')}
+        </p>
+        {attachments.length > 0 && (
+          <ul className="space-y-2 rounded-lg border border-gray-200 bg-white p-3 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">
+            {attachments.map((file, index) => (
+              <li key={`${file.name}-${index}`} className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{file.name}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {(file.size / 1024).toFixed(1)} KB
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleAttachmentRemove(index)}
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                  aria-label={t('tasks.form.attachmentsRemove')}
+                >
+                  ×
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Select
