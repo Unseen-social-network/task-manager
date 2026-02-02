@@ -115,4 +115,11 @@ export const tasksService = {
     const response = await api.post<TaskComment>(`/api/v1/tasks/${taskId}/comments/`, data)
     return response.data
   },
+
+  async lookupUsername(username: string): Promise<string> {
+    const response = await api.get<{ username: string }>('/api/v1/users/lookup/', {
+      params: { username },
+    })
+    return response.data.username
+  },
 }
