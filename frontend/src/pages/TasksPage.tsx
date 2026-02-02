@@ -222,11 +222,18 @@ export const TasksPage = () => {
     })
   }
 
-  const handleCreateTask = async (data: CreateTaskInput, attachments: File[] = []) => {
+  const handleCreateTask = async (
+    data: CreateTaskInput | Partial<CreateTaskInput>,
+    attachments: File[] = []
+  ) => {
     if (isCreating) return
     setIsCreating(true)
     try {
-      const createdTask = await tasksService.createTask(data)
+      if (data.title === undefined) {
+        throw new Error('Missing task title')
+      }
+      const createPayload: CreateTaskInput = { ...data, title: data.title }
+      const createdTask = await tasksService.createTask(createPayload)
       if (attachments.length > 0) {
         const results = await Promise.allSettled(
           attachments.map(file => tasksService.uploadAttachment(createdTask.id, file))
