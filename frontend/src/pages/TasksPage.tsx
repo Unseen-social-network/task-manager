@@ -144,12 +144,12 @@ export const TasksPage = () => {
   }, [])
 
   useEffect(() => {
-    if (taskView !== 'kanban') return
+    if (taskView !== 'kanban' || isDetailsModalOpen) return
     const interval = window.setInterval(() => {
       loadTasks({ showLoading: false })
     }, 15000)
     return () => window.clearInterval(interval)
-  }, [loadTasks, taskView])
+  }, [isDetailsModalOpen, loadTasks, taskView])
 
   useEffect(() => {
     let isActive = true
