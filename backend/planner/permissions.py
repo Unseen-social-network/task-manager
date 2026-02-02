@@ -81,8 +81,12 @@ class TaskAccessPermission(permissions.BasePermission):
             return obj.owner == request.user or self._is_tagged_user(obj, request.user)
         if obj.owner == request.user:
             return True
-        if request.method in ('PATCH', 'PUT'):
-            return self._is_tagged_user(obj, request.user)
+        if request.method in ('PATCH', 'PUT') and self._is_tagged_user(
+            obj, request.user
+        ):
+            if 'status' in request.data:
+                return self._status_update_allowed(request, obj)
+            return True
         return self._is_tagged_user(obj, request.user) and self._status_update_allowed(
             request, obj
         )
