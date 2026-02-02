@@ -9,6 +9,7 @@ import { useLocale } from '@/contexts/localeContext'
 import { invitesService } from '@/services/invites.service'
 import { getApiErrorMessage } from '@/utils/helpers'
 import { profileService } from '@/services/profile.service'
+import { copyToClipboard } from '@/utils/clipboard'
 import type {
   Invite,
   InviteCreateInput,
@@ -179,7 +180,7 @@ export const SettingsPage = () => {
     setSharingContact(true)
     try {
       const share = await profileService.shareContact()
-      await navigator.clipboard.writeText(share.share_url)
+      await copyToClipboard(share.share_url)
       setProfile(prev => (prev ? { ...prev, self_contact_id: share.contact_id } : prev))
       toast.success(t('settings.profile.shareContactSuccess'))
     } catch {

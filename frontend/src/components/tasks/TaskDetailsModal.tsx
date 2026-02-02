@@ -28,6 +28,7 @@ import {
   getStatusColor,
   formatDuration,
 } from '@/utils/helpers'
+import { copyToClipboard } from '@/utils/clipboard'
 
 interface TaskDetailsModalProps {
   task: Task
@@ -392,7 +393,7 @@ export const TaskDetailsModal = ({
     url.pathname = '/tasks'
     url.searchParams.set('task', String(task.id))
     try {
-      await navigator.clipboard.writeText(url.toString())
+      await copyToClipboard(url.toString())
       toast.success(t('tasks.shareSuccess'))
     } catch {
       toast.error(t('tasks.shareFail'))
