@@ -20,6 +20,7 @@ import { taskStatusesService } from '@/services/task-statuses.service'
 import { tasksService } from '@/services/tasks.service'
 import { useLocale } from '@/contexts/localeContext'
 import { formatDate, formatDateOnly, getUrgencyColor } from '@/utils/helpers'
+import { copyToClipboard } from '@/utils/clipboard'
 
 interface ProjectDetailsModalProps {
   project: Project
@@ -57,7 +58,7 @@ export const ProjectDetailsModal = ({
     try {
       const share = await projectsService.createShare(project.id)
       const url = mode === 'link' ? share.share_url : share.copy_url
-      await navigator.clipboard.writeText(url)
+      await copyToClipboard(url)
       toast.success(
         mode === 'link' ? t('projects.shareLinkSuccess') : t('projects.shareCopySuccess')
       )

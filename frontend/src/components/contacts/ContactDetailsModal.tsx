@@ -8,6 +8,7 @@ import { ContactForm } from './ContactForm'
 import { contactsService } from '@/services/contacts.service'
 import { formatDate } from '@/utils/helpers'
 import { useLocale } from '@/contexts/localeContext'
+import { copyToClipboard } from '@/utils/clipboard'
 
 interface ContactDetailsModalProps {
   contact: Contact
@@ -69,7 +70,7 @@ export const ContactDetailsModal = ({
     try {
       const share = await contactsService.createShare(contact.id)
       const url = mode === 'link' ? share.share_url : share.copy_url
-      await navigator.clipboard.writeText(url)
+      await copyToClipboard(url)
       toast.success(
         mode === 'link' ? t('contacts.shareLinkSuccess') : t('contacts.shareCopySuccess')
       )
