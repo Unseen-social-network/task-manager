@@ -60,6 +60,7 @@ export const TasksPage = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
+  const [isCreating, setIsCreating] = useState(false)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [filters, setFilters] = useState<TaskFiltersType>({})
   const [activeTab, setActiveTab] = useState<'active' | 'archive'>('active')
@@ -221,14 +222,33 @@ export const TasksPage = () => {
     })
   }
 
-  const handleCreateTask = async (data: CreateTaskInput) => {
+  const handleCreateTask = async (
+    data: CreateTaskInput | Partial<CreateTaskInput>,
+    attachments: File[] = []
+  ) => {
+    if (isCreating) return
+    setIsCreating(true)
     try {
-      await tasksService.createTask(data)
+      if (data.title === undefined) {
+        throw new Error('Missing task title')
+      }
+      const createPayload: CreateTaskInput = { ...data, title: data.title }
+      const createdTask = await tasksService.createTask(createPayload)
+      if (attachments.length > 0) {
+        const results = await Promise.allSettled(
+          attachments.map(file => tasksService.uploadAttachment(createdTask.id, file))
+        )
+        if (results.some(result => result.status === 'rejected')) {
+          toast.error(t('tasks.form.attachmentsUploadFail'))
+        }
+      }
       toast.success(t('tasks.createSuccess'))
       setIsCreateModalOpen(false)
       loadTasks()
     } catch {
       toast.error(t('tasks.createFail'))
+    } finally {
+      setIsCreating(false)
     }
   }
 
@@ -462,6 +482,7 @@ export const TasksPage = () => {
           statusOptions={statusOptions}
           onSubmit={handleCreateTask}
           onCancel={() => setIsCreateModalOpen(false)}
+          isLoading={isCreating}
         />
       </Modal>
 
