@@ -9,6 +9,7 @@ import { Select } from '@/components/ui/Select'
 import { Button } from '@/components/ui/Button'
 import { contactsService } from '@/services/contacts.service'
 import { projectsService } from '@/services/projects.service'
+import { tasksService } from '@/services/tasks.service'
 import { useLocale } from '@/contexts/localeContext'
 
 interface TaskFormProps {
@@ -67,12 +68,16 @@ export const TaskForm = ({
     return `${contact.name} (@${contact.username})`
   }
 
+  const normalizeTaggedInput = (value: string) => value.trim().replace(/^@+/, '')
+
   const {
     register,
     handleSubmit,
     formState: { errors },
+    setError,
     setValue,
     watch,
+    clearErrors,
   } = useForm<CreateTaskInput>({
     defaultValues: initialData
       ? {
@@ -154,6 +159,7 @@ export const TaskForm = ({
       shouldDirty: true,
       shouldTouch: true,
     })
+    clearErrors('tagged_users')
     setTagSearch('')
     setIsTagMenuOpen(false)
   }
@@ -166,26 +172,51 @@ export const TaskForm = ({
     )
   }
 
-  const handleTaggedUserBlur = (event: FocusEvent<HTMLInputElement>) => {
-    const enteredValue = event.target.value.trim()
-    if (enteredValue) {
-      const matchedContact = taggableContacts.find(contact => {
-        const nameMatch = contact.name.toLowerCase() === enteredValue.toLowerCase()
-        const usernameMatch = contact.username?.toLowerCase() === enteredValue.toLowerCase()
-        const labelMatch =
-          formatContactLabel(contact).toLowerCase() === enteredValue.toLowerCase()
-        return nameMatch || usernameMatch || labelMatch
-      })
-      const username = matchedContact?.username ?? enteredValue
-      if (username && !taggedUsers.includes(username)) {
-        setValue('tagged_users', [...taggedUsers, username], {
+  const handleTaggedUserBlur = async (event: FocusEvent<HTMLInputElement>) => {
+    const rawValue = event.target.value.trim()
+    const enteredValue = normalizeTaggedInput(rawValue)
+    if (!enteredValue) {
+      setTagSearch('')
+      setTimeout(() => setIsTagMenuOpen(false), 100)
+      return
+    }
+    const matchedContact = taggableContacts.find(contact => {
+      const nameMatch = contact.name.toLowerCase() === enteredValue.toLowerCase()
+      const usernameMatch = contact.username?.toLowerCase() === enteredValue.toLowerCase()
+      const labelMatch = formatContactLabel(contact).toLowerCase() === rawValue.toLowerCase()
+      return nameMatch || usernameMatch || labelMatch
+    })
+    if (matchedContact?.username) {
+      if (!taggedUsers.includes(matchedContact.username)) {
+        setValue('tagged_users', [...taggedUsers, matchedContact.username], {
           shouldDirty: true,
           shouldTouch: true,
         })
       }
+      clearErrors('tagged_users')
       setTagSearch('')
+      setTimeout(() => setIsTagMenuOpen(false), 100)
+      return
     }
-    setTimeout(() => setIsTagMenuOpen(false), 100)
+    try {
+      const resolvedUsername = await tasksService.lookupUsername(enteredValue)
+      if (!taggedUsers.includes(resolvedUsername)) {
+        setValue('tagged_users', [...taggedUsers, resolvedUsername], {
+          shouldDirty: true,
+          shouldTouch: true,
+        })
+      }
+      clearErrors('tagged_users')
+      setTagSearch('')
+    } catch (error) {
+      setError('tagged_users', {
+        type: 'validate',
+        message: t('tasks.form.taggedUserMissing'),
+      })
+      toast.error(t('tasks.form.taggedUserMissing'))
+    } finally {
+      setTimeout(() => setIsTagMenuOpen(false), 100)
+    }
   }
 
   const handleManualContactAdd = () => {
@@ -320,6 +351,7 @@ export const TaskForm = ({
           onChange={event => {
             setTagSearch(event.target.value)
             setIsTagMenuOpen(true)
+            clearErrors('tagged_users')
           }}
           onBlur={handleTaggedUserBlur}
           error={errors.tagged_users?.message as string | undefined}

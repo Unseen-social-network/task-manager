@@ -343,6 +343,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'tasks.form.taggedHint':
       'Add multiple teammates. Tagged users can see the task but cannot close it.',
     'tasks.form.taggedRemove': 'Remove tagged user',
+    'tasks.form.taggedUserMissing': 'User not found.',
     'tasks.form.useBookContact': 'Use contact from book',
     'tasks.form.manualContact': 'Enter contact manually',
     'tasks.form.contact': 'Contact',
@@ -863,6 +864,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'tasks.form.taggedHint':
       'Можно добавить несколько коллег. Отмеченные пользователи видят задачу, но не могут закрыть ее.',
     'tasks.form.taggedRemove': 'Удалить отмеченного пользователя',
+    'tasks.form.taggedUserMissing': 'Пользователь не найден.',
     'tasks.form.useBookContact': 'Выбрать контакт из книги',
     'tasks.form.manualContact': 'Ввести контакт вручную',
     'tasks.form.contact': 'Контакт',

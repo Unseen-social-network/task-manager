@@ -5,6 +5,7 @@ Views for Planner application.
 from io import BytesIO
 
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.db import transaction
 from django.db.models import Count, Q
@@ -63,6 +64,8 @@ from .serializers import (
     TaskSerializer,
     TaskStatusSerializer,
 )
+
+User = get_user_model()
 
 
 class ContactViewSet(viewsets.ModelViewSet):
@@ -782,6 +785,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         serializer = ProjectShareSerializer(share)
         return Response(serializer.data)
 
+
     @action(detail=True, methods=['get', 'delete'], url_path='access')
     def access(self, request, pk=None):
         """List or revoke shared access to this project."""
@@ -809,6 +813,29 @@ class ProjectViewSet(viewsets.ModelViewSet):
             return Response(status=status.HTTP_400_BAD_REQUEST)
         ProjectShareAccess.objects.filter(project=project, user=request.user).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class UserLookupView(APIView):
+    """Validate that a username exists in the system."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        username = request.query_params.get('username', '').strip()
+        if username.startswith('@'):
+            username = username[1:]
+        if not username:
+            return Response(
+                {'detail': 'Username is required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        user = User.objects.filter(username__iexact=username).first()
+        if not user:
+            return Response(
+                {'detail': 'User not found.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        return Response({'username': user.username})
 
 
 class ContactShareView(APIView):
