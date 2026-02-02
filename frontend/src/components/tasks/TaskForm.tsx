@@ -1,8 +1,16 @@
-import { useEffect, useMemo, useState, type FocusEvent } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ClipboardEvent,
+  type ChangeEvent,
+  type FocusEvent,
+} from 'react'
 import { useForm } from 'react-hook-form'
 import { format, isValid, parseISO } from 'date-fns'
 import toast from 'react-hot-toast'
-import type { CreateTaskInput, Contact, Project, TaskStatusOption } from '@/types'
+import type { CreateTaskInput, Contact, Project, TaskStatusOption, UpdateTaskInput } from '@/types'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { Select } from '@/components/ui/Select'
@@ -14,7 +22,7 @@ import { useLocale } from '@/contexts/localeContext'
 
 interface TaskFormProps {
   initialData?: CreateTaskInput
-  onSubmit: (data: CreateTaskInput) => Promise<void>
+  onSubmit: (data: CreateTaskInput | UpdateTaskInput, attachments?: File[]) => Promise<void>
   onCancel: () => void
   isLoading?: boolean
   statusOptions?: TaskStatusOption[]
@@ -46,7 +54,10 @@ export const TaskForm = ({
   })
   const [manualContactInput, setManualContactInput] = useState('')
   const [saveManualContacts, setSaveManualContacts] = useState(false)
+  const [attachments, setAttachments] = useState<File[]>([])
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const { t, locale } = useLocale()
+  const isCreateMode = !initialData
   const shouldShowProject = projects.length > 0
 
   const getDefaultDueDate = () => {
@@ -252,18 +263,42 @@ export const TaskForm = ({
         ...data,
         contact_freeform: primaryContact,
         contact_freeform_list: contactFreeformList,
-      })
+      }, isCreateMode ? attachments : undefined)
       return
     }
     await onSubmit({
       ...data,
       contact_freeform: '',
       contact_freeform_list: [],
-    })
+    }, isCreateMode ? attachments : undefined)
+  }
+
+  const handleAttachmentChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? [])
+    if (!files.length) return
+    setAttachments(prev => [...prev, ...files])
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
+  const handleAttachmentRemove = (index: number) => {
+    setAttachments(prev => prev.filter((_, itemIndex) => itemIndex !== index))
+  }
+
+  const handlePaste = (event: ClipboardEvent<HTMLFormElement>) => {
+    if (!isCreateMode) return
+    const items = Array.from(event.clipboardData?.items ?? [])
+    const imageFiles = items
+      .filter(item => item.kind === 'file' && item.type.startsWith('image/'))
+      .map(item => item.getAsFile())
+      .filter((file): file is File => Boolean(file))
+    if (!imageFiles.length) return
+    setAttachments(prev => [...prev, ...imageFiles])
   }
 
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4" onPaste={handlePaste}>
       <Input
         label={t('tasks.form.title')}
         {...register('title', { required: t('tasks.form.titleRequired') })}
@@ -276,6 +311,56 @@ export const TaskForm = ({
         {...register('description')}
         error={errors.description?.message}
       />
+
+      {isCreateMode && (
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
+              {t('tasks.form.attachments')}
+            </p>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {t('tasks.form.attachmentsAdd')}
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              onChange={handleAttachmentChange}
+              className="hidden"
+            />
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            {t('tasks.form.attachmentsHint')}
+          </p>
+          {attachments.length > 0 && (
+            <ul className="space-y-2 rounded-lg border border-gray-200 p-3 text-sm text-gray-700 dark:border-gray-700 dark:text-gray-200">
+              {attachments.map((file, index) => (
+                <li key={`${file.name}-${index}`} className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{file.name}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {(file.size / 1024).toFixed(1)} KB
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleAttachmentRemove(index)}
+                    className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                    aria-label={t('tasks.form.attachmentsRemove')}
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Select
