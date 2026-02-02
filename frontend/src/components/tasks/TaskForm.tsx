@@ -208,7 +208,7 @@ export const TaskForm = ({
       }
       clearErrors('tagged_users')
       setTagSearch('')
-    } catch (error) {
+    } catch {
       setError('tagged_users', {
         type: 'validate',
         message: t('tasks.form.taggedUserMissing'),

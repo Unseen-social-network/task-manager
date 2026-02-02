@@ -785,7 +785,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
         serializer = ProjectShareSerializer(share)
         return Response(serializer.data)
 
-
     @action(detail=True, methods=['get', 'delete'], url_path='access')
     def access(self, request, pk=None):
         """List or revoke shared access to this project."""
