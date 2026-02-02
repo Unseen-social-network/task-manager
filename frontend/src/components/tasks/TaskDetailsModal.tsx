@@ -1,4 +1,12 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  useMemo,
+  type DragEvent,
+  type ClipboardEvent,
+} from 'react'
 import { Edit2, Trash2, Upload, Download, X, Calendar, User, FolderKanban, AtSign, Link2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type {
@@ -50,6 +58,7 @@ export const TaskDetailsModal = ({
   const [isEditing, setIsEditing] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
+  const [isDragActive, setIsDragActive] = useState(false)
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false)
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [projectDetails, setProjectDetails] = useState<Project | null>(null)
@@ -286,23 +295,65 @@ export const TaskDetailsModal = ({
     }
   }
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-
+  const uploadAttachments = async (files: File[]) => {
+    if (files.length === 0) return
     setIsUploading(true)
     try {
-      await tasksService.uploadAttachment(task.id, file)
-      toast.success(t('tasks.uploadSuccess'))
-      onRefresh?.()
-    } catch {
-      toast.error(t('tasks.uploadFail'))
+      const results = await Promise.allSettled(
+        files.map(file => tasksService.uploadAttachment(task.id, file))
+      )
+      const hasFailures = results.some(result => result.status === 'rejected')
+      const hasSuccesses = results.some(result => result.status === 'fulfilled')
+      if (hasFailures) {
+        toast.error(t('tasks.uploadFail'))
+      }
+      if (hasSuccesses) {
+        toast.success(t('tasks.uploadSuccess'))
+        onRefresh?.()
+      }
     } finally {
       setIsUploading(false)
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ''
-      }
     }
+  }
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? [])
+    if (!files.length) return
+    await uploadAttachments(files)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
+  const handleAttachmentPaste = async (event: ClipboardEvent<HTMLDivElement>) => {
+    const items = Array.from(event.clipboardData?.items ?? [])
+    const files = items
+      .filter(item => item.kind === 'file')
+      .map(item => item.getAsFile())
+      .filter((file): file is File => Boolean(file))
+    if (!files.length) return
+    await uploadAttachments(files)
+  }
+
+  const handleAttachmentDragOver = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'copy'
+  }
+
+  const handleAttachmentDragEnter = () => {
+    setIsDragActive(true)
+  }
+
+  const handleAttachmentDragLeave = () => {
+    setIsDragActive(false)
+  }
+
+  const handleAttachmentDrop = async (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    const files = Array.from(event.dataTransfer.files ?? [])
+    setIsDragActive(false)
+    if (!files.length) return
+    await uploadAttachments(files)
   }
 
   const handleDeleteAttachment = async (attachmentId: number) => {
@@ -869,8 +920,19 @@ export const TaskDetailsModal = ({
         </div>
 
         {/* Attachments */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
+        <div
+          className={`rounded-lg border border-dashed p-3 transition ${
+            isDragActive
+              ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-950/40'
+              : 'border-gray-200 dark:border-gray-700'
+          }`}
+          onDragOver={handleAttachmentDragOver}
+          onDragEnter={handleAttachmentDragEnter}
+          onDragLeave={handleAttachmentDragLeave}
+          onDrop={handleAttachmentDrop}
+          onPaste={handleAttachmentPaste}
+        >
+          <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">
               {t('tasks.attachments')}
             </h3>
@@ -881,17 +943,21 @@ export const TaskDetailsModal = ({
             <input
               ref={fileInputRef}
               type="file"
+              multiple
               onChange={handleFileUpload}
               className="hidden"
             />
           </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            {t('tasks.form.attachmentsHint')}
+          </p>
 
           {task.attachments && task.attachments.length > 0 ? (
             <div className="space-y-2">
               {task.attachments.map(attachment => (
                 <div
                   key={attachment.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg dark:bg-gray-800"
+                  className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 dark:bg-gray-900 dark:border-gray-700"
                 >
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     <Download className="w-4 h-4 text-gray-400 flex-shrink-0" />
