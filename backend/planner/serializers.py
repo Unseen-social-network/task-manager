@@ -411,7 +411,11 @@ class TaskCommentSerializer(serializers.ModelSerializer):
             request
             and task
             and not Task.objects.filter(id=task.id)
-            .filter(Q(owner=request.user) | Q(tagged_user=request.user))
+            .filter(
+                Q(owner=request.user)
+                | Q(tagged_user=request.user)
+                | Q(tagged_users=request.user)
+            )
             .exists()
         ):
             raise serializers.ValidationError('Task not found or access denied.')
