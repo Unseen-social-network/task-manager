@@ -1,10 +1,13 @@
 import uuid
 
 from asgiref.sync import sync_to_async
+from django.contrib.auth import get_user_model
 from django.db.models import Q
 from django.utils import timezone
 
-from planner.models import Profile, Task, TaskStatus
+from planner.models import Profile, Project, Task, TaskStatus
+
+User = get_user_model()
 
 
 @sync_to_async
@@ -56,7 +59,12 @@ def link_profile_by_token(
 
 
 @sync_to_async
-def create_quick_task(chat_id: int, title: str, description: str) -> Task:
+def create_quick_task(
+    chat_id: int,
+    title: str,
+    description: str,
+    due_date=None,
+) -> Task:
     profile = (
         Profile.objects.select_related('user').filter(telegram_chat_id=chat_id).first()
     )
@@ -73,6 +81,7 @@ def create_quick_task(chat_id: int, title: str, description: str) -> Task:
         title=title,
         description=description,
         status=default_status,
+        due_date=due_date,
     )
 
 
@@ -91,7 +100,9 @@ def list_tasks_for_chat(
         raise ValueError('Telegram-аккаунт не привязан.')
 
     qs = Task.objects.filter(
-        Q(owner=profile.user) | Q(tagged_user=profile.user)
+        Q(owner=profile.user)
+        | Q(tagged_user=profile.user)
+        | Q(tagged_users=profile.user)
     ).order_by('-created_at')
 
     if status:
@@ -111,22 +122,79 @@ def get_task_for_chat(chat_id: int, task_id: int):
     if not profile:
         return None
 
-    return Task.objects.filter(
-        id=task_id,
-        owner=profile.user,
-    ).first()
+    return (
+        Task.objects.filter(id=task_id)
+        .filter(
+            Q(owner=profile.user)
+            | Q(tagged_user=profile.user)
+            | Q(tagged_users=profile.user)
+        )
+        .select_related('project', 'status')
+        .first()
+    )
 
 
 @sync_to_async
-def create_full_task(chat_id: int, title: str, description: str):
+def get_projects_for_user(chat_id: int):
+    """Return projects available to the user (owned + shared)."""
+    profile = (
+        Profile.objects.select_related('user').filter(telegram_chat_id=chat_id).first()
+    )
+    if not profile:
+        return []
+    user = profile.user
+    qs = (
+        (
+            Project.objects.filter(owner=user)
+            | Project.objects.filter(share_accesses__user=user)
+        )
+        .distinct()
+        .order_by('-created_at')[:20]
+    )
+    return list(qs)
+
+
+@sync_to_async
+def resolve_usernames_to_users(usernames: list[str]) -> list[User]:
+    """Resolve usernames to User objects. Skips invalid usernames."""
+    if not usernames:
+        return []
+    normalized = [u.strip().lstrip('@') for u in usernames if u and u.strip()]
+    if not normalized:
+        return []
+    return list(User.objects.filter(username__in=normalized))
+
+
+@sync_to_async
+def create_full_task(
+    chat_id: int,
+    title: str,
+    description: str,
+    project_id: int | None = None,
+    tagged_users: list[User] | None = None,
+    due_date=None,
+):
     profile = Profile.objects.select_related('user').get(telegram_chat_id=chat_id)
     default_status = (
         TaskStatus.objects.filter(is_default=True).order_by('order').first()
         or TaskStatus.objects.order_by('order').first()
     )
-    return Task.objects.create(
+
+    project = None
+    if project_id:
+        project = Project.objects.filter(
+            Q(owner=profile.user) | Q(share_accesses__user=profile.user),
+            pk=project_id,
+        ).first()
+
+    task = Task.objects.create(
         owner=profile.user,
         title=title,
         description=description,
         status=default_status,
+        project=project,
+        due_date=due_date,
     )
+    if tagged_users:
+        task.tagged_users.set(tagged_users)
+    return task

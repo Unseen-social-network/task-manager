@@ -21,6 +21,7 @@ from telegram_bot.services.tasks import (
     create_quick_task,
     list_tasks_for_chat,
 )
+from telegram_bot.utils.date_parse import parse_due_date
 from telegram_bot.utils.urls import is_test_env
 
 
@@ -151,6 +152,8 @@ class TelegramHelpView(APIView):
             '📌 Команды бота:\n'
             '/help — справка\n'
             '/new Заголовок | Описание — быстрая задача\n'
+            '/new Заголовок | Описание | ДД.ММ.ГГГГ — с дедлайном\n'
+            '/newfull — создать задачу пошагово (проект, коллеги, срок)\n'
             '/tasks — список задач\n'
             '/task <id> — задача по ID\n\n'
             f'🔗 Ссылка на задачу: {task_url_template}'
@@ -176,6 +179,7 @@ class TelegramQuickTaskCreateView(APIView):
         chat_id = request.data.get('chat_id')
         title = request.data.get('title')
         description = request.data.get('description', '')
+        due_date_raw = request.data.get('due_date')
 
         if not chat_id or not title:
             return Response(
@@ -183,11 +187,26 @@ class TelegramQuickTaskCreateView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        due_date = None
+        if due_date_raw is not None:
+            if isinstance(due_date_raw, str):
+                due_date = parse_due_date(due_date_raw)
+                if due_date_raw and due_date is None:
+                    return Response(
+                        {
+                            'detail': 'Invalid due_date format. Use DD.MM.YYYY or ISO YYYY-MM-DD'
+                        },
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+            else:
+                due_date = due_date_raw
+
         try:
             task = create_quick_task.__wrapped__(
                 chat_id=chat_id,
                 title=title,
                 description=description,
+                due_date=due_date,
             )
         except ValueError as exc:
             return Response(
@@ -195,14 +214,14 @@ class TelegramQuickTaskCreateView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        return Response(
-            {
-                'id': task.id,
-                'title': task.title,
-                'description': task.description,
-            },
-            status=status.HTTP_201_CREATED,
-        )
+        result = {
+            'id': task.id,
+            'title': task.title,
+            'description': task.description,
+        }
+        if task.due_date:
+            result['due_date'] = task.due_date.isoformat()
+        return Response(result, status=status.HTTP_201_CREATED)
 
 
 class TelegramTaskListView(APIView):

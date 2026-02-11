@@ -43,6 +43,7 @@ class TelegramQuickTaskSerializer(serializers.Serializer):
     chat_id = serializers.IntegerField(min_value=1)
     title = serializers.CharField(max_length=500)
     description = serializers.CharField(required=False, allow_blank=True)
+    due_date = serializers.DateTimeField(required=False, allow_null=True)
 
 
 class TelegramQuickTaskResponseSerializer(serializers.Serializer):

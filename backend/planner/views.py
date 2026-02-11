@@ -741,7 +741,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         base_queryset = Project.objects.filter(owner=user)
         if self.request.method in ('GET', 'HEAD', 'OPTIONS'):
             base_queryset = base_queryset | Project.objects.filter(
-                tasks__tagged_user=user
+                Q(tasks__tagged_user=user) | Q(tasks__tagged_users=user)
             )
             base_queryset = base_queryset | Project.objects.filter(
                 share_accesses__user=user
