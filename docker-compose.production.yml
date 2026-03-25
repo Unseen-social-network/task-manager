@@ -17,6 +17,25 @@ services:
     networks:
       - planner_network
 
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.10
+    container_name: planner_clickhouse_prod
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "clickhouse-client -q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    networks:
+      - planner_network
+
   backend:
     image: fgeeha/task_manager_backend:${IMAGE_TAG:-latest}
     volumes:
@@ -77,6 +96,7 @@ services:
 
 volumes:
   postgres_data:
+  clickhouse_data:
   media_data:
   static_data:
 
