@@ -42,6 +42,7 @@ services:
     volumes:
       - media_data:/app/media
       - static_data:/app/staticfiles
+      - clickhouse_data:/ch_clickhouse_data:ro
     env_file:
       - .env
     ports:
@@ -64,6 +65,8 @@ services:
 
   backup-scheduler:
     image: fgeeha/task_manager_backend:${IMAGE_TAG:-latest}
+    volumes:
+      - clickhouse_data:/ch_clickhouse_data:ro
     env_file:
       - .env
     environment:

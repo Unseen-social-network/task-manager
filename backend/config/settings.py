@@ -38,6 +38,8 @@ env = environ.Env(
     TELEGRAM_BACKUP_CRON=(str, '0 10 * * *'),
     TELEGRAM_BACKUP_TIMEOUT=(int, 20),
     TELEGRAM_BACKUP_SEND_STATS_MESSAGE=(bool, False),
+    CLICKHOUSE_HOST=(str, ''),
+    CLICKHOUSE_HTTP_PORT=(int, 8123),
 )
 
 # Read .env file if exists
@@ -240,6 +242,12 @@ TELEGRAM_BACKUP_CRON = env('TELEGRAM_BACKUP_CRON')
 TELEGRAM_BACKUP_TIMEOUT = env('TELEGRAM_BACKUP_TIMEOUT')
 TELEGRAM_BACKUP_SEND_STATS_MESSAGE = env('TELEGRAM_BACKUP_SEND_STATS_MESSAGE')
 FRONTEND_BASE_URL = env('FRONTEND_BASE_URL')
+CLICKHOUSE_HOST = env('CLICKHOUSE_HOST')
+CLICKHOUSE_HTTP_PORT = env('CLICKHOUSE_HTTP_PORT')
+# Только read-only mount тома clickhouse_data (см. docker-compose.production.yml)
+CLICKHOUSE_BACKUPS_READER_DIR = os.getenv(
+    'CLICKHOUSE_BACKUPS_READER_DIR', '/ch_clickhouse_data/backups'
+)
 
 # Logging
 LOGGING = {

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 from datetime import datetime
 import logging
@@ -9,6 +10,7 @@ import subprocess
 import tempfile
 from zoneinfo import ZoneInfo
 
+import aiohttp
 from django.conf import settings
 
 from telegram_bot.services.backup_bot_api import send_document, send_message
@@ -161,6 +163,59 @@ def create_backup_archive(output_dir: str) -> str:
     return dump_path
 
 
+def _clickhouse_telegram_backup_eligible() -> bool:
+    if not settings.CLICKHOUSE_HOST.strip():
+        return False
+    if not os.path.isdir(settings.CLICKHOUSE_BACKUPS_READER_DIR):
+        logging.warning(
+            'ClickHouse backup skipped: directory %s missing '
+            '(mount clickhouse_data on backend in compose).',
+            settings.CLICKHOUSE_BACKUPS_READER_DIR,
+        )
+        return False
+    return True
+
+
+async def _clickhouse_http_backup(server_side_filename: str) -> None:
+    host = settings.CLICKHOUSE_HOST.strip()
+    port = settings.CLICKHOUSE_HTTP_PORT
+    url = f'http://{host}:{port}/'
+    server_path = f'/var/lib/clickhouse/backups/{server_side_filename}'
+    query = f"BACKUP ALL EXCEPT DATABASES system TO File('{server_path}')"
+    timeout = aiohttp.ClientTimeout(total=600)
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        async with session.post(url, data=query.encode('utf-8')) as resp:
+            body = await resp.text()
+            if resp.status != 200:
+                raise RuntimeError(f'ClickHouse HTTP {resp.status}: {body[:800]}')
+            if 'DB::Exception' in body or '\tCode: ' in body:
+                raise RuntimeError(f'ClickHouse query failed: {body[:1200]}')
+
+
+async def _wait_clickhouse_backup_file(
+    reader_path: str,
+    timeout_sec: float = 300.0,
+) -> None:
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + timeout_sec
+    while loop.time() < deadline:
+        if os.path.isfile(reader_path) and os.path.getsize(reader_path) > 0:
+            return
+        await asyncio.sleep(0.5)
+    raise TimeoutError(f'Timeout waiting for ClickHouse backup file: {reader_path}')
+
+
+def _build_clickhouse_caption(stats: BackupStats | None) -> str:
+    timezone = ZoneInfo(settings.TIME_ZONE)
+    timestamp = datetime.now(timezone).strftime('%Y-%m-%d %H:%M:%S %Z')
+    lines = [f'ClickHouse native backup at {timestamp}.']
+    if stats is not None:
+        lines.append('')
+        lines.append('Server stats (same as Postgres backup):')
+        lines.extend(stats.format_lines())
+    return '\n'.join(lines)
+
+
 async def send_backup() -> None:
     if not settings.TELEGRAM_BACKUP_ENABLED:
         return
@@ -170,15 +225,52 @@ async def send_backup() -> None:
         raise ValueError('TELEGRAM_BACKUP_USER_ID is required for backups.')
 
     stats = _collect_stats() if settings.TELEGRAM_BACKUP_WITH_STATS else None
-    caption = _build_caption(stats)
+    caption_pg = _build_caption(stats)
+
+    timezone = ZoneInfo(settings.TIME_ZONE)
+    ch_ts = datetime.now(timezone).strftime('%Y%m%d_%H%M%S')
+    ch_filename = f'planner_ch_{ch_ts}.zip'
+    ch_reader_path = os.path.join(
+        settings.CLICKHOUSE_BACKUPS_READER_DIR,
+        ch_filename,
+    )
+    ch_send_path: str | None = None
 
     with tempfile.TemporaryDirectory() as temp_dir:
         archive_path = create_backup_archive(temp_dir)
+
+        if _clickhouse_telegram_backup_eligible():
+            try:
+                await _clickhouse_http_backup(ch_filename)
+                await _wait_clickhouse_backup_file(ch_reader_path)
+                ch_send_path = ch_reader_path
+            except Exception:
+                logging.exception(
+                    'ClickHouse backup failed; sending Postgres dump only.'
+                )
+
         await send_document(
             settings.TELEGRAM_BACKUP_USER_ID,
             archive_path,
-            caption=caption,
+            caption=caption_pg,
         )
+
+        if ch_send_path and os.path.isfile(ch_send_path):
+            caption_ch = _build_clickhouse_caption(stats)
+            try:
+                await send_document(
+                    settings.TELEGRAM_BACKUP_USER_ID,
+                    ch_send_path,
+                    caption=caption_ch,
+                )
+            finally:
+                try:
+                    os.remove(ch_send_path)
+                except OSError:
+                    logging.warning(
+                        'Could not remove ClickHouse backup file %s',
+                        ch_send_path,
+                    )
 
     if stats is not None and settings.TELEGRAM_BACKUP_SEND_STATS_MESSAGE:
         try:
