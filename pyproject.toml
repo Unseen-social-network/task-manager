@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "task-manager"
-version = "0.1.0"
+version = "0.1.1"
 description = "Production-ready Django task planner with REST API"
 authors = ["nkolesnikov <33605615+Fgeeha@users.noreply.github.com>"]
 readme = "README.md"
@@ -18,7 +18,7 @@ djangorestframework-simplejwt = "^5.3"
 django-filter = "^24.0"
 django-environ = "^0.11"
 psycopg2-binary = "^2.9"
-pillow = "^10.0"
+pillow = "^12.1.1"
 drf-spectacular = "^0.27"
 django-cors-headers = "^4.3"
 gunicorn = "^23.0.0"
