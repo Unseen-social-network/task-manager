@@ -17,9 +17,6 @@ FROM base AS system
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
-    openssl=3.5.4-1~deb13u2 \
-    libssl3t64=3.5.4-1~deb13u2 \
-    openssl-provider-legacy=3.5.4-1~deb13u2 \
     curl \
     postgresql-client \
  && rm -rf /var/lib/apt/lists/*
