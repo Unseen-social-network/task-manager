@@ -17,7 +17,7 @@
 
 ## ClickHouse (production compose)
 
-- Сервис `clickhouse` в `docker-compose.production.yml`: образ `clickhouse/clickhouse-server:24.10`, данные в volume `clickhouse_data`, сеть `planner_network`, healthcheck `clickhouse-client -q 'SELECT 1'`, `ulimits.nofile` 262144.
+- Сервис `clickhouse` в `docker-compose.production.yml`: образ `clickhouse/clickhouse-server:24.10`, данные в volume `clickhouse_data`, сеть `planner_network`, healthcheck `clickhouse-client -q 'SELECT 1'`, `ulimits.nofile` 262144. В `backups.allowed_path` подключён файл [`clickhouse-backups-allowed.xml`](../clickhouse-backups-allowed.xml) (каталог `/var/lib/clickhouse/backups` внутри volume) — иначе `BACKUP ... TO File('/tmp/...')` даёт `BAD_ARGUMENTS`. Ручной дамп: `make prod-ch-dump` (после обновления compose перезапустите сервис `clickhouse`).
 - Порты 8123/9000 на хост не пробрасываются: доступ только из контейнеров в `planner_network`. Для админки или отладки с хоста можно добавить в compose `ports: ["8123:8123"]`.
 - Из других сервисов compose: HTTP `http://clickhouse:8123`, нативный протокол `clickhouse:9000` (hostname совпадает с именем сервиса).
 - Переменные для будущего кода: см. закомментированный блок в `.env.example` (`CLICKHOUSE_HOST`, `CLICKHOUSE_HTTP_PORT`, `CLICKHOUSE_NATIVE_PORT`).

@@ -22,6 +22,7 @@ services:
     container_name: planner_clickhouse_prod
     volumes:
       - clickhouse_data:/var/lib/clickhouse
+      - ./clickhouse-backups-allowed.xml:/etc/clickhouse-server/config.d/backups-allowed.xml:ro
     ulimits:
       nofile:
         soft: 262144

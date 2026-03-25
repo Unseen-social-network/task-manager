@@ -191,19 +191,22 @@ prod-db-restore:
 	docker compose -f docker-compose.production.yml exec db \
 		bash -c "pg_restore --clean --if-exists -U $$POSTGRES_USER -d $$POSTGRES_DB /tmp/$(notdir $(DUMP))"
 
-# ClickHouse: встроенный BACKUP в zip внутри контейнера, затем docker compose cp на хост.
-# Запуск: из корня репозитория, стек prod уже поднят (make prod-up).
+# ClickHouse: BACKUP в каталог из backups.allowed_path (см. clickhouse-backups-allowed.xml), затем cp на хост.
+# После первого добавления XML перезапустите clickhouse: docker compose -f docker-compose.production.yml up -d clickhouse
 # Пример: make prod-ch-dump  или  make prod-ch-dump OUT_DIR=./my-backups
 prod-ch-dump:
-	@OUT_DIR="$(or $(OUT_DIR),backups)"; \
+	@set -e; \
+	OUT_DIR="$(or $(OUT_DIR),backups)"; \
 	mkdir -p "$$OUT_DIR"; \
 	TS=$$(date +%Y%m%d_%H%M%S); \
 	FNAME="clickhouse_$$TS.zip"; \
+	CH_ZIP=/var/lib/clickhouse/backups/clickhouse_manual_dump.zip; \
+	docker compose -f docker-compose.production.yml exec -T clickhouse mkdir -p /var/lib/clickhouse/backups; \
 	docker compose -f docker-compose.production.yml exec -T clickhouse \
-		clickhouse-client --query "BACKUP ALL EXCEPT DATABASES system TO File('/tmp/clickhouse_manual_dump.zip')"; \
+		clickhouse-client --query "BACKUP ALL EXCEPT DATABASES system TO File('$$CH_ZIP')"; \
 	docker compose -f docker-compose.production.yml cp \
-		clickhouse:/tmp/clickhouse_manual_dump.zip "$$OUT_DIR/$$FNAME"; \
-	docker compose -f docker-compose.production.yml exec -T clickhouse rm -f /tmp/clickhouse_manual_dump.zip; \
+		"clickhouse:$$CH_ZIP" "$$OUT_DIR/$$FNAME"; \
+	docker compose -f docker-compose.production.yml exec -T clickhouse rm -f "$$CH_ZIP"; \
 	echo "Saved: $$OUT_DIR/$$FNAME"
 
 
