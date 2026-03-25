@@ -44,8 +44,8 @@ jobs:
           context: .
           file: ./infra/docker/backend/Dockerfile
           push: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=registry,ref=${{ env.DOCKERHUB_NAMESPACE }}/${{ env.IMAGE_NAME_BACKEND }}:buildx-cache
+          cache-to: type=registry,ref=${{ env.DOCKERHUB_NAMESPACE }}/${{ env.IMAGE_NAME_BACKEND }}:buildx-cache,mode=max
           tags: |
             ${{ env.DOCKERHUB_NAMESPACE }}/${{ env.IMAGE_NAME_BACKEND }}:latest
             ${{ env.DOCKERHUB_NAMESPACE }}/${{ env.IMAGE_NAME_BACKEND }}:${{ github.event.workflow_run.head_sha }}
@@ -78,8 +78,8 @@ jobs:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=registry,ref=${{ env.DOCKERHUB_NAMESPACE }}/${{ env.IMAGE_NAME_FRONTEND }}:buildx-cache
+          cache-to: type=registry,ref=${{ env.DOCKERHUB_NAMESPACE }}/${{ env.IMAGE_NAME_FRONTEND }}:buildx-cache,mode=max
           tags: |
             ${{ env.DOCKERHUB_NAMESPACE }}/${{ env.IMAGE_NAME_FRONTEND }}:latest
             ${{ env.DOCKERHUB_NAMESPACE }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ github.event.workflow_run.head_sha }}
@@ -140,15 +140,18 @@ jobs:
           overwrite: true
 
       - name: Deploy to server
+        env:
+          DEPLOY_PATH: ${{ secrets.PROJECT_PATH }}
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           passphrase: ${{ secrets.DEPLOY_SSH_PASSPHRASE }}
+          envs: DEPLOY_PATH
           script: |
             set -euo pipefail
-            cd /opt/planner
+            cd "$DEPLOY_PATH"
             compose="docker compose -f docker-compose.production.yml"
 
             wait_for_health() {
@@ -179,6 +182,13 @@ jobs:
             fi
             wait_for_health "$db_container" 24 5
 
+            ch_container="$($compose ps -q clickhouse)"
+            if [ -z "$ch_container" ]; then
+              echo "ClickHouse container not found (check docker-compose.production.yml on server)." >&2
+              exit 1
+            fi
+            wait_for_health "$ch_container" 36 5
+
             $compose exec -T backend python manage.py migrate --no-input
             $compose exec -T backend python manage.py collectstatic --no-input
 
@@ -208,7 +218,7 @@ jobs:
         uses: appleboy/telegram-action@v1.0.1
         with:
           to: ${{ secrets.TELEGRAM_TO }}
-          token: ${{ secrets.TELEGRAM_TOKEN}}
+          token: ${{ secrets.TELEGRAM_TOKEN }}
           message: |
             🚀 Deploy successful
             🔐 Trivy scan: PASSED
