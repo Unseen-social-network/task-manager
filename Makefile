@@ -201,7 +201,8 @@ prod-ch-dump:
 	TS=$$(date +%Y%m%d_%H%M%S); \
 	FNAME="clickhouse_$$TS.zip"; \
 	CH_ZIP=/var/lib/clickhouse/backups/clickhouse_manual_dump.zip; \
-	docker compose -f docker-compose.production.yml exec -T clickhouse mkdir -p /var/lib/clickhouse/backups; \
+	docker compose -f docker-compose.production.yml exec -u 0 -T clickhouse \
+		sh -c 'mkdir -p /var/lib/clickhouse/backups && chown -R clickhouse:clickhouse /var/lib/clickhouse/backups'; \
 	docker compose -f docker-compose.production.yml exec -T clickhouse \
 		clickhouse-client --query "BACKUP ALL EXCEPT DATABASES system TO File('$$CH_ZIP')"; \
 	docker compose -f docker-compose.production.yml cp \
