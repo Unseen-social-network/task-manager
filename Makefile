@@ -1,4 +1,4 @@
-.PHONY: help build up down restart logs shell migrate makemigrations createsuperuser send-backup load-backup db-copy-dump db-restore test lint format clean prod-build prod-up prod-down prod-restart prod-logs prod-superuser prod-send-backup prod-load-backup prod-db-copy-dump prod-db-restore frontend-install frontend-lint frontend-build frontend-check all-pre-CI
+.PHONY: help build up down restart logs shell migrate makemigrations createsuperuser send-backup load-backup db-copy-dump db-restore test lint format clean prod-build prod-up prod-down prod-restart prod-logs prod-superuser prod-send-backup prod-load-backup prod-db-copy-dump prod-db-restore prod-ch-dump frontend-install frontend-lint frontend-build frontend-check all-pre-CI
 
 # Default target
 help:
@@ -35,6 +35,7 @@ help:
 	@echo "  make prod-send-backup - Send production database dump via Telegram bot"
 	@echo "  make prod-load-backup - Restore production database from local .dump file"
 	@echo "  make prod-db-copy-dump - Copy local .dump file into production DB container"
+	@echo "  make prod-ch-dump     - Dump ClickHouse to OUT_DIR (default: backups/)"
 
 # Development commands
 build:
@@ -189,6 +190,21 @@ prod-db-restore:
 	fi
 	docker compose -f docker-compose.production.yml exec db \
 		bash -c "pg_restore --clean --if-exists -U $$POSTGRES_USER -d $$POSTGRES_DB /tmp/$(notdir $(DUMP))"
+
+# ClickHouse: встроенный BACKUP в zip внутри контейнера, затем docker compose cp на хост.
+# Запуск: из корня репозитория, стек prod уже поднят (make prod-up).
+# Пример: make prod-ch-dump  или  make prod-ch-dump OUT_DIR=./my-backups
+prod-ch-dump:
+	@OUT_DIR="$(or $(OUT_DIR),backups)"; \
+	mkdir -p "$$OUT_DIR"; \
+	TS=$$(date +%Y%m%d_%H%M%S); \
+	FNAME="clickhouse_$$TS.zip"; \
+	docker compose -f docker-compose.production.yml exec -T clickhouse \
+		clickhouse-client --query "BACKUP ALL EXCEPT DATABASES system TO File('/tmp/clickhouse_manual_dump.zip')"; \
+	docker compose -f docker-compose.production.yml cp \
+		clickhouse:/tmp/clickhouse_manual_dump.zip "$$OUT_DIR/$$FNAME"; \
+	docker compose -f docker-compose.production.yml exec -T clickhouse rm -f /tmp/clickhouse_manual_dump.zip; \
+	echo "Saved: $$OUT_DIR/$$FNAME"
 
 
 # Cleanup
