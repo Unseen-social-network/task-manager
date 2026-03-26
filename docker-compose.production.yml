@@ -74,6 +74,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      clickhouse:
+        condition: service_healthy
     restart: unless-stopped
     command: ["python", "manage.py", "run_backup_scheduler"]
     networks:
