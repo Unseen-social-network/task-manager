@@ -9,6 +9,7 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
 
+from .analytics_views import UserAnalyticsView
 from .views import (
     AttachmentViewSet,
     ContactShareAcceptView,
@@ -84,6 +85,8 @@ urlpatterns = [
     path(
         'invites/accept/<uuid:token>/', InviteAcceptView.as_view(), name='invite-accept'
     ),
+    # Analytics (staff only)
+    path('analytics/', UserAnalyticsView.as_view(), name='user-analytics'),
     # API endpoints
     path('', include(router.urls)),
 ]

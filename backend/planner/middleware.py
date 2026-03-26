@@ -1,10 +1,12 @@
 """
 Логирование обращений к API (метод, путь, пользователь, статус, длительность).
+Если ClickHouse настроен — события пишутся туда в фоне, не блокируя запрос.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 import logging
 import time
 
@@ -13,10 +15,17 @@ from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 
+from planner.clickhouse_client import insert_user_event
+
 log = logging.getLogger('planner.user_actions')
 
-# Не логируем тела запросов и заголовки (в т.ч. пароли); только маршрут и метаданные.
 _MAX_PATH_LEN = 2048
+
+# Пути, которые не нужно трекать (healthcheck, schema)
+_SKIP_PREFIXES = ('/api/schema/', '/health/')
+
+# Фоновый пул для отправки в ClickHouse (2 потока достаточно)
+_ch_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix='ch_events')
 
 
 def _resolve_user_for_log(request: HttpRequest):
@@ -54,12 +63,23 @@ class UserActionLoggingMiddleware:
                     path = path[: _MAX_PATH_LEN - 3] + '...'
 
                 actor = _resolve_user_for_log(request)
+                status_code = response.status_code if response is not None else 500
+
                 if actor is not None and getattr(actor, 'is_authenticated', False):
                     user_part = f'user_id={actor.pk} username={actor.get_username()}'
+                    skip = any(path.startswith(p) for p in _SKIP_PREFIXES)
+                    if not skip:
+                        _ch_executor.submit(
+                            insert_user_event,
+                            actor.pk,
+                            path,
+                            request.method,
+                            status_code,
+                            duration_ms,
+                        )
                 else:
                     user_part = 'anonymous'
 
-                status_code = response.status_code if response is not None else 500
                 log.info(
                     '%s %s %s status=%s duration_ms=%.1f',
                     request.method,
