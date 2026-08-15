@@ -1,50 +1,19 @@
-.PHONY: help build up down restart logs shell migrate makemigrations createsuperuser send-backup load-backup db-copy-dump db-restore test lint format clean prod-build prod-up prod-down prod-restart prod-logs prod-superuser prod-send-backup prod-load-backup prod-db-copy-dump prod-db-restore prod-ch-dump frontend-install frontend-lint frontend-build frontend-check all-pre-CI
+.DEFAULT_GOAL := help
+.PHONY: help build build-no-cache up down restart logs shell bash migrate migrate-to makemigrations createsuperuser send-backup load-backup db-copy-dump db-restore test test-cov lint format frontend-install frontend-lint frontend-build frontend-check clean prod-build prod-up prod-down prod-restart prod-logs prod-superuser prod-send-backup prod-load-backup prod-db-copy-dump prod-db-restore prod-ch-dump all-pre-CI
 
-# Default target
-help:
-	@echo "Available commands:"
-	@echo "  make build           - Build Docker images"
-	@echo "  make up              - Start development environment"
-	@echo "  make down            - Stop development environment"
-	@echo "  make restart         - Restart services"
-	@echo "  make logs            - View logs"
-	@echo "  make shell           - Open Django shell"
-	@echo "  make bash            - Open bash in backend container"
-	@echo "  make migrate         - Run database migrations"
-	@echo "  make makemigrations  - Create new migrations"
-	@echo "  make createsuperuser - Create superuser"
-	@echo "  make send-backup     - Send database dump via Telegram bot"
-	@echo "  make load-backup     - Restore database from local .dump file"
-	@echo "  make test            - Run tests"
-	@echo "  make lint            - Run linters"
-	@echo "  make format          - Format code"
-	@echo "  make frontend-install - Install frontend dependencies"
-	@echo "  make frontend-lint   - Run frontend lint"
-	@echo "  make frontend-build  - Build frontend"
-	@echo "  make frontend-check  - Run frontend lint + build"
-	@echo "  make clean           - Clean up containers and volumes"
-	@echo "  make all-pre-CI      - All check"
-	@echo ""
-	@echo "Production commands:"
-	@echo "  make prod-build      - Build production images"
-	@echo "  make prod-up         - Start production environment"
-	@echo "  make prod-down       - Stop production environment"
-	@echo "  make prod-restart    - Restart production environment"
-	@echo "  make prod-logs       - View production logs"
-	@echo "  make prod-superuser  - Create superuser"
-	@echo "  make prod-send-backup - Send production database dump via Telegram bot"
-	@echo "  make prod-load-backup - Restore production database from local .dump file"
-	@echo "  make prod-db-copy-dump - Copy local .dump file into production DB container"
-	@echo "  make prod-ch-dump     - Dump ClickHouse to OUT_DIR (default: backups/)"
+help: ## Показать список целей
+	@grep -hE '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) \
+	  | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-# Development commands
-build:
+# --- Разработка ---------------------------------------------------------------
+
+build: ## Собрать Docker-образы
 	DOCKER_BUILDKIT=1 docker compose -f infra/compose/docker-compose.yml build
 
-build-no-cache:
+build-no-cache: ## Собрать Docker-образы без кеша
 	DOCKER_BUILDKIT=1 docker compose -f infra/compose/docker-compose.yml build --no-cache
 
-up:
+up: ## Запустить окружение разработки
 	docker compose -f infra/compose/docker-compose.yml up -d
 	@echo "Waiting for database..."
 	@sleep 5
@@ -52,41 +21,43 @@ up:
 	docker compose -f infra/compose/docker-compose.yml exec backend python manage.py collectstatic --noinput
 	@echo "\nDevelopment environment is ready!"
 
-down:
+down: ## Остановить окружение разработки
 	docker compose -f infra/compose/docker-compose.yml down
 
-restart:
+restart: ## Перезапустить сервисы разработки
 	docker compose -f infra/compose/docker-compose.yml restart
 
-logs:
+logs: ## Логи разработки (follow)
 	docker compose -f infra/compose/docker-compose.yml logs -f
 
-shell:
+shell: ## Django shell в backend-контейнере
 	docker compose -f infra/compose/docker-compose.yml exec backend python manage.py shell
 
-bash:
+bash: ## Bash в backend-контейнере
 	docker compose -f infra/compose/docker-compose.yml exec backend bash
 
-migrate:
+# --- База данных ----------------------------------------------------------------
+
+migrate: ## Применить миграции
 	docker compose -f infra/compose/docker-compose.yml exec backend python manage.py migrate
 
-migrate-to:
+migrate-to: ## Применить миграции до конкретной версии: make migrate-to VERSION=0014 [APP=...]
 	@if [ -z "$(VERSION)" ]; then \
 		echo "❌ Usage: make migrate-to VERSION=0014"; \
 		exit 1; \
 	fi
 	docker compose -f infra/compose/docker-compose.yml exec backend python manage.py migrate $(APP) $(VERSION)
 
-makemigrations:
+makemigrations: ## Создать новые миграции
 	docker compose -f infra/compose/docker-compose.yml exec backend python manage.py makemigrations
 
-createsuperuser:
+createsuperuser: ## Создать суперпользователя
 	docker compose -f infra/compose/docker-compose.yml exec backend python manage.py createsuperuser
 
-send-backup:
+send-backup: ## Отправить дамп БД через Telegram-бота
 	docker compose -f infra/compose/docker-compose.yml exec backend python manage.py send_backup_dump
 
-load-backup:
+load-backup: ## Восстановить БД из локального .dump: make load-backup DUMP=planner_....dump
 	@if [ -z "$(DUMP)" ]; then \
 		echo "❌ Usage: make load-backup DUMP=planner_YYYYMMDD_HHMMSS.dump"; \
 		exit 1; \
@@ -96,7 +67,7 @@ load-backup:
 	docker compose -f infra/compose/docker-compose.yml exec db \
 		bash -c "pg_restore --clean --if-exists -U planner_user -d planner_db /tmp/$(notdir $(DUMP))"
 
-db-copy-dump:
+db-copy-dump: ## Скопировать .dump в контейнер db: make db-copy-dump DUMP=planner_....dump
 	@if [ -z "$(DUMP)" ]; then \
 		echo "❌ Usage: make db-copy-dump DUMP=planner_YYYYMMDD_HHMMSS.dump"; \
 		exit 1; \
@@ -104,7 +75,7 @@ db-copy-dump:
 	docker compose -f infra/compose/docker-compose.yml cp \
 		$(DUMP) db:/tmp/$(notdir $(DUMP))
 
-db-restore:
+db-restore: ## Восстановить БД из уже скопированного .dump: make db-restore DUMP=planner_....dump
 	@if [ -z "$(DUMP)" ]; then \
 		echo "❌ Usage: make db-restore DUMP=planner_YYYYMMDD_HHMMSS.dump"; \
 		exit 1; \
@@ -112,37 +83,40 @@ db-restore:
 	docker compose -f infra/compose/docker-compose.yml exec db \
 		bash -c "pg_restore --clean --if-exists -U planner_user -d planner_db /tmp/$(notdir $(DUMP))"
 
+# --- Проверки --------------------------------------------------------------------
 
-# Testing and linting
-test:
+test: ## Прогнать тесты (SQLite)
 	USE_SQLITE_FOR_TESTS=1 poetry run pytest
 
-test-cov:
+test-cov: ## Прогнать тесты с отчётом покрытия (в контейнере)
 	docker compose -f infra/compose/docker-compose.yml exec backend pytest --cov=planner --cov-report=html
 
-lint:
+lint: ## Прогнать pre-commit по всему проекту
 	poetry run pre-commit run -a
 
-format:
+format: ## Отформатировать backend (ruff check --fix + ruff format)
 	poetry run ruff check --fix backend/
 	poetry run ruff format backend/
 
-frontend-install:
+frontend-install: ## Установить зависимости фронтенда
 	cd frontend && npm install
 
-frontend-lint:
+frontend-lint: ## Линт фронтенда
 	cd frontend && npm run lint
 
-frontend-build:
+frontend-build: ## Сборка фронтенда
 	cd frontend && npm run build
 
-frontend-check: frontend-lint frontend-build
+frontend-check: frontend-lint frontend-build ## Линт + сборка фронтенда
 
-# Production commands
-prod-build:
+all-pre-CI: lint test frontend-check ## Все проверки перед коммитом/CI
+
+# --- Прод -------------------------------------------------------------------------
+
+prod-build: ## Собрать прод-образы
 	docker compose -f docker-compose.production.yml build
 
-prod-up:
+prod-up: ## Поднять прод-окружение
 	DOCKER_BUILDKIT=1 docker compose -f docker-compose.production.yml up -d
 	@echo "Waiting for database..."
 	@sleep 5
@@ -151,21 +125,21 @@ prod-up:
 	@echo "\nProduction environment is ready!"
 	@echo "Application: http://localhost"
 
-prod-down:
+prod-down: ## Остановить прод-окружение
 	docker compose -f docker-compose.production.yml down
 
-prod-restart: prod-down prod-up
+prod-restart: prod-down prod-up ## Перезапустить прод-окружение
 
-prod-logs:
+prod-logs: ## Логи прод-окружения (follow)
 	docker compose -f docker-compose.production.yml logs -f
 
-prod-superuser:
+prod-superuser: ## Создать суперпользователя в проде
 	docker compose -f docker-compose.production.yml exec backend python manage.py createsuperuser
 
-prod-send-backup:
+prod-send-backup: ## Отправить прод-дамп БД через Telegram-бота
 	docker compose -f docker-compose.production.yml exec backend python manage.py send_backup_dump
 
-prod-load-backup:
+prod-load-backup: ## Восстановить прод-БД из локального .dump: make prod-load-backup DUMP=planner_....dump
 	@if [ -z "$(DUMP)" ]; then \
 		echo "❌ Usage: make prod-load-backup DUMP=planner_YYYYMMDD_HHMMSS.dump"; \
 		exit 1; \
@@ -175,7 +149,7 @@ prod-load-backup:
 	docker compose -f docker-compose.production.yml exec db \
 		bash -c "pg_restore --clean --if-exists -U $$POSTGRES_USER -d $$POSTGRES_DB /tmp/$(notdir $(DUMP))"
 
-prod-db-copy-dump:
+prod-db-copy-dump: ## Скопировать .dump в контейнер прод-db: make prod-db-copy-dump DUMP=planner_....dump
 	@if [ -z "$(DUMP)" ]; then \
 		echo "❌ Usage: make prod-db-copy-dump DUMP=planner_YYYYMMDD_HHMMSS.dump"; \
 		exit 1; \
@@ -183,7 +157,7 @@ prod-db-copy-dump:
 	docker compose -f docker-compose.production.yml cp \
 		$(DUMP) db:/tmp/$(notdir $(DUMP))
 
-prod-db-restore:
+prod-db-restore: ## Восстановить прод-БД из уже скопированного .dump: make prod-db-restore DUMP=planner_....dump
 	@if [ -z "$(DUMP)" ]; then \
 		echo "❌ Usage: make prod-db-restore DUMP=planner_YYYYMMDD_HHMMSS.dump"; \
 		exit 1; \
@@ -194,7 +168,7 @@ prod-db-restore:
 # ClickHouse: BACKUP в каталог из backups.allowed_path (см. clickhouse-backups-allowed.xml), затем cp на хост.
 # После первого добавления XML перезапустите clickhouse: docker compose -f docker-compose.production.yml up -d clickhouse
 # Пример: make prod-ch-dump  или  make prod-ch-dump OUT_DIR=./my-backups
-prod-ch-dump:
+prod-ch-dump: ## Дамп ClickHouse в OUT_DIR (по умолчанию backups/)
 	@set -e; \
 	OUT_DIR="$(or $(OUT_DIR),backups)"; \
 	mkdir -p "$$OUT_DIR"; \
@@ -210,9 +184,9 @@ prod-ch-dump:
 	docker compose -f docker-compose.production.yml exec -T clickhouse rm -f "$$CH_ZIP"; \
 	echo "Saved: $$OUT_DIR/$$FNAME"
 
+# --- Обслуживание --------------------------------------------------------------------
 
-# Cleanup
-clean:
+clean: ## Остановить стеки (с томами) и удалить кэши
 	docker compose -f infra/compose/docker-compose.yml down -v
 	docker compose -f docker-compose.production.yml down -v
 	find . -type d -name __pycache__ -exec rm -rf {} +
@@ -220,7 +194,3 @@ clean:
 	find . -type d -name "*.egg-info" -exec rm -rf {} +
 	find . -type d -name ".pytest_cache" -exec rm -rf {} +
 	find . -type d -name ".ruff_cache" -exec rm -rf {} +
-
-
-# Pre-Ci
-all-pre-CI: lint test frontend-check
