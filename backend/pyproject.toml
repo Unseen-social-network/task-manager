@@ -103,8 +103,15 @@ exclude = [
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings"
 python_files = ["test_*.py", "*_test.py"]
-pythonpath = ["backend"]
-addopts = "--reuse-db --nomigrations"
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+pythonpath = ["."]
+addopts = "--reuse-db --nomigrations --strict-markers -v"
+markers = [
+  "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+  "integration: marks tests as integration tests",
+]
+testpaths = ["planner/tests", "telegram_bot/tests"]
 
 # =============================================================
 # Build system

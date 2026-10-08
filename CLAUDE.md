@@ -11,17 +11,17 @@ Planner: Django 5 + DRF backend (`backend/`), React 18 + Vite + TypeScript + Tai
 All `make` targets are listed with `make help`. The ones used most:
 
 ```bash
-# Dev stack (infra/compose/docker-compose.yml): db, backend (runserver :8000), frontend (nginx :3000)
+# Dev stack (docker-compose.yml, project name planner-dev): db, backend (runserver :8000), frontend (nginx :3000)
 make build && make up          # `up` does NOT run migrations; run `make migrate` yourself
-docker compose -f infra/compose/docker-compose.yml --profile dev up -d frontend-dev   # Vite hot reload on :3000
+docker compose --profile dev up -d frontend-dev   # Vite hot reload on :3000
 
-# Backend checks (run from the repo root)
-make test                      # USE_SQLITE_FOR_TESTS=1 poetry run pytest
+# Backend checks (make targets cd into backend/, where pyproject.toml and the Poetry env live)
+make test                      # cd backend && USE_SQLITE_FOR_TESTS=1 poetry run pytest
 make lint                      # pre-commit on all files (ruff, ruff-format, django-upgrade, hygiene hooks)
-make format                    # ruff check --fix + ruff format on backend/
+make format                    # ruff check --fix + ruff format in backend/
 
 # Single test
-USE_SQLITE_FOR_TESTS=1 poetry run pytest backend/planner/tests/test_tasks.py::TestName::test_name
+cd backend && USE_SQLITE_FOR_TESTS=1 poetry run pytest planner/tests/test_tasks.py::TestName::test_name
 
 # Frontend
 make frontend-check            # npm run lint (eslint, --max-warnings 0) + npm run build (tsc && vite build)
@@ -31,11 +31,11 @@ make all-pre-CI                # lint + test + frontend-check
 
 CI (`.github/workflows/ci.yml`) also runs `python manage.py makemigrations --check --dry-run` from `backend/`. After changing a model, commit the generated migration.
 
-Production uses `docker-compose.production.yml`: db, clickhouse, backend (gunicorn), backup-scheduler, nginx. Targets are `prod-*`, and `prod-up` runs migrate and collectstatic.
+Production uses `docker-compose.production.yml`: db, clickhouse, backend (gunicorn), backup-scheduler, frontend (nginx image built from `frontend/Dockerfile`, which also proxies `/api/` and `/admin/` to backend). Targets are `prod-*`, and `prod-up` runs migrate and collectstatic. CD (`.github/workflows/cd.yml`) builds images from `backend/` and `frontend/`, copies the prod compose file, `Makefile` and `clickhouse-backups-allowed.xml` to the server and runs `up -d --remove-orphans`. Keep the prod compose file at the repo root: its location sets the compose project name on the server, and moving it would attach fresh, empty volumes.
 
 ## Testing notes
 
-- `pytest.ini` at the repo root takes precedence over `[tool.pytest.ini_options]` in `pyproject.toml`. It sets `pythonpath = backend`, `--reuse-db --nomigrations`, and `testpaths` for both apps.
+- Pytest is configured in `backend/pyproject.toml` (`--reuse-db --nomigrations`, `testpaths` for both apps), so run it from `backend/`.
 - `config/settings.py` switches to SQLite (`backend/db.sqlite3`) when `USE_SQLITE_FOR_TESTS` or `PYTEST_CURRENT_TEST` is set, or when `test` is in argv. Tests never need Postgres.
 - `config/urls.py` also mounts `telegram_bot.urls` under `/api/` (in addition to `/api/v1/`), but only in the test env. Some tests depend on that legacy prefix.
 - Fixtures are in `backend/<app>/tests/conftest.py`. Many task fixtures need `task_statuses`, because tasks reference `TaskStatus` rows.
@@ -55,5 +55,5 @@ Production uses `docker-compose.production.yml`: db, clickhouse, backend (gunico
 
 ## Conventions
 
-- Ruff config is in `pyproject.toml`: line length 88, **single quotes**, isort with `force-sort-within-sections`, and migrations excluded. The pre-commit config excludes `frontend/`, `infra/` and migrations.
+- Ruff config is in `backend/pyproject.toml`: line length 88, **single quotes**, isort with `force-sort-within-sections`, and migrations excluded. The pre-commit config (repo root) excludes `frontend/` and migrations.
 - Commit messages follow Conventional Commits and are written in Russian. Look at `git log` for the style.

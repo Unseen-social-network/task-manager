@@ -6,7 +6,6 @@ exclude: |
     data/|
     docs/|
     frontend/|
-    infra/|
     venv/|
     env/|
     __pycache__/|
@@ -41,8 +40,6 @@ repos:
         args:
           - --fix
           - --exit-non-zero-on-fix
-          - --config
-          - pyproject.toml
 
       # Форматирование (замена Black)
       - id: ruff-format
@@ -63,7 +60,7 @@ repos:
     hooks:
       - id: pytest
         name: pytest (manual)
-        entry: poetry run pytest
+        entry: bash -c 'cd backend && poetry run pytest'
         language: system
         pass_filenames: false
         stages: [manual]

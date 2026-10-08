@@ -81,7 +81,7 @@ services:
     networks:
       - planner_network
 
-  nginx:
+  frontend:
     image: fgeeha/task_manager_frontend:${IMAGE_TAG:-latest}
     ports:
       - "3003:80"

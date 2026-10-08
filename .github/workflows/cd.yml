@@ -41,8 +41,8 @@ jobs:
       - name: Build and push Backend
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: ./infra/docker/backend/Dockerfile
+          context: ./backend
+          file: ./backend/Dockerfile
           push: true
           cache-from: type=registry,ref=${{ env.DOCKERHUB_NAMESPACE }}/${{ env.IMAGE_NAME_BACKEND }}:buildx-cache
           cache-to: type=registry,ref=${{ env.DOCKERHUB_NAMESPACE }}/${{ env.IMAGE_NAME_BACKEND }}:buildx-cache,mode=max
@@ -173,7 +173,7 @@ jobs:
             }
 
             $compose pull
-            DOCKER_BUILDKIT=1 $compose up -d
+            DOCKER_BUILDKIT=1 $compose up -d --remove-orphans
 
             db_container="$($compose ps -q db)"
             if [ -z "$db_container" ]; then
@@ -199,7 +199,7 @@ jobs:
             fi
             wait_for_health "$backend_container" 36 5
 
-            frontend_container="$($compose ps -q nginx)"
+            frontend_container="$($compose ps -q frontend)"
             if [ -z "$frontend_container" ]; then
               echo "Frontend container not found." >&2
               exit 1

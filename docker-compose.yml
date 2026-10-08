@@ -1,3 +1,6 @@
+# Без явного name проект назывался по каталогу (compose) и делил тома с другими стеками
+name: planner-dev
+
 services:
   db:
     image: postgres:16-alpine3.20
@@ -16,24 +19,23 @@ services:
 
   backend:
     build:
-      context: ../..
-      dockerfile: infra/docker/backend/Dockerfile
+      context: ./backend
       target: dev
     container_name: planner_backend_dev
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
-      - ../../backend:/app
+      - ./backend:/app
       - media_data:/app/media
       - static_data:/app/staticfiles
     env_file:
-      - ../../.env
+      - .env
     depends_on:
       db:
         condition: service_healthy
 
   frontend:
     build:
-      context: ../../frontend
+      context: ./frontend
       dockerfile: Dockerfile
     container_name: planner_frontend
     ports:
@@ -51,7 +53,7 @@ services:
     container_name: planner_frontend_dev
     working_dir: /app
     volumes:
-      - ../../frontend:/app
+      - ./frontend:/app
       - /app/node_modules
       - static_data:/app/staticfiles:ro
       - media_data:/app/media:ro

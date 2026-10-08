@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="560" viewBox="0 0 1200 560" role="img" aria-labelledby="title desc">
   <title id="title">Архитектура Planner</title>
-  <desc id="desc">Браузер обращается к nginx, который отдаёт React-сборку и проксирует /api в Django. Telegram присылает обновления на webhook приложения telegram_bot. Приложение planner хранит данные в PostgreSQL, middleware пишет события API в ClickHouse, backup-scheduler отправляет дампы в Telegram.</desc>
+  <desc id="desc">Браузер обращается к контейнеру frontend (nginx), который отдаёт React-сборку и проксирует /api в Django. Telegram присылает обновления на webhook приложения telegram_bot. Приложение planner хранит данные в PostgreSQL, middleware пишет события API в ClickHouse, backup-scheduler отправляет дампы в Telegram.</desc>
 
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
@@ -23,11 +23,11 @@
       <text x="24" y="68" font-size="18" fill="#9ca3af">/new · /tasks</text>
     </g>
 
-    <!-- nginx -->
+    <!-- frontend -->
     <g transform="translate(64 244)">
       <rect width="300" height="96" rx="12" fill="#1a2332" stroke="#374151"/>
-      <text x="24" y="40" font-size="22" font-weight="600" fill="#f3f4f6">nginx</text>
-      <text x="24" y="72" font-size="18" fill="#9ca3af">сборка фронта + /api</text>
+      <text x="24" y="40" font-size="22" font-weight="600" fill="#f3f4f6">frontend</text>
+      <text x="24" y="72" font-size="18" fill="#9ca3af">nginx: сборка + /api</text>
     </g>
 
     <!-- Django -->

@@ -20,10 +20,18 @@ Planner — веб-приложение для команды, где задач
 ## Как устроено
 
 <p align="center">
-  <img src="./assets/readme/architecture.svg" width="100%" alt="Схема: браузер → nginx → Django/DRF; Telegram → webhook; данные в PostgreSQL, события API в ClickHouse, backup-scheduler шлёт дампы в Telegram">
+  <img src="./assets/readme/architecture.svg" width="100%" alt="Схема: браузер → frontend (nginx) → Django/DRF; Telegram → webhook; данные в PostgreSQL, события API в ClickHouse, backup-scheduler шлёт дампы в Telegram">
 </p>
 
-Backend на Django + DRF отдаёт REST API по `/api/v1/`, авторизация через JWT. Frontend — React + Vite + Tailwind, собирается в статику, которую раздаёт nginx. Telegram присылает обновления на webhook приложения `telegram_bot`, а роутер передаёт их обработчикам команд. В проде middleware пишет события API в ClickHouse, и они попадают в аналитику для staff (`/api/v1/analytics/`). Подробности о логах и ClickHouse — в [`infra/LOGGING_AND_ANALYTICS.md`](infra/LOGGING_AND_ANALYTICS.md).
+Backend на Django + DRF отдаёт REST API по `/api/v1/`, авторизация через JWT. Frontend — React + Vite + Tailwind, собирается в статику, которую раздаёт nginx в контейнере `frontend`; он же проксирует `/api/` и `/admin/` в backend. Telegram присылает обновления на webhook приложения `telegram_bot`, а роутер передаёт их обработчикам команд. В проде middleware пишет события API в ClickHouse, и они попадают в аналитику для staff (`/api/v1/analytics/`). Подробности о логах и ClickHouse — в [`docs/LOGGING_AND_ANALYTICS.md`](docs/LOGGING_AND_ANALYTICS.md).
+
+```text
+backend/     Django-проект, pyproject.toml (Poetry, ruff, pytest), Dockerfile
+frontend/    React-приложение, Dockerfile и конфиги nginx
+docs/        заметки по логам и аналитике
+docker-compose.yml             dev-стек: db, backend, frontend
+docker-compose.production.yml  прод-стек: db, clickhouse, backend, backup-scheduler, frontend
+```
 
 ## Быстрый старт (dev)
 
@@ -45,7 +53,7 @@ make createsuperuser
 Vite с hot reload вместо собранного фронтенда:
 
 ```bash
-docker compose -f infra/compose/docker-compose.yml --profile dev up -d frontend-dev
+docker compose --profile dev up -d frontend-dev
 ```
 
 Все цели Makefile с описаниями выводит `make help`.
@@ -68,7 +76,7 @@ make prod-build
 make prod-up         # поднимает стек, применяет миграции и collectstatic
 ```
 
-Стек описан в `docker-compose.production.yml`: PostgreSQL, ClickHouse, backend на Gunicorn, backup-scheduler и nginx.
+Стек описан в `docker-compose.production.yml`: PostgreSQL, ClickHouse, backend на Gunicorn, backup-scheduler и frontend (nginx).
 
 ## Панель руководителя
 

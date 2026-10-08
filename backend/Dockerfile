@@ -70,7 +70,7 @@ WORKDIR /app
 COPY --from=deps-prod /usr/local /usr/local
 
 # приложение
-COPY backend/ /app/
+COPY . /app/
 RUN mkdir -p /app/media /app/staticfiles
 
 # пользователь
@@ -87,7 +87,7 @@ ENV GUNICORN_WORKERS=3 \
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
- CMD curl -f http://localhost:8000/health/ || exit 1
+  CMD curl -fsS http://localhost:8000/api/schema/ > /dev/null || exit 1
 
 CMD ["sh", "-c", "gunicorn config.wsgi:application \
   --bind 0.0.0.0:8000 \
@@ -103,7 +103,7 @@ FROM system AS dev
 WORKDIR /app
 
 COPY --from=deps-dev /usr/local /usr/local
-COPY backend/ /app/
+COPY . /app/
 
 EXPOSE 8000
 
