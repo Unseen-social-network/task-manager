@@ -119,6 +119,7 @@ prod-build: ## Собрать прод-образы
 	$(DC_PROD) build
 
 prod-up: ## Поднять прод-окружение
+	$(DC_PROD) run --rm --no-deps --user 0 --entrypoint chown backend -R app:app /app/media /app/staticfiles
 	DOCKER_BUILDKIT=1 $(DC_PROD) up -d --remove-orphans
 	@echo "Waiting for database..."
 	@sleep 5
@@ -139,7 +140,7 @@ prod-superuser: ## Создать суперпользователя в прод
 	$(DC_PROD) exec backend python manage.py createsuperuser
 
 prod-send-backup: ## Отправить прод-дамп БД через Telegram-бота
-	$(DC_PROD) exec backend python manage.py send_backup_dump
+	$(DC_PROD) exec backup-scheduler python manage.py send_backup_dump
 
 prod-load-backup: ## Восстановить прод-БД из локального .dump: make prod-load-backup DUMP=planner_....dump
 	@if [ -z "$(DUMP)" ]; then \

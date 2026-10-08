@@ -5,31 +5,28 @@ FROM python:3.12-slim AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    POETRY_VERSION=2.3.1 \
-    POETRY_HOME=/opt/poetry \
-    POETRY_VIRTUALENVS_CREATE=false \
-    PATH="/opt/poetry/bin:$PATH"
+    POETRY_VIRTUALENVS_CREATE=false
 
 # =========================
 # system deps
 # =========================
 FROM base AS system
 
+# postgresql-client нужен для pg_dump в бэкапах
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
-    curl \
     postgresql-client \
  && rm -rf /var/lib/apt/lists/*
 
 # =========================
-# poetry
+# poetry (только для установки зависимостей, в runtime не попадает)
 # =========================
-FROM system AS poetry
+FROM base AS poetry
 
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-
-RUN curl -sSL https://install.python-poetry.org | python3 - \
- && poetry --version
+# Отдельный venv: сам poetry не смешивается с зависимостями проекта в /usr/local
+RUN python -m venv /opt/poetry \
+ && /opt/poetry/bin/pip install --no-cache-dir poetry==2.3.1
+ENV PATH="/opt/poetry/bin:$PATH"
 
 # =========================
 # deps (prod)
@@ -60,7 +57,21 @@ RUN poetry install \
     --no-ansi
 
 # =========================
-# runtime (prod)
+# runtime (dev)
+# =========================
+FROM system AS dev
+
+WORKDIR /app
+
+COPY --from=deps-dev /usr/local /usr/local
+COPY . /app/
+
+EXPOSE 8000
+
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+
+# =========================
+# runtime (prod) — последняя стадия, собирается по умолчанию
 # =========================
 FROM system AS prod
 
@@ -68,6 +79,9 @@ WORKDIR /app
 
 # зависимости
 COPY --from=deps-prod /usr/local /usr/local
+
+# pip в runtime не нужен, а его вендорные пакеты попадают в отчёт Trivy
+RUN python -m pip uninstall -y pip
 
 # приложение
 COPY . /app/
@@ -87,24 +101,10 @@ ENV GUNICORN_WORKERS=3 \
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
-  CMD curl -fsS http://localhost:8000/api/schema/ > /dev/null || exit 1
+  CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/schema/', timeout=4)"]
 
 CMD ["sh", "-c", "gunicorn config.wsgi:application \
   --bind 0.0.0.0:8000 \
   --workers ${GUNICORN_WORKERS} \
   --threads ${GUNICORN_THREADS} \
   --timeout ${GUNICORN_TIMEOUT}"]
-
-# =========================
-# runtime (dev)
-# =========================
-FROM system AS dev
-
-WORKDIR /app
-
-COPY --from=deps-dev /usr/local /usr/local
-COPY . /app/
-
-EXPOSE 8000
-
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

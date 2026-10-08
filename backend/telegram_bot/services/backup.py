@@ -169,7 +169,7 @@ def _clickhouse_telegram_backup_eligible() -> bool:
     if not os.path.isdir(settings.CLICKHOUSE_BACKUPS_READER_DIR):
         logging.warning(
             'ClickHouse backup skipped: directory %s missing '
-            '(mount clickhouse_data on backend in compose).',
+            '(mount clickhouse_data on backup-scheduler in compose).',
             settings.CLICKHOUSE_BACKUPS_READER_DIR,
         )
         return False

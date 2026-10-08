@@ -42,7 +42,6 @@ services:
     volumes:
       - media_data:/app/media
       - static_data:/app/staticfiles
-      - clickhouse_data:/ch_clickhouse_data
     env_file:
       - .env
     ports:
@@ -55,7 +54,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/api/schema/ > /dev/null || exit 1"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/schema/', timeout=4)"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -65,6 +64,9 @@ services:
 
   backup-scheduler:
     image: fgeeha/task_manager_backend:${IMAGE_TAG:-latest}
+    # root нужен, чтобы читать и удалять zip-бэкапы ClickHouse (файлы uid clickhouse).
+    # Контейнер не принимает входящих соединений, web-backend работает от app.
+    user: "0:0"
     volumes:
       - clickhouse_data:/ch_clickhouse_data
     env_file:
@@ -78,6 +80,9 @@ services:
         condition: service_healthy
     restart: unless-stopped
     command: ["python", "manage.py", "run_backup_scheduler"]
+    # HEALTHCHECK образа проверяет HTTP, а планировщик веб-сервер не поднимает
+    healthcheck:
+      disable: true
     networks:
       - planner_network
 
@@ -92,7 +97,7 @@ services:
       - backend
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost/ > /dev/null || exit 1"]
+      test: ["CMD-SHELL", "wget -qO /dev/null http://127.0.0.1/ || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5

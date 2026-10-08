@@ -29,9 +29,9 @@ clickhouse-connect = "^0.8"
 
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^8.0"
+pytest = "^9.0.3"
 pytest-django = "^4.8"
-pytest-cov = "^4.1"
+pytest-cov = "^7.0"
 ruff = "^0.9"
 ipython = "^8.20"
 factory-boy = "^3.3"
