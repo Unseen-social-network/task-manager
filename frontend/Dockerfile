@@ -13,8 +13,7 @@ RUN npm run build
 # Production stage
 # =========================
 FROM nginx:1.31.6-alpine3.24
-# hadolint ignore=DL3018
-RUN apk update && apk upgrade --no-cache && apk add --no-cache curl
+RUN apk upgrade --no-cache
 
 # ⬇️ ПОДМЕНЯЕМ ГЛАВНЫЙ nginx.conf
 COPY nginx-main.conf /etc/nginx/nginx.conf
@@ -26,4 +25,8 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 EXPOSE 80
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
+  CMD ["wget", "-qO", "/dev/null", "http://127.0.0.1/"]
+
 CMD ["nginx", "-g", "daemon off;"]

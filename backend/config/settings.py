@@ -244,7 +244,7 @@ TELEGRAM_BACKUP_SEND_STATS_MESSAGE = env('TELEGRAM_BACKUP_SEND_STATS_MESSAGE')
 FRONTEND_BASE_URL = env('FRONTEND_BASE_URL')
 CLICKHOUSE_HOST = env('CLICKHOUSE_HOST')
 CLICKHOUSE_HTTP_PORT = env('CLICKHOUSE_HTTP_PORT')
-# Только read-only mount тома clickhouse_data (см. docker-compose.production.yml)
+# Том clickhouse_data смонтирован только в backup-scheduler (см. docker-compose.production.yml)
 CLICKHOUSE_BACKUPS_READER_DIR = os.getenv(
     'CLICKHOUSE_BACKUPS_READER_DIR', '/ch_clickhouse_data/backups'
 )

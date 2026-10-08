@@ -20,8 +20,8 @@
 - Сервис `clickhouse` в `docker-compose.production.yml`: образ `clickhouse/clickhouse-server:24.10`, данные в volume `clickhouse_data`, сеть `planner_network`, healthcheck `clickhouse-client -q 'SELECT 1'`, `ulimits.nofile` 262144. В `backups.allowed_path` подключён файл [`clickhouse-backups-allowed.xml`](../clickhouse-backups-allowed.xml) (каталог `/var/lib/clickhouse/backups` внутри volume) — иначе `BACKUP ... TO File('/tmp/...')` даёт `BAD_ARGUMENTS`. Ручной дамп: `make prod-ch-dump` (после обновления compose перезапустите сервис `clickhouse`).
 - Порты 8123/9000 на хост не пробрасываются: доступ только из контейнеров в `planner_network`. Для админки или отладки с хоста можно добавить в compose `ports: ["8123:8123"]`.
 - Из других сервисов compose: HTTP `http://clickhouse:8123`, нативный протокол `clickhouse:9000` (hostname совпадает с именем сервиса).
-- Переменные: `.env.example` — `CLICKHOUSE_HOST`, `CLICKHOUSE_HTTP_PORT` (для бэкапов в Telegram задайте `CLICKHOUSE_HOST=clickhouse` в prod и смонтируйте `clickhouse_data:/ch_clickhouse_data:ro` у `backend` и `backup-scheduler`).
-- `manage.py send_backup_dump` / `make prod-send-backup`: при включённых Telegram backup и непустом `CLICKHOUSE_HOST` в чат уходят два файла — Postgres и нативный ClickHouse `.zip`.
+- Переменные: `.env.example` — `CLICKHOUSE_HOST`, `CLICKHOUSE_HTTP_PORT` (для бэкапов в Telegram задайте `CLICKHOUSE_HOST=clickhouse` в prod и том `clickhouse_data:/ch_clickhouse_data` смонтирован только у `backup-scheduler`, который работает от root, чтобы читать и удалять zip-файлы ClickHouse).
+- `manage.py send_backup_dump` / `make prod-send-backup` (выполняется в `backup-scheduler`): при включённых Telegram backup и непустом `CLICKHOUSE_HOST` в чат уходят два файла — Postgres и нативный ClickHouse `.zip`.
 
 Проверка синтаксиса compose (нужен файл `.env` рядом с compose, т.к. `backend` и `backup-scheduler` используют `env_file: .env`):
 

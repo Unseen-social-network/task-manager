@@ -43,6 +43,7 @@ jobs:
         with:
           context: ./backend
           file: ./backend/Dockerfile
+          target: prod
           push: true
           cache-from: type=registry,ref=${{ env.DOCKERHUB_NAMESPACE }}/${{ env.IMAGE_NAME_BACKEND }}:buildx-cache
           cache-to: type=registry,ref=${{ env.DOCKERHUB_NAMESPACE }}/${{ env.IMAGE_NAME_BACKEND }}:buildx-cache,mode=max
@@ -173,6 +174,8 @@ jobs:
             }
 
             $compose pull
+            # Тома media/static созданы, когда backend работал от root; образ теперь от app
+            $compose run --rm --no-deps --user 0 --entrypoint chown backend -R app:app /app/media /app/staticfiles
             DOCKER_BUILDKIT=1 $compose up -d --remove-orphans
 
             db_container="$($compose ps -q db)"
