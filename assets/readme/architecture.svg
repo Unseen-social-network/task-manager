@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="560" viewBox="0 0 1200 560" role="img" aria-labelledby="title desc">
+  <title id="title">Архитектура Planner</title>
+  <desc id="desc">Браузер обращается к nginx, который отдаёт React-сборку и проксирует /api в Django. Telegram присылает обновления на webhook приложения telegram_bot. Приложение planner хранит данные в PostgreSQL, middleware пишет события API в ClickHouse, backup-scheduler отправляет дампы в Telegram.</desc>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#60a5fa"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="560" rx="24" fill="#111827"/>
+
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif">
+    <!-- Clients -->
+    <g transform="translate(64 48)">
+      <rect width="300" height="88" rx="12" fill="#1a2332" stroke="#374151"/>
+      <text x="24" y="38" font-size="22" font-weight="600" fill="#f3f4f6">Браузер</text>
+      <text x="24" y="68" font-size="18" fill="#9ca3af">React · Vite · Tailwind</text>
+    </g>
+    <g transform="translate(660 48)">
+      <rect width="220" height="88" rx="12" fill="#1a2332" stroke="#374151"/>
+      <text x="24" y="38" font-size="22" font-weight="600" fill="#f3f4f6">Telegram</text>
+      <text x="24" y="68" font-size="18" fill="#9ca3af">/new · /tasks</text>
+    </g>
+
+    <!-- nginx -->
+    <g transform="translate(64 244)">
+      <rect width="300" height="96" rx="12" fill="#1a2332" stroke="#374151"/>
+      <text x="24" y="40" font-size="22" font-weight="600" fill="#f3f4f6">nginx</text>
+      <text x="24" y="72" font-size="18" fill="#9ca3af">сборка фронта + /api</text>
+    </g>
+
+    <!-- Django -->
+    <g transform="translate(400 184)">
+      <rect width="736" height="176" rx="16" fill="#152036" stroke="#2563eb" stroke-width="2"/>
+      <text x="24" y="38" font-size="22" font-weight="700" fill="#f9fafb">Django + DRF</text>
+      <text x="190" y="38" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18" fill="#93c5fd">/api/v1/</text>
+      <g transform="translate(24 60)">
+        <rect width="220" height="96" rx="10" fill="#263042"/>
+        <text x="20" y="38" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="20" fill="#f3f4f6">planner</text>
+        <text x="20" y="70" font-size="18" fill="#9ca3af">задачи и доступы</text>
+      </g>
+      <g transform="translate(260 60)">
+        <rect width="220" height="96" rx="10" fill="#263042"/>
+        <text x="20" y="38" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="20" fill="#f3f4f6">telegram_bot</text>
+        <text x="20" y="70" font-size="18" fill="#9ca3af">webhook → router</text>
+      </g>
+      <g transform="translate(496 60)">
+        <rect width="216" height="96" rx="10" fill="#263042"/>
+        <text x="20" y="38" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="20" fill="#f3f4f6">middleware</text>
+        <text x="20" y="70" font-size="18" fill="#9ca3af">лог запросов API</text>
+      </g>
+    </g>
+
+    <!-- Storage and jobs -->
+    <g transform="translate(424 440)">
+      <rect width="220" height="88" rx="12" fill="#1a2332" stroke="#374151"/>
+      <text x="20" y="38" font-size="22" font-weight="600" fill="#f3f4f6">PostgreSQL</text>
+      <text x="20" y="68" font-size="18" fill="#9ca3af">основные данные</text>
+    </g>
+    <g transform="translate(896 440)">
+      <rect width="216" height="88" rx="12" fill="#1a2332" stroke="#374151"/>
+      <text x="20" y="38" font-size="22" font-weight="600" fill="#f3f4f6">ClickHouse</text>
+      <text x="20" y="68" font-size="18" fill="#9ca3af">события, только prod</text>
+    </g>
+    <g transform="translate(64 440)">
+      <rect width="300" height="88" rx="12" fill="#1a2332" stroke="#374151"/>
+      <text x="24" y="38" font-size="22" font-weight="600" fill="#f3f4f6">backup-scheduler</text>
+      <text x="24" y="68" font-size="18" fill="#9ca3af">дамп по cron → Telegram</text>
+    </g>
+  </g>
+
+  <!-- Arrows -->
+  <g fill="none" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrow)">
+    <path d="M214 136 V240"/>
+    <path d="M364 292 H396"/>
+    <path d="M770 136 V240"/>
+    <path d="M534 340 V436"/>
+    <path d="M1004 340 V436"/>
+    <path d="M424 484 H368"/>
+  </g>
+  <text x="784" y="170" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18" fill="#93c5fd">webhook</text>
+</svg>

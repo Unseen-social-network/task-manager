@@ -1,163 +1,139 @@
-# Planner
-[![CI](https://github.com/Unseen-social-network/task-manager/actions/workflows/ci.yml/badge.svg?branch=main)](
-https://github.com/Unseen-social-network/task-manager/actions/workflows/ci.yml
-)
-![CD](https://github.com/Unseen-social-network/task-manager/actions/workflows/cd.yml/badge.svg?event=workflow_run)
+<p align="center">
+  <img src="./assets/readme/hero.svg" width="100%" alt="Planner — задачи, контакты и проекты на Kanban-доске, в панели руководителя и в Telegram-боте">
+</p>
 
-## Описание
+<p align="center">
+  <a href="https://github.com/Unseen-social-network/task-manager/actions/workflows/ci.yml"><img src="https://github.com/Unseen-social-network/task-manager/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
+  <img src="https://github.com/Unseen-social-network/task-manager/actions/workflows/cd.yml/badge.svg?event=workflow_run" alt="CD">
+</p>
 
-Planner — Django-приложение для управления задачами с REST API, веб-интерфейсом и интеграцией с Telegram-ботом.
+Planner — веб-приложение для команды, где задачи, контакты и проекты лежат в одном месте. Задачу можно завести в браузере или одной командой в Telegram, а руководитель сразу видит просрочки, очередь на проверку и перегруженных сотрудников.
 
-### Как читать интерфейс задач (на что ориентироваться)
+## Что умеет
 
-Для руководителей и менеджеров в интерфейсе задач есть подсказки по загрузке и рискам.
+- **Задачи** — список и Kanban-доска, настраиваемые статусы, срочность, сроки, комментарии, вложения, учёт времени и помодоро-таймер, экспорт в Excel.
+- **Панель руководителя** — KPI, оповещения и блокеры, баланс нагрузки по сотрудникам и быстрые фильтры (подробнее ниже).
+- **Контакты и проекты** — общий доступ по ссылке и приглашения в команду.
+- **Telegram-бот** — создание и просмотр задач из чата и уведомления, когда вас отметили в задаче.
+- **Резервные копии** — ежедневный дамп PostgreSQL (и ClickHouse в проде), который отправляется в Telegram.
 
-* **Карточки задач**: цветной индикатор слева и значок срочности помогают быстро понять приоритет.
-* **KPI‑карточки**: показывают общее число активных задач, просрочки, задачи на проверке и перегруженных исполнителей.
-* **Баланс нагрузки**: визуальные полосы по сотрудникам показывают, кто перегружен или свободен.
-* **Оповещения и блокеры**: отдельный список задач, которые просрочены, заблокированы или ожидают проверки.
-* **Умные фильтры**: быстрые переключатели для фокуса на рисках, просрочках и задачах на согласовании.
+## Как устроено
 
-Ориентируйтесь в первую очередь на блоки «Оповещения и блокеры» и «Баланс нагрузки», чтобы быстро снять риски и перераспределить задачи.
+<p align="center">
+  <img src="./assets/readme/architecture.svg" width="100%" alt="Схема: браузер → nginx → Django/DRF; Telegram → webhook; данные в PostgreSQL, события API в ClickHouse, backup-scheduler шлёт дампы в Telegram">
+</p>
 
-### Пояснение к подсказкам на панели менеджера
-
-* **«Очередь на проверку»** — это число задач, которые требуют ревью или согласования. Например: «0 задач ожидают проверки или согласования. Назначьте ответственных и даты.»
-* **«Задачи с риском задержки»** — задачи с высоким приоритетом и близким сроком. Например: «0 задач с высоким приоритетом и близким сроком. Приоритизируйте напоминания.»
-* **«Самые перегруженные сотрудники»** — список тех, у кого больше всего активных задач. Если список пуст, отображается сообщение: «Сегодня перегруженных нет.»
-
-## Стек
-
-- Backend: Django, DRF, PostgreSQL
-- Frontend: Vite + React (папка `frontend/`)
-- Инфраструктура: Docker Compose, Gunicorn
+Backend на Django + DRF отдаёт REST API по `/api/v1/`, авторизация через JWT. Frontend — React + Vite + Tailwind, собирается в статику, которую раздаёт nginx. Telegram присылает обновления на webhook приложения `telegram_bot`, а роутер передаёт их обработчикам команд. В проде middleware пишет события API в ClickHouse, и они попадают в аналитику для staff (`/api/v1/analytics/`). Подробности о логах и ClickHouse — в [`infra/LOGGING_AND_ANALYTICS.md`](infra/LOGGING_AND_ANALYTICS.md).
 
 ## Быстрый старт (dev)
 
-1. Скопируйте и заполните переменные окружения:
-   ```bash
-   cp .env.example .env
-   ```
-2. Соберите и запустите сервисы:
-   ```bash
-   make build
-   make up
-   ```
-3. Полезные адреса после запуска:
-   - Backend: http://localhost:8000
-   - Admin: http://localhost:8000/admin
-   - API docs: http://localhost:8000/api/schema/swagger-ui/
-   - Frontend: http://localhost:3000
+```bash
+cp .env.example .env   # заполните переменные
+make build
+make up
+make migrate           # `make up` миграции не применяет
+make createsuperuser
+```
 
-### Frontend в режиме разработки (hot reload)
+| Что | Адрес |
+| --- | --- |
+| Frontend | http://localhost:3000 |
+| Backend | http://localhost:8000 |
+| Админка | http://localhost:8000/admin |
+| API docs | http://localhost:8000/api/schema/swagger-ui/ |
 
-Если нужен dev-сервер Vite, используйте профиль `dev`:
+Vite с hot reload вместо собранного фронтенда:
 
 ```bash
 docker compose -f infra/compose/docker-compose.yml --profile dev up -d frontend-dev
 ```
 
-## Production-режим
+Все цели Makefile с описаниями выводит `make help`.
+
+## Проверки
+
+```bash
+make lint            # pre-commit: ruff, ruff-format, django-upgrade
+make test            # pytest на SQLite, Postgres не нужен
+make frontend-check  # eslint + сборка (сначала make frontend-install)
+make all-pre-CI      # всё сразу
+```
+
+CI дополнительно проверяет, что нет несозданных миграций (`manage.py makemigrations --check`).
+
+## Production
 
 ```bash
 make prod-build
-make prod-up
+make prod-up         # поднимает стек, применяет миграции и collectstatic
 ```
 
-## Локальные проверки качества
+Стек описан в `docker-compose.production.yml`: PostgreSQL, ClickHouse, backend на Gunicorn, backup-scheduler и nginx.
 
-### Backend
+## Панель руководителя
+
+| Блок | Что показывает |
+| --- | --- |
+| Карточки задач | Цветная полоса слева и значок срочности показывают приоритет |
+| KPI | Активные задачи, просрочки, задачи на проверке, перегруженные исполнители |
+| Оповещения и блокеры | Просроченные, заблокированные и ожидающие проверки задачи |
+| Баланс нагрузки | Полосы по сотрудникам: кто перегружен, а кто свободен |
+| Умные фильтры | Быстрый фокус на рисках, просрочках и согласованиях |
+
+Начинайте с блоков «Оповещения и блокеры» и «Баланс нагрузки»: по ним видно, какие риски снять и кому передать задачи.
+
+Подсказки на панели:
+
+- **«Очередь на проверку»** — задачи, которые ждут ревью или согласования.
+- **«Задачи с риском задержки»** — задачи с высоким приоритетом и близким сроком.
+- **«Самые перегруженные сотрудники»** — у кого больше всего активных задач. Если таких нет, показывается «Сегодня перегруженных нет.»
+
+## Telegram-бот
+
+Сначала привяжите аккаунт: в настройках профиля нажмите «Подключить Telegram-бота», перейдите по ссылке и отправьте боту `/start <token>`.
+
+| Команда | Что делает |
+| --- | --- |
+| `/new Заголовок \| Описание` | Быстро создаёт задачу |
+| `/newfull` | Создаёт задачу в диалоге со всеми полями |
+| `/tasks`, `/tasks todo` | Показывает список задач, можно с фильтром по статусу |
+| `/task <id>` | Показывает одну задачу |
+| `/help` | Выводит справку |
+
+<details>
+<summary>REST-эндпоинты для внешнего бот-клиента</summary>
+
+Все запросы идентифицируют пользователя по `chat_id`.
+
+- `GET /api/v1/telegram/help/` — текст справки, готовый к показу.
+- `POST /api/v1/telegram/tasks/quick/` — `chat_id`, `title`, `description` (опционально).
+- `GET /api/v1/telegram/tasks/` — `chat_id`, `status` (`todo`, `in_progress`, `done`, `canceled`), `limit` (по умолчанию 10, максимум 50).
+
+В ответах есть `task_url` и шаблон `task_url_template` вида `https://<frontend>/tasks?task={id}`: их удобно вставлять в сообщения бота.
+
+</details>
+
+## Резервные копии
+
+Отдельный Telegram-бот присылает в личные сообщения дамп `pg_dump` в формате `.dump`. Если задан `CLICKHOUSE_HOST`, он отправляет ещё и ClickHouse-бэкап в `.zip`. В проде расписание выполняет контейнер `backup-scheduler` (`python manage.py run_backup_scheduler`).
 
 ```bash
-make lint
-make test
+make send-backup        # отправить дамп сейчас (dev)
+make prod-send-backup   # то же в проде
+make load-backup DUMP=planner_YYYYMMDD_HHMMSS.dump   # восстановить локально
 ```
 
-### Frontend
+<details>
+<summary>Переменные окружения</summary>
 
-```bash
-make frontend-install
-make frontend-check
-```
+| Переменная | Назначение |
+| --- | --- |
+| `TELEGRAM_BACKUP_BOT_TOKEN` | Токен бота для бэкапов |
+| `TELEGRAM_BACKUP_USER_ID` | Ваш Telegram user id |
+| `TELEGRAM_BACKUP_ENABLED` | Включить отправку (`1`/`0`) |
+| `TELEGRAM_BACKUP_CRON` | Расписание, например `0 10 * * *` |
+| `TELEGRAM_BACKUP_WITH_STATS` | Добавлять статистику ВМ (`1`/`0`) |
+| `TELEGRAM_BACKUP_SEND_STATS_MESSAGE` | Слать статистику отдельным сообщением (`1`/`0`) |
+| `TELEGRAM_BACKUP_TIMEOUT` | Таймаут запросов к Telegram API, сек (по умолчанию 20) |
 
-### Полный набор проверок (перед CI)
-
-```bash
-make lint
-make test
-make frontend-check
-```
-
-```bash
-make all-pre-CI
-```
-
-## Telegram-бот: команды и сценарии
-
-### Команда `/help`
-
-Добавлен backend-эндпоинт `/api/v1/telegram/help/`, который возвращает подробную справку для бота. Боту достаточно передать `chat_id`, а текст можно показать пользователю без дополнительных преобразований.
-
-### Как создать задачу через Telegram
-
-1. **Привяжите Telegram к аккаунту**
-   * В веб-интерфейсе откройте настройки профиля и нажмите «Подключить Telegram-бота».
-   * Перейдите по ссылке на бота и выполните команду `/start <token>`.
-2. **Быстрое создание задачи (quick)**
-   * Команда для пользователя: `/new Заголовок | Описание`.
-   * На стороне бота это соответствует вызову `POST /api/v1/telegram/tasks/quick/` с полями:
-     * `chat_id`
-     * `title`
-     * `description` (опционально)
-3. **Подробное создание задачи (full)**
-   * Команда для пользователя: `/newfull` (бот может дальше вести диалогом).
-   * На стороне бота это соответствует вызову `POST /api/v1/telegram/tasks/full/`.
-   * Можно передавать дополнительные поля: `urgency`, `due_date`, `status`, `project_id`, `contact_id`, `contact_freeform`, `tagged_username`.
-
-### Как смотреть задачи через Telegram
-
-1. **Список задач**
-   * Команда для пользователя: `/tasks` или `/tasks todo`.
-   * На стороне бота: `GET /api/v1/telegram/tasks/` с параметрами:
-     * `chat_id` — обязателен
-     * `status` — опционально (`todo`, `in_progress`, `done`, `canceled`)
-     * `limit` — опционально, по умолчанию 10 (максимум 50)
-2. **Просмотр конкретной задачи**
-   * Команда для пользователя: `/task <id>`.
-   * На стороне бота: `GET /api/v1/telegram/tasks/<id>/?chat_id=<chat_id>`.
-3. **Ссылка на задачу в вебе**
-   * Backend теперь возвращает `task_url` и шаблон `task_url_template` вида: `https://<frontend>/tasks?task={id}`.
-   * Эту ссылку удобно добавлять в ответы бота, чтобы пользователь мог сразу открыть задачу в веб-интерфейсе.
-
-## Резервные копии через Telegram
-
-Для ежедневной отправки дампа БД используется отдельный Telegram-бот. Бэкап создаётся через `pg_dump` в формате `.dump` и отправляется в личные сообщения.
-
-### Переменные окружения
-
-* `TELEGRAM_BACKUP_BOT_TOKEN` — токен бота, который шлёт бэкапы.
-* `TELEGRAM_BACKUP_USER_ID` — ваш Telegram user id, куда отправлять бэкапы.
-* `TELEGRAM_BACKUP_ENABLED` — включить/выключить отправку дампов (`1`/`0`).
-* `TELEGRAM_BACKUP_WITH_STATS` — отправлять статистику по ВМ (`1`/`0`).
-* `TELEGRAM_BACKUP_CRON` — cron-расписание (пример: `0 10 * * *`).
-* `TELEGRAM_BACKUP_TIMEOUT` — таймаут запросов к Telegram API в секундах (по умолчанию 20).
-* `TELEGRAM_BACKUP_SEND_STATS_MESSAGE` — отправлять отдельным сообщением статистику по бэкапу (`1`/`0`).
-
-### Запуск по расписанию
-
-Для запуска встроенного планировщика используйте команду:
-
-```bash
-python manage.py run_backup_scheduler
-```
-
-Cron-расписание берётся из переменной `TELEGRAM_BACKUP_CRON` в `.env`.
-
-### Ручной запуск
-
-Для ручной отправки дампа можно использовать Makefile:
-
-```bash
-make send-backup
-make prod-send-backup
-```
+</details>
