@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="440" viewBox="0 0 1200 440" role="img" aria-labelledby="title desc">
+  <title id="title">Planner</title>
+  <desc id="desc">Схема интерфейса Planner: Kanban-доска со статусами «К выполнению», «В работе», «Выполнена», цветовой полосой срочности на карточках и Telegram-командой /new, которая создаёт задачу на доске.</desc>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#60a5fa"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="440" rx="24" fill="#111827"/>
+
+  <!-- Title block -->
+  <g id="title-block" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif">
+    <text x="64" y="92" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18" letter-spacing="2" fill="#93c5fd">DJANGO · DRF · REACT · TELEGRAM</text>
+    <text x="60" y="178" font-size="92" font-weight="700" fill="#f9fafb">Planner</text>
+    <!-- urgency motif: low / medium / high / critical -->
+    <rect x="64" y="204" width="56" height="6" rx="3" fill="#4b5563"/>
+    <rect x="126" y="204" width="56" height="6" rx="3" fill="#3b82f6"/>
+    <rect x="188" y="204" width="56" height="6" rx="3" fill="#f97316"/>
+    <rect x="250" y="204" width="56" height="6" rx="3" fill="#dc2626"/>
+    <text x="64" y="262" font-size="27" fill="#e5e7eb">Задачи, контакты и проекты —</text>
+    <text x="64" y="298" font-size="27" fill="#e5e7eb">на Kanban-доске, в панели</text>
+    <text x="64" y="334" font-size="27" fill="#e5e7eb">руководителя и в Telegram</text>
+    <text x="64" y="388" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="17" fill="#6b7280">PostgreSQL · ClickHouse · Docker Compose</text>
+  </g>
+
+  <!-- Kanban board -->
+  <g id="board" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif">
+    <!-- Column: todo -->
+    <g transform="translate(600 48)">
+      <rect width="168" height="344" rx="14" fill="#1a2332"/>
+      <text x="14" y="34" font-size="18" font-weight="600" fill="#d1d5db">К выполнению</text>
+      <g transform="translate(10 52)">
+        <rect width="148" height="62" rx="8" fill="#263042"/>
+        <rect width="5" height="62" rx="2" fill="#f97316"/>
+        <text x="16" y="27" font-size="18" fill="#f3f4f6">Договор</text>
+        <text x="16" y="49" font-size="16" fill="#9ca3af">до 14.10</text>
+      </g>
+      <g transform="translate(10 124)">
+        <rect width="148" height="62" rx="8" fill="#263042"/>
+        <rect width="5" height="62" rx="2" fill="#3b82f6"/>
+        <text x="16" y="27" font-size="18" fill="#f3f4f6">Звонок</text>
+        <text x="16" y="49" font-size="16" fill="#9ca3af">проект CRM</text>
+      </g>
+      <g transform="translate(10 196)">
+        <rect width="148" height="62" rx="8" fill="#263042" stroke="#60a5fa" stroke-width="2"/>
+        <rect width="5" height="62" rx="2" fill="#dc2626"/>
+        <text x="16" y="27" font-size="18" fill="#f3f4f6">Счёт №214</text>
+        <text x="16" y="49" font-size="16" fill="#93c5fd">из Telegram</text>
+      </g>
+    </g>
+
+    <!-- Column: in progress -->
+    <g transform="translate(780 48)">
+      <rect width="168" height="344" rx="14" fill="#1a2332"/>
+      <text x="14" y="34" font-size="18" font-weight="600" fill="#d1d5db">В работе</text>
+      <g transform="translate(10 52)">
+        <rect width="148" height="62" rx="8" fill="#263042"/>
+        <rect width="5" height="62" rx="2" fill="#f97316"/>
+        <text x="16" y="27" font-size="18" fill="#f3f4f6">Отчёт Q3</text>
+        <text x="16" y="49" font-size="16" fill="#f87171">просрочено</text>
+      </g>
+      <g transform="translate(10 124)">
+        <rect width="148" height="62" rx="8" fill="#263042"/>
+        <rect width="5" height="62" rx="2" fill="#4b5563"/>
+        <text x="16" y="27" font-size="18" fill="#f3f4f6">Ревью макета</text>
+        <text x="16" y="49" font-size="16" fill="#9ca3af">на проверке</text>
+      </g>
+    </g>
+
+    <!-- Column: done -->
+    <g transform="translate(960 48)">
+      <rect width="168" height="344" rx="14" fill="#1a2332"/>
+      <text x="14" y="34" font-size="18" font-weight="600" fill="#d1d5db">Выполнена</text>
+      <g transform="translate(10 52)" opacity="0.55">
+        <rect width="148" height="62" rx="8" fill="#263042"/>
+        <rect width="5" height="62" rx="2" fill="#3b82f6"/>
+        <text x="16" y="27" font-size="18" fill="#f3f4f6">Онбординг</text>
+        <text x="16" y="49" font-size="16" fill="#9ca3af">готово</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- Telegram chat over the board -->
+  <g id="telegram" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">
+    <rect x="806" y="256" width="330" height="54" rx="14" fill="#2563eb"/>
+    <text x="824" y="290" font-size="19" fill="#ffffff">/new Счёт №214 | до пт</text>
+    <rect x="790" y="322" width="330" height="54" rx="14" fill="#0b1220" stroke="#374151" stroke-width="1.5"/>
+    <text x="808" y="356" font-size="19" fill="#e5e7eb">✓ Задача создана</text>
+    <path d="M800 283 C 784 283, 784 276, 772 276" fill="none" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrow)"/>
+  </g>
+</svg>
