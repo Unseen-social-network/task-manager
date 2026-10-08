@@ -12,7 +12,7 @@ RUN npm run build
 # =========================
 # Production stage
 # =========================
-FROM nginx:1.29.4-alpine3.23
+FROM nginx:1.31.6-alpine3.24
 # hadolint ignore=DL3018
 RUN apk update && apk upgrade --no-cache && apk add --no-cache curl
 
