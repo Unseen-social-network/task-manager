@@ -96,7 +96,7 @@ make prod-up         # поднимает стек, применяет мигр�
 | --- | --- |
 | `/new Заголовок \| Описание` | Быстро создаёт задачу |
 | `/newfull` | Создаёт задачу в диалоге со всеми полями |
-| `/tasks`, `/tasks todo` | Показывает список задач, можно с фильтром по статусу |
+| `/tasks`, `/tasks todo` | Показывает активные задачи или задачи с указанным статусом |
 | `/task <id>` | Показывает одну задачу |
 | `/help` | Выводит справку |
 
@@ -107,9 +107,9 @@ make prod-up         # поднимает стек, применяет мигр�
 
 - `GET /api/v1/telegram/help/` — текст справки, готовый к показу.
 - `POST /api/v1/telegram/tasks/quick/` — `chat_id`, `title`, `description` (опционально).
-- `GET /api/v1/telegram/tasks/` — `chat_id`, `status` (`todo`, `in_progress`, `done`, `canceled`), `limit` (по умолчанию 10, максимум 50).
+- `GET /api/v1/telegram/tasks/` — `chat_id`, `status` (`active`, `todo`, `in_progress`, `done`, `canceled`; без него — все задачи), `limit` (по умолчанию 20).
 
-В ответах есть `task_url` и шаблон `task_url_template` вида `https://<frontend>/tasks?task={id}`: их удобно вставлять в сообщения бота.
+В ответах есть шаблон `task_url_template` вида `https://<frontend>/tasks?task={id}`: подставьте `id` задачи, чтобы получить ссылку для сообщения бота.
 
 </details>
 
